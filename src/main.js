@@ -8,6 +8,8 @@ import ConfirmationService from 'primevue/confirmationservice';
 import ToastService from 'primevue/toastservice';
 
 import '@/assets/tailwind.css';
+import './assets/styles.scss';
+
 import '@/assets/styles.scss';
 
 const app = createApp(App);
