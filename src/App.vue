@@ -1,7 +1,10 @@
-<script setup></script>
+<script setup>
+import { RouterView } from 'vue-router';
+</script>
 
 <template>
-    <router-view />
+    <Toast />
+    <RouterView />
 </template>
 
 <style scoped></style>
