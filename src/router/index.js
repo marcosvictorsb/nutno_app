@@ -44,6 +44,11 @@ const router = createRouter({
             ]
         },
         {
+            path: '/xyz/leads/campanha',
+            name: 'leadsCampanha',
+            component: () => import('@/views/pages/LeadsCampanha.vue')
+        },
+        {
             path: '/landing',
             redirect: '/'
         },
