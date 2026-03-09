@@ -54,5 +54,26 @@ export const LeadsService = {
             console.error('Erro ao buscar leads:', error);
             throw error;
         }
+    },
+
+    async getLeadsCount() {
+        try {
+            const url = getLeadUrl() + '/count';
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Erro ao buscar contagem de leads:', error);
+            throw error;
+        }
     }
 };

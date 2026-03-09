@@ -1,7 +1,7 @@
 <script setup>
 import { LeadsService } from '@/service/LeadsService';
 import { useToast } from 'primevue/usetoast';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 const toast = useToast();
 const heroName = ref('');
@@ -9,6 +9,24 @@ const heroEmail = ref('');
 const ctaEmail = ref('');
 const isLoadingHero = ref(false);
 const isLoadingCta = ref(false);
+const totalLeads = ref(214);
+
+const fetchLeadsCount = async () => {
+    try {
+        const response = await LeadsService.getLeadsCount();
+        if (response.success && response.data && response.data.count) {
+            // Somar o count do backend + 214 (fictício)
+            totalLeads.value = response.data.count + 214;
+        }
+    } catch (error) {
+        console.error('Erro ao buscar contagem de leads:', error);
+        // Manter o valor padrão de 214 em caso de erro
+    }
+};
+
+onMounted(() => {
+    fetchLeadsCount();
+});
 
 const submitHeroLead = async () => {
     if (!heroName.value.trim() || !heroEmail.value.trim()) {
@@ -35,6 +53,7 @@ const submitHeroLead = async () => {
         });
         heroName.value = '';
         heroEmail.value = '';
+        fetchLeadsCount();
     } catch (error) {
         toast.add({
             severity: 'error',
@@ -70,6 +89,7 @@ const submitCtaLead = async () => {
             life: 3000
         });
         ctaEmail.value = '';
+        fetchLeadsCount();
     } catch (error) {
         toast.add({
             severity: 'error',
@@ -139,7 +159,7 @@ const submitCtaLead = async () => {
                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6fGys7XUAmpQiI9t93lloYIesSbu4oYI4a7a2omrpdmdMUtHwGIv5ryB6Yr_YeJBafuuZL1LviON8_GFopV2uCyn-hiXcHQ7zsA30W2kW5XJGTdjWGyRQt-zBY-IRwjxUHLlp3TaspVQ3SBzVB9g4w9u9Jmh2tlAl3H0U0JJPUstCOmAh_4H2F2IhJlzabe4tgrVC6eeK7OOLdXnm1wa_RJj7aLsWu3l_lLFX0xXkbwdAzfBVAlpwsxhYBfp9GLZZFabs-d75eg7a"
                         />
                     </div>
-                    <span class="text-primary font-semibold text-sm">🎉 214 nutricionistas já estão na lista de espera</span>
+                    <span class="text-primary font-semibold text-sm">🎉 {{ totalLeads }} nutricionistas já estão na lista de espera</span>
                 </div>
             </div>
         </section>
