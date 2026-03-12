@@ -72,6 +72,11 @@ const router = createRouter({
             path: '/auth/error',
             name: 'error',
             component: () => import('@/views/pages/auth/Error.vue')
+        },
+        {
+            path: '/criar-conta-gratis',
+            name: 'criarContaGratis',
+            component: () => import('@/views/pages/CriarContaGratis.vue')
         }
     ]
 });
