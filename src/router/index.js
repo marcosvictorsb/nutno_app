@@ -1,4 +1,5 @@
 import AppLayout from '@/layout/AppLayout.vue';
+import AuthService from '@/service/AuthService';
 import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
@@ -12,6 +13,13 @@ const router = createRouter({
         {
             path: '/',
             component: AppLayout,
+            beforeEnter: (to, from, next) => {
+                if (AuthService.isAuthenticated()) {
+                    next();
+                } else {
+                    next('/auth/login');
+                }
+            },
             children: [
                 {
                     path: '/dashboard',
