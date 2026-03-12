@@ -14,20 +14,24 @@ const model = ref([
         ]
     },
     {
-        label: 'Prime Blocks',
-        icon: 'pi pi-fw pi-prime',
-        path: '/blocks',
+        label: 'Gerenciamento',
+        icon: 'pi pi-fw pi-cog',
+        path: '/gerenciamento',
         items: [
             {
-                label: 'Free Blocks',
-                icon: 'pi pi-fw pi-eye',
-                to: '/blocks/free'
+                label: 'Pacientes',
+                icon: 'pi pi-fw pi-heart',
+                to: '/pacientes'
             },
             {
-                label: 'All Blocks',
-                icon: 'pi pi-fw pi-globe',
-                url: 'https://blocks.primevue.org/',
-                target: '_blank'
+                label: 'Alimentos',
+                icon: 'pi pi-fw pi-apple',
+                to: '/alimentos'
+            },
+            {
+                label: 'Configuração',
+                icon: 'pi pi-fw pi-sliders-v',
+                to: '/configuracao'
             }
         ]
     },

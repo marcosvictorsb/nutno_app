@@ -27,10 +27,26 @@ const router = createRouter({
                     component: () => import('@/views/Dashboard.vue')
                 },
                 {
-                    path: '/blocks/free',
-                    name: 'blocks',
+                    path: '/pacientes',
+                    name: 'pacientes',
                     meta: {
-                        breadcrumb: ['Prime Blocks', 'Free Blocks']
+                        breadcrumb: ['Pacientes']
+                    },
+                    component: () => import('@/views/Pacientes.vue')
+                },
+                {
+                    path: '/alimentos',
+                    name: 'alimentos',
+                    meta: {
+                        breadcrumb: ['Alimentos']
+                    },
+                    component: () => import('@/views/utilities/Blocks.vue')
+                },
+                {
+                    path: '/configuracao',
+                    name: 'configuracao',
+                    meta: {
+                        breadcrumb: ['Configuração']
                     },
                     component: () => import('@/views/utilities/Blocks.vue')
                 },
