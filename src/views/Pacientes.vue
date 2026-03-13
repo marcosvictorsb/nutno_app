@@ -10,9 +10,8 @@ import InputMask from 'primevue/inputmask';
 import InputText from 'primevue/inputtext';
 import RadioButton from 'primevue/radiobutton';
 import Tag from 'primevue/tag';
-import Toggle from 'primevue/togglebutton';
 import { useToast } from 'primevue/usetoast';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -24,11 +23,12 @@ const filtroStatus = ref('todos');
 const searchValue = ref('');
 const showDialog = ref(false);
 const loading = ref(true);
+const formErrors = ref({});
 
 // Estados da foto de perfil
-const imagemPreview = ref(null);
-const zoomImagem = ref(100);
-const inputFotoRef = ref(null);
+// const imagemPreview = ref(null);
+// const zoomImagem = ref(100);
+// const inputFotoRef = ref(null);
 
 // Estados do formulário
 const formNovoPaciente = ref({
@@ -37,10 +37,9 @@ const formNovoPaciente = ref({
     data_nascimento: null,
     email: '',
     whatsapp: '',
-    sexo: '',
-    foto_perfil: null,
-    enviar_automatico: false,
-    canal: 'whatsapp'
+    sexo: ''
+    // enviar_automatico: false,
+    // canal: 'whatsapp'
 });
 
 // Função para extrair iniciais do nome
@@ -148,33 +147,33 @@ const carregarPacientes = async () => {
 };
 
 // Função para carregar imagem de perfil
-const carregarImagem = (event) => {
-    const arquivo = event.target.files[0];
-    if (arquivo) {
-        const leitor = new FileReader();
-        leitor.onload = (e) => {
-            imagemPreview.value = e.target.result;
-            formNovoPaciente.value.foto_perfil = e.target.result;
-            zoomImagem.value = 100;
-        };
-        leitor.readAsDataURL(arquivo);
-    }
-};
+// const carregarImagem = (event) => {
+//     const arquivo = event.target.files[0];
+//     if (arquivo) {
+//         const leitor = new FileReader();
+//         leitor.onload = (e) => {
+//             imagemPreview.value = e.target.result;
+//             formNovoPaciente.value.foto_perfil = e.target.result;
+//             zoomImagem.value = 100;
+//         };
+//         leitor.readAsDataURL(arquivo);
+//     }
+// };
 
 // Função para remover a imagem
-const removerImagem = () => {
-    imagemPreview.value = null;
-    formNovoPaciente.value.foto_perfil = null;
-    zoomImagem.value = 100;
-    if (inputFotoRef.value) {
-        inputFotoRef.value.value = '';
-    }
-};
+// const removerImagem = () => {
+//     imagemPreview.value = null;
+//     formNovoPaciente.value.foto_perfil = null;
+//     zoomImagem.value = 100;
+//     if (inputFotoRef.value) {
+//         inputFotoRef.value.value = '';
+//     }
+// };
 
 // Função para abrir seletor de arquivo
-const selecionarFoto = () => {
-    inputFotoRef.value?.click();
-};
+// const selecionarFoto = () => {
+//     inputFotoRef.value?.click();
+// };
 
 const pacientesFiltrados = () => {
     let resultado = pacientes.value || [];
@@ -200,50 +199,52 @@ const abrirNovoPaciente = () => {
         data_nascimento: null,
         email: '',
         whatsapp: '',
-        sexo: '',
-        foto_perfil: null,
-        enviar_automatico: false,
-        canal: 'whatsapp'
+        sexo: ''
     };
-    imagemPreview.value = null;
-    zoomImagem.value = 100;
-    if (inputFotoRef.value) {
-        inputFotoRef.value.value = '';
-    }
+    formErrors.value = {};
+    // imagemPreview.value = null;
+    // zoomImagem.value = 100;
+    // if (inputFotoRef.value) {
+    //     inputFotoRef.value.value = '';
+    // }
     showDialog.value = true;
 };
 
 const salvarNovoPaciente = async () => {
     // Validar campos obrigatórios
-    if (!formNovoPaciente.value.nome || !formNovoPaciente.value.email) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Atenção',
-            detail: 'Nome e Email são obrigatórios',
-            life: 3000
-        });
+    formErrors.value = {};
+
+    if (!formNovoPaciente.value.nome) {
+        formErrors.value.nome = 'Nome completo é obrigatório';
+    }
+
+    if (!formNovoPaciente.value.email) {
+        formErrors.value.email = 'Email é obrigatório';
+    }
+
+    if (!formNovoPaciente.value.sexo) {
+        formErrors.value.sexo = 'Sexo é obrigatório';
+    }
+
+    if (Object.keys(formErrors.value).length > 0) {
         return;
     }
 
     try {
-        // Criar FormData para enviar a imagem
-        const formData = new FormData();
-        formData.append('nome', formNovoPaciente.value.nome);
-        formData.append('como_prefere_ser_chamado', formNovoPaciente.value.apelido);
-        formData.append('data_nascimento', formNovoPaciente.value.data_nascimento);
-        formData.append('email', formNovoPaciente.value.email);
-        formData.append('whatsapp', formNovoPaciente.value.whatsapp);
-        formData.append('sexo', formNovoPaciente.value.sexo);
-        formData.append('enviar_automatico', formNovoPaciente.value.enviar_automatico);
-        formData.append('canal', formNovoPaciente.value.canal);
-
-        // Adicionar imagem se existir
-        if (formNovoPaciente.value.foto_perfil && inputFotoRef.value?.files[0]) {
-            formData.append('foto_perfil', inputFotoRef.value.files[0]);
-        }
+        // Preparar dados para enviar no body
+        const dadosPaciente = {
+            nome: formNovoPaciente.value.nome,
+            como_prefere_ser_chamado: formNovoPaciente.value.apelido,
+            data_nascimento: formNovoPaciente.value.data_nascimento,
+            email: formNovoPaciente.value.email,
+            whatsapp: formNovoPaciente.value.whatsapp,
+            sexo: formNovoPaciente.value.sexo
+            // enviar_automatico: formNovoPaciente.value.enviar_automatico,
+            // canal: formNovoPaciente.value.canal
+        };
 
         // Chamar service para salvar
-        await PacienteService.criarPaciente(formData);
+        await PacienteService.criarPaciente(dadosPaciente);
 
         toast.add({
             severity: 'success',
@@ -277,6 +278,34 @@ const criarPlano = (paciente) => {
 const novoPlano = (paciente) => {
     console.log('Novo plano para:', paciente.nome);
 };
+
+// Watchers para remover erros quando o usuário edita os campos
+watch(
+    () => formNovoPaciente.value.nome,
+    () => {
+        if (formErrors.value.nome) {
+            delete formErrors.value.nome;
+        }
+    }
+);
+
+watch(
+    () => formNovoPaciente.value.email,
+    () => {
+        if (formErrors.value.email) {
+            delete formErrors.value.email;
+        }
+    }
+);
+
+watch(
+    () => formNovoPaciente.value.sexo,
+    () => {
+        if (formErrors.value.sexo) {
+            delete formErrors.value.sexo;
+        }
+    }
+);
 
 onMounted(() => {
     carregarPacientes();
@@ -337,7 +366,7 @@ onMounted(() => {
                         <Avatar :label="paciente.iniciais" shape="circle" size="large" :class="`${getAvatarBgColor(paciente.iniciais)} font-bold text-lg ring-4 ring-white`" />
                         <div class="flex-1 leading-tight">
                             <h3 class="font-bold text-lg -mb-1">{{ paciente.nome }}</h3>
-                            <p class="font-semibold text-sm">{{ paciente.idade }} anos</p>
+                            <p class="font-semibold text-sm">{{ paciente.data_nascimento ? `${paciente.idade} anos` : 'Idade não informada' }}</p>
                         </div>
                         <Tag :value="getStatusLabel(paciente.status)" :severity="getStatusSeverity(paciente.status)" class="ml-auto" severity="info" />
                     </div>
@@ -383,23 +412,16 @@ onMounted(() => {
             <div>
                 <h3 class="text-lg font-bold text-gray-900 mb-4">Dados pessoais</h3>
 
-                <!-- Foto de Perfil -->
-                <div class="mb-8 flex flex-col items-center">
-                    <!-- Input file hidden -->
+                <!-- Foto de Perfil - Em desenvolvimento -->
+                <!-- <div class="mb-8 flex flex-col items-center">
                     <input ref="inputFotoRef" type="file" accept="image/*" @change="carregarImagem" class="hidden" />
-
-                    <!-- Imagem Container -->
                     <div class="relative group mb-4">
-                        <!-- Preview da Imagem -->
                         <div v-if="imagemPreview" class="relative w-40 h-40 rounded-full overflow-hidden bg-gray-100 border-4 border-emerald-200 shadow-lg flex items-center justify-center">
                             <img :src="imagemPreview" :style="{ transform: `scale(${zoomImagem / 100})` }" class="w-full h-full object-cover" />
-                            <!-- Overlay Upload -->
                             <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all duration-300 cursor-pointer" @click="selecionarFoto">
                                 <i class="pi pi-cloud-upload text-white text-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
                             </div>
                         </div>
-
-                        <!-- Placeholder -->
                         <div
                             v-else
                             class="w-40 h-40 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-dashed border-emerald-300 flex items-center justify-center cursor-pointer hover:border-emerald-400 hover:shadow-md transition-all duration-300 group"
@@ -411,25 +433,22 @@ onMounted(() => {
                             </div>
                         </div>
                     </div>
-
-                    <!-- Controle de Zoom (compacto) -->
                     <div v-if="imagemPreview" class="w-full max-w-xs mb-4">
                         <input v-model.number="zoomImagem" type="range" min="50" max="200" step="10" class="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
                         <p class="text-xs text-center text-gray-500 mt-2">Tamanho: {{ zoomImagem }}%</p>
                     </div>
-
-                    <!-- Botões de ação -->
                     <div v-if="imagemPreview" class="flex gap-2 justify-center">
                         <Button label="Alterar" icon="pi pi-upload" severity="success" size="small" outlined @click="selecionarFoto" />
                         <Button label="Remover" icon="pi pi-trash" severity="danger" size="small" text @click="removerImagem" />
                     </div>
                     <p class="text-sm font-semibold text-gray-700 mt-4">Foto de perfil</p>
-                </div>
+                </div> -->
 
                 <!-- Nome Completo -->
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Nome completo</label>
-                    <InputText v-model="formNovoPaciente.nome" placeholder="Ex.: João da Silva" class="w-full" autocomplete="off" />
+                    <InputText v-model="formNovoPaciente.nome" placeholder="Ex.: João da Silva" class="w-full" autocomplete="off" :invalid="!!formErrors.nome" />
+                    <small v-if="formErrors.nome" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.nome }}</small>
                 </div>
 
                 <!-- Apelido e Data de Nascimento -->
@@ -447,7 +466,8 @@ onMounted(() => {
                 <!-- E-mail -->
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">E-mail</label>
-                    <InputText v-model="formNovoPaciente.email" type="email" placeholder="email@exemplo.com" class="w-full" autocomplete="off" />
+                    <InputText v-model="formNovoPaciente.email" type="email" placeholder="email@exemplo.com" class="w-full" autocomplete="off" :invalid="!!formErrors.email" />
+                    <small v-if="formErrors.email" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.email }}</small>
                 </div>
 
                 <!-- WhatsApp e Sexo -->
@@ -458,30 +478,31 @@ onMounted(() => {
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Sexo</label>
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-4 mb-2">
                             <div class="flex items-center">
-                                <RadioButton v-model="formNovoPaciente.sexo" value="M" inputId="masculino" />
+                                <RadioButton v-model="formNovoPaciente.sexo" value="M" inputId="masculino" :invalid="!!formErrors.sexo" />
                                 <label for="masculino" class="ml-2 text-sm cursor-pointer">Masculino</label>
                             </div>
                             <div class="flex items-center">
-                                <RadioButton v-model="formNovoPaciente.sexo" value="F" inputId="feminino" />
+                                <RadioButton v-model="formNovoPaciente.sexo" value="F" inputId="feminino" :invalid="!!formErrors.sexo" />
                                 <label for="feminino" class="ml-2 text-sm cursor-pointer">Feminino</label>
                             </div>
                             <div class="flex items-center">
-                                <RadioButton v-model="formNovoPaciente.sexo" value="O" inputId="outro" />
+                                <RadioButton v-model="formNovoPaciente.sexo" value="Outro" inputId="outro" :invalid="!!formErrors.sexo" />
                                 <label for="outro" class="ml-2 text-sm cursor-pointer">Outro</label>
                             </div>
                         </div>
+                        <small v-if="formErrors.sexo" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.sexo }}</small>
                     </div>
                 </div>
             </div>
 
             <!-- Seção: Boas-vindas -->
-            <div class="border-t border-gray-200 pt-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">Boas-vindas</h3>
+            <!-- <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Boas-vindas</h3> -->
 
-                <!-- Link de Acesso -->
-                <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded mb-4 flex items-start gap-3">
+            <!-- Link de Acesso -->
+            <!-- <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded mb-4 flex items-start gap-3">
                     <i class="pi pi-link text-emerald-600 text-xl flex-shrink-0 mt-1"></i>
                     <div class="flex-1">
                         <h4 class="font-semibold text-emerald-900 mb-1">Link de acesso</h4>
@@ -500,7 +521,7 @@ onMounted(() => {
                     </div>
                     <Toggle v-model="formNovoPaciente.enviar_automatico" onLabel="Sim" offLabel="Não" class="flex-shrink-0" />
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <template #footer>
