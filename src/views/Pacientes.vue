@@ -389,9 +389,9 @@ onMounted(() => {
                     </div>
 
                     <!-- Telefone -->
-                    <div v-if="paciente.telefone" class="flex items-center gap-3">
+                    <div class="flex items-center gap-3">
                         <i class="pi pi-phone text-emerald-600"></i>
-                        <p class="text-gray-700 text-sm">{{ paciente.telefone }}</p>
+                        <p class="text-gray-700 text-sm">{{ paciente.telefone || 'Telefone não informado' }}</p>
                     </div>
                 </div>
 

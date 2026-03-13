@@ -35,6 +35,14 @@ const router = createRouter({
                     component: () => import('@/views/Pacientes.vue')
                 },
                 {
+                    path: '/pacientes/:id',
+                    name: 'pacienteDetalhes',
+                    meta: {
+                        breadcrumb: ['Pacientes', 'Detalhes']
+                    },
+                    component: () => import('@/views/PacienteDetalhes.vue')
+                },
+                {
                     path: '/alimentos',
                     name: 'alimentos',
                     meta: {
@@ -101,6 +109,11 @@ const router = createRouter({
             path: '/criar-conta-gratis',
             name: 'criarContaGratis',
             component: () => import('@/views/pages/CriarContaGratis.vue')
+        },
+        {
+            path: '/formulario/:id',
+            name: 'formularioAnamnese',
+            component: () => import('@/views/FormularioAnamnese.vue')
         }
     ]
 });
