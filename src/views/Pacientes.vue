@@ -1,12 +1,16 @@
 <script setup>
 import PacienteService from '@/service/PacienteService';
+import { DatePicker } from 'primevue';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
+import InputMask from 'primevue/inputmask';
 import InputText from 'primevue/inputtext';
+import RadioButton from 'primevue/radiobutton';
 import Tag from 'primevue/tag';
+import Toggle from 'primevue/togglebutton';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -20,6 +24,24 @@ const filtroStatus = ref('todos');
 const searchValue = ref('');
 const showDialog = ref(false);
 const loading = ref(true);
+
+// Estados da foto de perfil
+const imagemPreview = ref(null);
+const zoomImagem = ref(100);
+const inputFotoRef = ref(null);
+
+// Estados do formulário
+const formNovoPaciente = ref({
+    nome: '',
+    apelido: '',
+    data_nascimento: null,
+    email: '',
+    whatsapp: '',
+    sexo: '',
+    foto_perfil: null,
+    enviar_automatico: false,
+    canal: 'whatsapp'
+});
 
 // Função para extrair iniciais do nome
 const getIniciaisDo = (nome) => {
@@ -125,6 +147,35 @@ const carregarPacientes = async () => {
     }
 };
 
+// Função para carregar imagem de perfil
+const carregarImagem = (event) => {
+    const arquivo = event.target.files[0];
+    if (arquivo) {
+        const leitor = new FileReader();
+        leitor.onload = (e) => {
+            imagemPreview.value = e.target.result;
+            formNovoPaciente.value.foto_perfil = e.target.result;
+            zoomImagem.value = 100;
+        };
+        leitor.readAsDataURL(arquivo);
+    }
+};
+
+// Função para remover a imagem
+const removerImagem = () => {
+    imagemPreview.value = null;
+    formNovoPaciente.value.foto_perfil = null;
+    zoomImagem.value = 100;
+    if (inputFotoRef.value) {
+        inputFotoRef.value.value = '';
+    }
+};
+
+// Função para abrir seletor de arquivo
+const selecionarFoto = () => {
+    inputFotoRef.value?.click();
+};
+
 const pacientesFiltrados = () => {
     let resultado = pacientes.value || [];
 
@@ -143,7 +194,76 @@ const pacientesFiltrados = () => {
 };
 
 const abrirNovoPaciente = () => {
+    formNovoPaciente.value = {
+        nome: '',
+        apelido: '',
+        data_nascimento: null,
+        email: '',
+        whatsapp: '',
+        sexo: '',
+        foto_perfil: null,
+        enviar_automatico: false,
+        canal: 'whatsapp'
+    };
+    imagemPreview.value = null;
+    zoomImagem.value = 100;
+    if (inputFotoRef.value) {
+        inputFotoRef.value.value = '';
+    }
     showDialog.value = true;
+};
+
+const salvarNovoPaciente = async () => {
+    // Validar campos obrigatórios
+    if (!formNovoPaciente.value.nome || !formNovoPaciente.value.email) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Atenção',
+            detail: 'Nome e Email são obrigatórios',
+            life: 3000
+        });
+        return;
+    }
+
+    try {
+        // Criar FormData para enviar a imagem
+        const formData = new FormData();
+        formData.append('nome', formNovoPaciente.value.nome);
+        formData.append('como_prefere_ser_chamado', formNovoPaciente.value.apelido);
+        formData.append('data_nascimento', formNovoPaciente.value.data_nascimento);
+        formData.append('email', formNovoPaciente.value.email);
+        formData.append('whatsapp', formNovoPaciente.value.whatsapp);
+        formData.append('sexo', formNovoPaciente.value.sexo);
+        formData.append('enviar_automatico', formNovoPaciente.value.enviar_automatico);
+        formData.append('canal', formNovoPaciente.value.canal);
+
+        // Adicionar imagem se existir
+        if (formNovoPaciente.value.foto_perfil && inputFotoRef.value?.files[0]) {
+            formData.append('foto_perfil', inputFotoRef.value.files[0]);
+        }
+
+        // Chamar service para salvar
+        await PacienteService.criarPaciente(formData);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: 'Paciente cadastrado com sucesso',
+            life: 3000
+        });
+
+        // Fechar dialog e recarregar lista
+        showDialog.value = false;
+        await carregarPacientes();
+    } catch (error) {
+        console.error('Erro ao salvar paciente:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Não foi possível cadastrar o paciente',
+            life: 3000
+        });
+    }
 };
 
 const verPerfil = (paciente) => {
@@ -257,13 +377,135 @@ onMounted(() => {
     </div>
 
     <!-- Dialog Novo Paciente -->
-    <Dialog v-model:visible="showDialog" header="Novo Paciente" :modal="true" :style="{ width: '50vw' }" @hide="showDialog = false">
-        <div class="space-y-4">
-            <p class="text-gray-500">Formulário para adicionar novo paciente em desenvolvimento...</p>
+    <Dialog v-model:visible="showDialog" header="Novo Paciente" :modal="true" :style="{ width: '60vw' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" @hide="showDialog = false">
+        <div class="space-y-6">
+            <!-- Seção: Dados Pessoais -->
+            <div>
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Dados pessoais</h3>
+
+                <!-- Foto de Perfil -->
+                <div class="mb-8 flex flex-col items-center">
+                    <!-- Input file hidden -->
+                    <input ref="inputFotoRef" type="file" accept="image/*" @change="carregarImagem" class="hidden" />
+
+                    <!-- Imagem Container -->
+                    <div class="relative group mb-4">
+                        <!-- Preview da Imagem -->
+                        <div v-if="imagemPreview" class="relative w-40 h-40 rounded-full overflow-hidden bg-gray-100 border-4 border-emerald-200 shadow-lg flex items-center justify-center">
+                            <img :src="imagemPreview" :style="{ transform: `scale(${zoomImagem / 100})` }" class="w-full h-full object-cover" />
+                            <!-- Overlay Upload -->
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 flex items-center justify-center transition-all duration-300 cursor-pointer" @click="selecionarFoto">
+                                <i class="pi pi-cloud-upload text-white text-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></i>
+                            </div>
+                        </div>
+
+                        <!-- Placeholder -->
+                        <div
+                            v-else
+                            class="w-40 h-40 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-dashed border-emerald-300 flex items-center justify-center cursor-pointer hover:border-emerald-400 hover:shadow-md transition-all duration-300 group"
+                            @click="selecionarFoto"
+                        >
+                            <div class="text-center">
+                                <i class="pi pi-camera text-emerald-400 text-4xl block mb-2"></i>
+                                <p class="text-xs font-semibold text-emerald-600">Clique para enviar</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controle de Zoom (compacto) -->
+                    <div v-if="imagemPreview" class="w-full max-w-xs mb-4">
+                        <input v-model.number="zoomImagem" type="range" min="50" max="200" step="10" class="w-full h-2 bg-emerald-100 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                        <p class="text-xs text-center text-gray-500 mt-2">Tamanho: {{ zoomImagem }}%</p>
+                    </div>
+
+                    <!-- Botões de ação -->
+                    <div v-if="imagemPreview" class="flex gap-2 justify-center">
+                        <Button label="Alterar" icon="pi pi-upload" severity="success" size="small" outlined @click="selecionarFoto" />
+                        <Button label="Remover" icon="pi pi-trash" severity="danger" size="small" text @click="removerImagem" />
+                    </div>
+                    <p class="text-sm font-semibold text-gray-700 mt-4">Foto de perfil</p>
+                </div>
+
+                <!-- Nome Completo -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nome completo</label>
+                    <InputText v-model="formNovoPaciente.nome" placeholder="Ex.: João da Silva" class="w-full" autocomplete="off" />
+                </div>
+
+                <!-- Apelido e Data de Nascimento -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Apelido</label>
+                        <InputText v-model="formNovoPaciente.apelido" placeholder="Como ele prefere ser chamado" class="w-full" autocomplete="off" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Data de nascimento</label>
+                        <DatePicker v-model="formNovoPaciente.data_nascimento" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" />
+                    </div>
+                </div>
+
+                <!-- E-mail -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">E-mail</label>
+                    <InputText v-model="formNovoPaciente.email" type="email" placeholder="email@exemplo.com" class="w-full" autocomplete="off" />
+                </div>
+
+                <!-- WhatsApp e Sexo -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
+                        <InputMask v-model="formNovoPaciente.whatsapp" mask="(99) 99999-9999" placeholder="(00) 00000-0000" class="w-full" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Sexo</label>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center">
+                                <RadioButton v-model="formNovoPaciente.sexo" value="M" inputId="masculino" />
+                                <label for="masculino" class="ml-2 text-sm cursor-pointer">Masculino</label>
+                            </div>
+                            <div class="flex items-center">
+                                <RadioButton v-model="formNovoPaciente.sexo" value="F" inputId="feminino" />
+                                <label for="feminino" class="ml-2 text-sm cursor-pointer">Feminino</label>
+                            </div>
+                            <div class="flex items-center">
+                                <RadioButton v-model="formNovoPaciente.sexo" value="O" inputId="outro" />
+                                <label for="outro" class="ml-2 text-sm cursor-pointer">Outro</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção: Boas-vindas -->
+            <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Boas-vindas</h3>
+
+                <!-- Link de Acesso -->
+                <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded mb-4 flex items-start gap-3">
+                    <i class="pi pi-link text-emerald-600 text-xl flex-shrink-0 mt-1"></i>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-emerald-900 mb-1">Link de acesso</h4>
+                        <p class="text-sm text-emerald-800">O paciente receberá automaticamente um link para acessar o portal do paciente e preencher a anamnese prévia.</p>
+                        <div class="mt-3 flex gap-2">
+                            <Button
+                                label="WHATSAPP"
+                                icon="pi pi-send"
+                                :severity="formNovoPaciente.canal === 'whatsapp' ? 'success' : 'secondary'"
+                                size="small"
+                                :text="formNovoPaciente.canal !== 'whatsapp'"
+                                @click="formNovoPaciente.canal = 'whatsapp'"
+                            />
+                            <Button label="E-MAIL" icon="pi pi-envelope" :severity="formNovoPaciente.canal === 'email' ? 'success' : 'secondary'" size="small" :text="formNovoPaciente.canal !== 'email'" @click="formNovoPaciente.canal = 'email'" />
+                        </div>
+                    </div>
+                    <Toggle v-model="formNovoPaciente.enviar_automatico" onLabel="Sim" offLabel="Não" class="flex-shrink-0" />
+                </div>
+            </div>
         </div>
+
         <template #footer>
-            <Button label="Cancelar" severity="secondary" text @click="showDialog = false" />
-            <Button label="Salvar" severity="success" @click="showDialog = false" />
+            <Button label="Cancelar" severity="secondary" @click="showDialog = false" />
+            <Button label="Salvar paciente" severity="success" icon="pi pi-check" @click="salvarNovoPaciente" class="w-full" />
         </template>
     </Dialog>
 </template>

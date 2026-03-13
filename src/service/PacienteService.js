@@ -36,7 +36,16 @@ export default {
 
     // Criar novo paciente
     criarPaciente(dados) {
-        return apiClient.post('/pacientes', dados);
+        const config = {};
+
+        // Se for FormData, deixar o axios detectar automaticamente
+        if (dados instanceof FormData) {
+            config.headers = {
+                'Content-Type': 'multipart/form-data'
+            };
+        }
+
+        return apiClient.post('/pacientes', dados, config);
     },
 
     // Atualizar paciente
