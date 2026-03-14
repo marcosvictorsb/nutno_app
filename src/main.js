@@ -1,3 +1,4 @@
+import { setRouter, setToast } from '@/service/ApiClient';
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
@@ -147,4 +148,16 @@ app.use(ToastService);
 app.use(ConfirmationService);
 app.component('Toast', Toast);
 
+// Inicializar ApiClient com router e toast
+setRouter(router);
+
+// Aguardar a app estar pronta para acessar o toast
 app.mount('#app');
+
+// Após a app estar montada, configurar o toast global
+setTimeout(() => {
+    const appInstance = app._instance;
+    if (appInstance && appInstance.appContext.config.globalProperties.$toast) {
+        setToast(appInstance.appContext.config.globalProperties.$toast);
+    }
+}, 0);

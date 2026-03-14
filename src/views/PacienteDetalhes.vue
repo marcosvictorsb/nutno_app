@@ -1,11 +1,13 @@
 <script setup>
 import AnamneseService from '@/service/AnamneseService';
+import MedidaService from '@/service/MedidaService';
 import PacienteService from '@/service/PacienteService';
 import { DatePicker } from 'primevue';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputMask from 'primevue/inputmask';
+import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import RadioButton from 'primevue/radiobutton';
 import Tag from 'primevue/tag';
@@ -37,6 +39,49 @@ const showDialogEdicaoAnamnese = ref(false);
 const loadingEdicaoAnamnese = ref(false);
 const anamneseEditando = ref(null);
 const modoEdicao = ref(true); // true = editar, false = criar
+
+// Estados das medidas
+const medidas = ref([]);
+const loadingMedidas = ref(false);
+const erroMedidas = ref(null);
+const medidasCarregada = ref(false);
+const medidaSelecionada = ref(null);
+
+// Estados para adição de medidas
+const showDialogCriacaoMedida = ref(false);
+const loadingCriacaoMedida = ref(false);
+const formularioMedida = ref({
+    data_avaliacao: null,
+    peso: null,
+    altura: null,
+    imc: null,
+    perc_gordura_corporal: null,
+    perc_massa_magra: null,
+    idade_metabolica: null,
+    circunferencia_cintura: null,
+    circunferencia_quadril: null,
+    relacao_cintura_quadril: null,
+    circunferencia_abdominal: null,
+    circunferencia_braco: null,
+    circunferencia_coxa_direita: null,
+    circunferencia_coxa_esquerda: null,
+    circunferencia_panturrilha: null,
+    circunferencia_torax: null,
+    dobra_subescapular: null,
+    dobra_tricipital: null,
+    dobra_bicipital: null,
+    dobra_suprailíaca: null,
+    dobra_abdominal: null,
+    dobra_coxal: null,
+    dobra_peitoral: null,
+    pressao_arterial_sistolica: null,
+    pressao_arterial_diastolica: null,
+    frequencia_cardiaca: null,
+    tmb: null,
+    gasto_energetico_total: null,
+    nivel_atividade: 'leve',
+    observacoes: ''
+});
 
 // Estados do formulário de edição
 const formEdicaoPaciente = ref({
@@ -454,6 +499,260 @@ const salvarEdicaoAnamnese = async () => {
     }
 };
 
+// Funções de Medidas
+const carregarMedidas = async () => {
+    loadingMedidas.value = true;
+    erroMedidas.value = null;
+
+    try {
+        const idPaciente = route.params.id;
+        console.log('📊 Carregando medidas do paciente:', idPaciente);
+
+        const response = await MedidaService.listarMedidasPaciente(idPaciente);
+        console.log('✅ Resposta de medidas:', response.data);
+
+        if (response.data.success) {
+            if (response.data.data && Array.isArray(response.data.data)) {
+                medidas.value = response.data.data.sort((a, b) => new Date(b.data_avaliacao) - new Date(a.data_avaliacao));
+                if (medidas.value.length > 0) {
+                    medidaSelecionada.value = medidas.value[0];
+                }
+                erroMedidas.value = null;
+            } else {
+                medidas.value = [];
+                erroMedidas.value = null;
+            }
+        } else {
+            erroMedidas.value = response.data.message || 'Erro ao listar medidas';
+            medidas.value = [];
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar medidas:', error);
+        erroMedidas.value = 'Erro ao carregar medidas. Tente novamente.';
+        medidas.value = [];
+    } finally {
+        loadingMedidas.value = false;
+        medidasCarregada.value = true;
+    }
+};
+
+watch(
+    () => activeTab.value,
+    (novaTab) => {
+        if (novaTab === 'medidas' && !medidasCarregada.value) {
+            carregarMedidas();
+        }
+    }
+);
+
+const abrirCriacaoMedida = () => {
+    formularioMedida.value = {
+        data_avaliacao: new Date(),
+        peso: null,
+        altura: null,
+        imc: null,
+        perc_gordura_corporal: null,
+        perc_massa_magra: null,
+        idade_metabolica: null,
+        circunferencia_cintura: null,
+        circunferencia_quadril: null,
+        relacao_cintura_quadril: null,
+        circunferencia_abdominal: null,
+        circunferencia_braco: null,
+        circunferencia_coxa_direita: null,
+        circunferencia_coxa_esquerda: null,
+        circunferencia_panturrilha: null,
+        circunferencia_torax: null,
+        dobra_subescapular: null,
+        dobra_tricipital: null,
+        dobra_bicipital: null,
+        dobra_suprailíaca: null,
+        dobra_abdominal: null,
+        dobra_coxal: null,
+        dobra_peitoral: null,
+        pressao_arterial_sistolica: null,
+        pressao_arterial_diastolica: null,
+        frequencia_cardiaca: null,
+        tmb: null,
+        gasto_energetico_total: null,
+        nivel_atividade: 'leve',
+        observacoes: ''
+    };
+    showDialogCriacaoMedida.value = true;
+};
+
+const fecharCriacaoMedida = () => {
+    showDialogCriacaoMedida.value = false;
+    formularioMedida.value = {};
+};
+
+const salvarMedida = async () => {
+    loadingCriacaoMedida.value = true;
+
+    try {
+        const idPaciente = route.params.id;
+        console.log('📝 Salvando medida para paciente:', idPaciente);
+
+        // Converter a data para o formato YYYY-MM-DD
+        let dataFormatada = null;
+        if (formularioMedida.value.data_avaliacao) {
+            const date = new Date(formularioMedida.value.data_avaliacao);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            dataFormatada = `${year}-${month}-${day}`;
+        }
+
+        // Preparar dados para enviar (apenas campos preenchidos e com valores)
+        const dadosMedida = {};
+
+        if (dataFormatada) dadosMedida.data_avaliacao = dataFormatada;
+        if (formularioMedida.value.peso !== null && formularioMedida.value.peso !== '') {
+            dadosMedida.peso = formularioMedida.value.peso.toString();
+        }
+        if (formularioMedida.value.altura !== null && formularioMedida.value.altura !== '') {
+            dadosMedida.altura = formularioMedida.value.altura.toString();
+        }
+        if (formularioMedida.value.imc !== null && formularioMedida.value.imc !== '') {
+            dadosMedida.imc = formularioMedida.value.imc.toString();
+        }
+        if (formularioMedida.value.perc_gordura_corporal !== null && formularioMedida.value.perc_gordura_corporal !== '') {
+            dadosMedida.perc_gordura_corporal = formularioMedida.value.perc_gordura_corporal.toString();
+        }
+        if (formularioMedida.value.perc_massa_magra !== null && formularioMedida.value.perc_massa_magra !== '') {
+            dadosMedida.perc_massa_magra = formularioMedida.value.perc_massa_magra.toString();
+        }
+        if (formularioMedida.value.idade_metabolica !== null && formularioMedida.value.idade_metabolica !== '') {
+            dadosMedida.idade_metabolica = formularioMedida.value.idade_metabolica;
+        }
+        if (formularioMedida.value.circunferencia_cintura !== null && formularioMedida.value.circunferencia_cintura !== '') {
+            dadosMedida.circunferencia_cintura = formularioMedida.value.circunferencia_cintura.toString();
+        }
+        if (formularioMedida.value.circunferencia_quadril !== null && formularioMedida.value.circunferencia_quadril !== '') {
+            dadosMedida.circunferencia_quadril = formularioMedida.value.circunferencia_quadril.toString();
+        }
+        if (formularioMedida.value.relacao_cintura_quadril !== null && formularioMedida.value.relacao_cintura_quadril !== '') {
+            dadosMedida.relacao_cintura_quadril = formularioMedida.value.relacao_cintura_quadril.toString();
+        }
+        if (formularioMedida.value.circunferencia_abdominal !== null && formularioMedida.value.circunferencia_abdominal !== '') {
+            dadosMedida.circunferencia_abdominal = formularioMedida.value.circunferencia_abdominal.toString();
+        }
+        if (formularioMedida.value.circunferencia_braco !== null && formularioMedida.value.circunferencia_braco !== '') {
+            dadosMedida.circunferencia_braco = formularioMedida.value.circunferencia_braco.toString();
+        }
+        if (formularioMedida.value.circunferencia_coxa_direita !== null && formularioMedida.value.circunferencia_coxa_direita !== '') {
+            dadosMedida.circunferencia_coxa_direita = formularioMedida.value.circunferencia_coxa_direita.toString();
+        }
+        if (formularioMedida.value.circunferencia_coxa_esquerda !== null && formularioMedida.value.circunferencia_coxa_esquerda !== '') {
+            dadosMedida.circunferencia_coxa_esquerda = formularioMedida.value.circunferencia_coxa_esquerda.toString();
+        }
+        if (formularioMedida.value.circunferencia_panturrilha !== null && formularioMedida.value.circunferencia_panturrilha !== '') {
+            dadosMedida.circunferencia_panturrilha = formularioMedida.value.circunferencia_panturrilha.toString();
+        }
+        if (formularioMedida.value.circunferencia_torax !== null && formularioMedida.value.circunferencia_torax !== '') {
+            dadosMedida.circunferencia_torax = formularioMedida.value.circunferencia_torax.toString();
+        }
+        if (formularioMedida.value.dobra_subescapular !== null && formularioMedida.value.dobra_subescapular !== '') {
+            dadosMedida.dobra_subescapular = formularioMedida.value.dobra_subescapular.toString();
+        }
+        if (formularioMedida.value.dobra_tricipital !== null && formularioMedida.value.dobra_tricipital !== '') {
+            dadosMedida.dobra_tricipital = formularioMedida.value.dobra_tricipital.toString();
+        }
+        if (formularioMedida.value.dobra_bicipital !== null && formularioMedida.value.dobra_bicipital !== '') {
+            dadosMedida.dobra_bicipital = formularioMedida.value.dobra_bicipital.toString();
+        }
+        if (formularioMedida.value.dobra_suprailíaca !== null && formularioMedida.value.dobra_suprailíaca !== '') {
+            dadosMedida.dobra_suprailíaca = formularioMedida.value.dobra_suprailíaca.toString();
+        }
+        if (formularioMedida.value.dobra_abdominal !== null && formularioMedida.value.dobra_abdominal !== '') {
+            dadosMedida.dobra_abdominal = formularioMedida.value.dobra_abdominal.toString();
+        }
+        if (formularioMedida.value.dobra_coxal !== null && formularioMedida.value.dobra_coxal !== '') {
+            dadosMedida.dobra_coxal = formularioMedida.value.dobra_coxal.toString();
+        }
+        if (formularioMedida.value.dobra_peitoral !== null && formularioMedida.value.dobra_peitoral !== '') {
+            dadosMedida.dobra_peitoral = formularioMedida.value.dobra_peitoral.toString();
+        }
+        if (formularioMedida.value.pressao_arterial_sistolica !== null && formularioMedida.value.pressao_arterial_sistolica !== '') {
+            dadosMedida.pressao_arterial_sistolica = formularioMedida.value.pressao_arterial_sistolica;
+        }
+        if (formularioMedida.value.pressao_arterial_diastolica !== null && formularioMedida.value.pressao_arterial_diastolica !== '') {
+            dadosMedida.pressao_arterial_diastolica = formularioMedida.value.pressao_arterial_diastolica;
+        }
+        if (formularioMedida.value.frequencia_cardiaca !== null && formularioMedida.value.frequencia_cardiaca !== '') {
+            dadosMedida.frequencia_cardiaca = formularioMedida.value.frequencia_cardiaca;
+        }
+        if (formularioMedida.value.tmb !== null && formularioMedida.value.tmb !== '') {
+            dadosMedida.tmb = formularioMedida.value.tmb.toString();
+        }
+        if (formularioMedida.value.gasto_energetico_total !== null && formularioMedida.value.gasto_energetico_total !== '') {
+            dadosMedida.gasto_energetico_total = formularioMedida.value.gasto_energetico_total.toString();
+        }
+        if (formularioMedida.value.nivel_atividade) {
+            dadosMedida.nivel_atividade = formularioMedida.value.nivel_atividade;
+        }
+        if (formularioMedida.value.observacoes) {
+            dadosMedida.observacoes = formularioMedida.value.observacoes;
+        }
+
+        const response = await MedidaService.criarMedida(idPaciente, dadosMedida);
+
+        console.log('✅ Medida criada:', response.data);
+
+        if (response.data.success) {
+            fecharCriacaoMedida();
+            await carregarMedidas();
+
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso!',
+                detail: 'Medida criada com sucesso',
+                life: 3000
+            });
+        } else {
+            throw new Error(response.data.message || 'Erro ao criar medida');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao salvar medida:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: error.response?.data?.message || 'Erro ao salvar a medida',
+            life: 3000
+        });
+    } finally {
+        loadingCriacaoMedida.value = false;
+    }
+};
+
+const deletarMedida = async (idMedida) => {
+    if (!confirm('Tem certeza que deseja deletar esta medida?')) {
+        return;
+    }
+
+    try {
+        const idPaciente = route.params.id;
+        await MedidaService.deletarMedida(idPaciente, idMedida);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: 'Medida deletada com sucesso',
+            life: 3000
+        });
+
+        await carregarMedidas();
+    } catch (error) {
+        console.error('❌ Erro ao deletar medida:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Erro ao deletar a medida',
+            life: 3000
+        });
+    }
+};
+
 onMounted(() => {
     carregarPaciente();
 });
@@ -859,6 +1158,284 @@ onMounted(() => {
                 </div>
             </div>
 
+            <!-- Tab: Medidas -->
+            <div v-if="activeTab === 'medidas'" class="mx-auto">
+                <!-- Loading State -->
+                <div v-if="loadingMedidas" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
+                    <i class="pi pi-spin pi-spinner text-5xl text-emerald-600 mb-4"></i>
+                    <p class="text-gray-600 font-medium">Carregando medidas...</p>
+                </div>
+
+                <!-- Medidas Not Found / Empty State -->
+                <div v-else-if="!loadingMedidas && medidas.length === 0" class="bg-white rounded-2xl shadow-sm border border-emerald-50 p-8 mx-auto">
+                    <div class="text-center space-y-6">
+                        <div class="flex justify-center">
+                            <div class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+                                <i class="pi pi-chart-bar text-5xl text-blue-500"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Nenhuma Medida Registrada</h3>
+                            <p class="text-gray-500 text-base leading-relaxed">
+                                Este paciente ainda não possui medidas corporais registradas. <br />
+                                Clique no botão abaixo para registrar a primeira medida e começar a monitorar a evolução.
+                            </p>
+                        </div>
+                        <Button label="Registrar Primeira Medida" icon="pi pi-plus" @click="abrirCriacaoMedida" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold w-full sm:w-auto justify-center" size="large" />
+                    </div>
+                </div>
+
+                <!-- Medidas Found - Display Data -->
+                <div v-else-if="!loadingMedidas && medidas.length > 0" class="space-y-6">
+                    <!-- Header com botão Adicionar -->
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-slate-800">Dados das Medidas</h2>
+                        <Button label="Adicionar Medida" icon="pi pi-plus" @click="abrirCriacaoMedida" class="bg-emerald-600 hover:bg-emerald-700" />
+                    </div>
+
+                    <!-- Quick Stats - Cards with Latest Measurements -->
+                    <div v-if="medidaSelecionada" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Weight Card -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-emerald-50 hover:shadow-md transition-shadow">
+                            <p class="text-xs font-bold text-slate-400 tracking-widest uppercase mb-4">PESO ATUAL</p>
+                            <div class="flex items-end justify-between">
+                                <div>
+                                    <span class="text-4xl font-bold text-emerald-600">{{ medidaSelecionada.peso }}</span>
+                                    <span class="text-lg text-slate-400 ml-1 font-medium">kg</span>
+                                </div>
+                                <div v-if="medidas[1]" class="text-right">
+                                    <div class="flex items-center" :class="medidaSelecionada.peso < medidas[1].peso ? 'text-green-600' : 'text-red-600'">
+                                        <span class="material-symbols-outlined text-base">{{ medidaSelecionada.peso < medidas[1].peso ? 'arrow_downward' : 'arrow_upward' }}</span>
+                                        <span class="text-xs font-bold">{{ Math.abs((medidaSelecionada.peso - medidas[1].peso).toFixed(2)) }} kg</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BMI Card -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-blue-50 hover:shadow-md transition-shadow">
+                            <p class="text-xs font-bold text-slate-400 tracking-widest uppercase mb-4">IMC</p>
+                            <div class="flex items-end justify-between">
+                                <div>
+                                    <span class="text-4xl font-bold text-blue-600">{{ medidaSelecionada.imc || '-' }}</span>
+                                </div>
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full">{{ medidaSelecionada.imc >= 30 ? 'ACIMA' : medidaSelecionada.imc >= 25 ? 'SOBRE' : 'NORMAL' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Fat % Card -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-50 hover:shadow-md transition-shadow">
+                            <p class="text-xs font-bold text-slate-400 tracking-widest uppercase mb-4">% GORDURA</p>
+                            <div class="flex items-end justify-between">
+                                <div>
+                                    <span class="text-4xl font-bold text-orange-600">{{ medidaSelecionada.perc_gordura_corporal || '-' }}</span>
+                                    <span class="text-lg text-slate-400 ml-1 font-medium">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lean Mass Card -->
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-purple-50 hover:shadow-md transition-shadow">
+                            <p class="text-xs font-bold text-slate-400 tracking-widest uppercase mb-4">% MASSA MAGRA</p>
+                            <div class="flex items-end justify-between">
+                                <div>
+                                    <span class="text-4xl font-bold text-purple-600">{{ medidaSelecionada.perc_massa_magra || '-' }}</span>
+                                    <span class="text-lg text-slate-400 ml-1 font-medium">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historical Table -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 overflow-hidden">
+                        <div class="px-8 py-6 border-b border-emerald-100">
+                            <h4 class="font-bold text-lg text-slate-800">Histórico de Avaliações</h4>
+                        </div>
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-emerald-100">
+                                    <th class="px-8 py-4">Data</th>
+                                    <th class="px-8 py-4">Peso</th>
+                                    <th class="px-8 py-4">Altura</th>
+                                    <th class="px-8 py-4">IMC</th>
+                                    <th class="px-8 py-4">% Gordura</th>
+                                    <th class="px-8 py-4">Cintura</th>
+                                    <th class="px-8 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="medida in medidas" :key="medida.id" class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-8 py-4 font-semibold text-slate-800">{{ MedidaService.formatarData(medida.data_avaliacao) }}</td>
+                                    <td class="px-8 py-4 text-slate-600">{{ medida.peso }} kg</td>
+                                    <td class="px-8 py-4 text-slate-600">{{ medida.altura }} cm</td>
+                                    <td class="px-8 py-4 font-bold text-emerald-600">{{ medida.imc }}</td>
+                                    <td class="px-8 py-4 text-slate-600">{{ medida.perc_gordura_corporal || '-' }}%</td>
+                                    <td class="px-8 py-4 text-slate-600">{{ medida.circunferencia_cintura || '-' }} cm</td>
+                                    <td class="px-8 py-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <Button icon="pi pi-eye" text severity="info" size="small" @click="medidaSelecionada = medida" class="hover:text-emerald-600" />
+                                            <Button icon="pi pi-trash" text severity="danger" size="small" @click="deletarMedida(medida.id)" class="hover:text-red-600" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Detailed Evaluation - if medida is selected -->
+                    <div v-if="medidaSelecionada" class="space-y-6">
+                        <div class="flex items-center gap-3 mb-6">
+                            <h4 class="text-xl font-bold">Avaliação — {{ MedidaService.formatarData(medidaSelecionada.data_avaliacao) }}</h4>
+                            <span v-if="medidaSelecionada.id === medidas[0].id" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">MAIS RECENTE</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Section 1: Antropométricos -->
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-emerald-50">
+                                <h5 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Dados Antropométricos</h5>
+                                <div class="grid grid-cols-2 gap-y-6 gap-x-4">
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">PESO</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.peso }} kg</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">ALTURA</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.altura }} cm</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">IMC</p>
+                                        <p class="text-lg font-bold text-emerald-600">{{ medidaSelecionada.imc }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">% GORDURA</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.perc_gordura_corporal || '-' }}%</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">% MASSA MAGRA</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.perc_massa_magra || '-' }}%</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">IDADE METABÓLICA</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.idade_metabolica || '-' }} anos</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Circunferências -->
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-emerald-50">
+                                <h5 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Circunferências (cm)</h5>
+                                <div class="grid grid-cols-3 gap-y-6 gap-x-4">
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">CINTURA</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_cintura || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">QUADRIL</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_quadril || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">ABDÔMEN</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_abdominal || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">RCQ</p>
+                                        <p class="text-lg font-bold text-emerald-600">{{ medidaSelecionada.relacao_cintura_quadril || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">BRAÇO</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_braco || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">TÓRAX</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_torax || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">COXA D.</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_coxa_direita || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">COXA E.</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_coxa_esquerda || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">PANTURRILHA</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.circunferencia_panturrilha || '-' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 3: Dobras Cutâneas -->
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-emerald-50">
+                                <h5 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Dobras Cutâneas (mm)</h5>
+                                <div class="grid grid-cols-4 gap-y-6 gap-x-4">
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">SUBSCAP.</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_subescapular || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">TRÍCEPS</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_tricipital || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">BÍCEPS</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_bicipital || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">SUPRAIL.</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_suprailíaca || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">ABDÔM.</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_abdominal || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">COXAL</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_coxal || '-' }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">PEITORAL</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.dobra_peitoral || '-' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section 4: Dados Complementares -->
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-emerald-50">
+                                <h5 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Dados Complementares</h5>
+                                <div class="space-y-6">
+                                    <div class="grid grid-cols-2 gap-y-6 gap-x-4">
+                                        <div class="space-y-1">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">PRESSÃO ART.</p>
+                                            <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.pressao_arterial_sistolica || '-' }}/{{ medidaSelecionada.pressao_arterial_diastolica || '-' }} mmHg</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">FREQ. CARDÍACA</p>
+                                            <p class="text-lg font-bold text-slate-800">{{ medidaSelecionada.frequencia_cardiaca || '-' }} bpm</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">TMB (BMR)</p>
+                                            <p class="text-lg font-bold text-emerald-600">{{ medidaSelecionada.tmb || '-' }} kcal</p>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase">GET (TDEE)</p>
+                                            <p class="text-lg font-bold text-emerald-600">{{ medidaSelecionada.gasto_energetico_total || '-' }} kcal</p>
+                                        </div>
+                                    </div>
+                                    <div v-if="medidaSelecionada.nivel_atividade">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-3">NÍVEL DE ATIVIDADE</p>
+                                        <span class="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">{{ MedidaService.formatarValor('nivel_atividade', medidaSelecionada.nivel_atividade) }}</span>
+                                    </div>
+                                    <div v-if="medidaSelecionada.observacoes" class="bg-slate-50 p-4 rounded-lg">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">OBSERVAÇÕES</p>
+                                        <p class="text-sm text-slate-600 leading-relaxed">{{ medidaSelecionada.observacoes }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Other Tabs - Placeholder -->
             <div v-else class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-emerald-50 p-12 text-center">
                 <i class="pi pi-home text-4xl text-slate-300 mb-4"></i>
@@ -867,7 +1444,201 @@ onMounted(() => {
         </div>
         <!-- END: Content Area -->
 
-        <!-- Dialog Editar Paciente -->
+        <!-- Dialog Criar Medida -->
+        <Dialog v-model:visible="showDialogCriacaoMedida" header="Adicionar Medida" :modal="true" :style="{ width: '90vw', maxHeight: '90vh' }" :breakpoints="{ '1199px': '95vw', '575px': '100vw' }" @hide="fecharCriacaoMedida">
+            <div v-if="true" class="space-y-6 max-h-[calc(90vh-250px)] overflow-y-auto pr-4">
+                <!-- Data da Avaliação -->
+                <section class="bg-white rounded-xl border-2 border-emerald-100 p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">📅</div>
+                        <h3 class="text-lg font-bold text-gray-900">Data da Avaliação</h3>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Data</label>
+                        <DatePicker v-model="formularioMedida.data_avaliacao" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
+                    </div>
+                </section>
+
+                <!-- Seção 1: Dados Antropométricos -->
+                <section class="bg-white rounded-xl border-2 border-blue-100 p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">⚖️</div>
+                        <h3 class="text-lg font-bold text-gray-900">Dados Antropométricos</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Peso (kg)</label>
+                            <InputNumber v-model="formularioMedida.peso" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Altura (cm)</label>
+                            <InputNumber v-model="formularioMedida.altura" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">IMC</label>
+                            <InputNumber v-model="formularioMedida.imc" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">% Gordura Corporal</label>
+                            <InputNumber v-model="formularioMedida.perc_gordura_corporal" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">% Massa Magra</label>
+                            <InputNumber v-model="formularioMedida.perc_massa_magra" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Idade Metabólica (anos)</label>
+                            <InputNumber v-model="formularioMedida.idade_metabolica" :maxFractionDigits="0" placeholder="00" />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Seção 2: Circunferências -->
+                <section class="bg-white rounded-xl border-2 border-purple-100 p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">📏</div>
+                        <h3 class="text-lg font-bold text-gray-900">Circunferências (cm)</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Cintura</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_cintura" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Quadril</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_quadril" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">RCQ</label>
+                            <InputNumber v-model="formularioMedida.relacao_cintura_quadril" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Abdominal</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_abdominal" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Braço</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_braco" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tórax</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_torax" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Coxa Direita</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_coxa_direita" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Coxa Esquerda</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_coxa_esquerda" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Panturrilha</label>
+                            <InputNumber v-model="formularioMedida.circunferencia_panturrilha" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Seção 3: Dobras Cutâneas -->
+                <section class="bg-white rounded-xl border-2 border-orange-100 p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-lg">📐</div>
+                        <h3 class="text-lg font-bold text-gray-900">Dobras Cutâneas (mm)</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Subscapular</label>
+                            <InputNumber v-model="formularioMedida.dobra_subescapular" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tríceps</label>
+                            <InputNumber v-model="formularioMedida.dobra_tricipital" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Bíceps</label>
+                            <InputNumber v-model="formularioMedida.dobra_bicipital" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Suprailíaca</label>
+                            <InputNumber v-model="formularioMedida.dobra_suprailíaca" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Abdominal</label>
+                            <InputNumber v-model="formularioMedida.dobra_abdominal" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Coxal</label>
+                            <InputNumber v-model="formularioMedida.dobra_coxal" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Peitoral</label>
+                            <InputNumber v-model="formularioMedida.dobra_peitoral" :maxFractionDigits="2" placeholder="00.00" />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Seção 4: Dados Complementares -->
+                <section class="bg-white rounded-xl border-2 border-red-100 p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg">❤️</div>
+                        <h3 class="text-lg font-bold text-gray-900">Dados Complementares</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Pressão Arterial (Sistólica)</label>
+                                <InputNumber v-model="formularioMedida.pressao_arterial_sistolica" :maxFractionDigits="0" placeholder="120" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Pressão Arterial (Diastólica)</label>
+                                <InputNumber v-model="formularioMedida.pressao_arterial_diastolica" :maxFractionDigits="0" placeholder="80" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Frequência Cardíaca (bpm)</label>
+                                <InputNumber v-model="formularioMedida.frequencia_cardiaca" :maxFractionDigits="0" placeholder="72" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">TMB (kcal/dia)</label>
+                                <InputNumber v-model="formularioMedida.tmb" :maxFractionDigits="2" placeholder="0000.00" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Gasto Energético Total (kcal)</label>
+                                <InputNumber v-model="formularioMedida.gasto_energetico_total" :maxFractionDigits="2" placeholder="0000.00" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Nível de Atividade</label>
+                            <div class="flex gap-2 flex-wrap">
+                                <button
+                                    v-for="nivel in ['sedentario', 'leve', 'moderado', 'intenso']"
+                                    :key="nivel"
+                                    @click="formularioMedida.nivel_atividade = nivel"
+                                    :class="['px-4 py-2 rounded-full text-xs font-medium transition-all', formularioMedida.nivel_atividade === nivel ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
+                                >
+                                    {{ MedidaService.formatarValor('nivel_atividade', nivel) }}
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Observações</label>
+                            <textarea
+                                v-model="formularioMedida.observacoes"
+                                placeholder="Adicione observações importantes"
+                                rows="3"
+                                class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                            ></textarea>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <template #footer>
+                <Button label="Cancelar" severity="secondary" @click="fecharCriacaoMedida" />
+                <Button label="Adicionar Medida" severity="success" icon="pi pi-check" :loading="loadingCriacaoMedida" @click="salvarMedida" />
+            </template>
+        </Dialog>
+        <!-- END: Dialog Criar Medida -->
+
         <Dialog v-model:visible="showDialogEdicao" header="Editar Paciente" :modal="true" :style="{ width: '60vw' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" @hide="showDialogEdicao = false">
             <div class="space-y-6">
                 <!-- Seção: Dados Pessoais -->

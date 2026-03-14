@@ -1,27 +1,9 @@
 import axios from 'axios';
-import AuthService from './AuthService';
+import apiClient from './ApiClient';
 
 const isDevelopment = import.meta.env.DEV;
 
 const apiUrl = isDevelopment ? 'http://localhost:3000' : 'https://nutno.com.br';
-
-const apiClient = axios.create({
-    baseURL: apiUrl
-});
-
-// Interceptor para adicionar o token em todas as requisições
-apiClient.interceptors.request.use(
-    (config) => {
-        const token = AuthService.getToken();
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
 
 // Mapa de traduções para valores com underscores
 const TRADUCOES = {
