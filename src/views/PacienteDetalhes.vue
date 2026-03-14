@@ -929,7 +929,7 @@ onMounted(() => {
             </div>
 
             <!-- Tab: Anamnese -->
-            <div v-if="activeTab === 'anamnese'" class="mx-auto">
+            <div v-else-if="activeTab === 'anamnese'" class="mx-auto">
                 <!-- Loading State -->
                 <div v-if="loadingAnamnese" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
                     <i class="pi pi-spin pi-spinner text-5xl text-emerald-600 mb-4"></i>
@@ -1159,7 +1159,7 @@ onMounted(() => {
             </div>
 
             <!-- Tab: Medidas -->
-            <div v-if="activeTab === 'medidas'" class="mx-auto">
+            <div v-else-if="activeTab === 'medidas'" class="mx-auto">
                 <!-- Loading State -->
                 <div v-if="loadingMedidas" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
                     <i class="pi pi-spin pi-spinner text-5xl text-emerald-600 mb-4"></i>
