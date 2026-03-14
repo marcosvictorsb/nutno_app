@@ -11,7 +11,7 @@ import InputText from 'primevue/inputtext';
 import RadioButton from 'primevue/radiobutton';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -24,6 +24,8 @@ const searchValue = ref('');
 const showDialog = ref(false);
 const loading = ref(true);
 const formErrors = ref({});
+const paginaAtual = ref(1);
+const itensPorPagina = ref(12);
 
 // Estados da foto de perfil
 // const imagemPreview = ref(null);
@@ -192,6 +194,48 @@ const pacientesFiltrados = () => {
     return resultado;
 };
 
+// Computed para pacientes da página atual
+const pacientesPaginados = computed(() => {
+    const filtrados = pacientesFiltrados();
+    const inicio = (paginaAtual.value - 1) * itensPorPagina.value;
+    const fim = inicio + itensPorPagina.value;
+    return filtrados.slice(inicio, fim);
+});
+
+// Computed para total de páginas
+const totalPaginas = computed(() => {
+    const filtrados = pacientesFiltrados();
+    return Math.ceil(filtrados.length / itensPorPagina.value) || 1;
+});
+
+// Computed para números das páginas a exibir (página atual ±1)
+const pageNumbers = computed(() => {
+    const total = totalPaginas.value;
+    const current = paginaAtual.value;
+    const pages = [];
+
+    // Sempre mostra até 3 números de página
+    const start = Math.max(1, current - 1);
+    const end = Math.min(total, current + 1);
+
+    for (let i = start; i <= end; i++) {
+        pages.push(i);
+    }
+
+    return pages;
+});
+
+// Função para ir para página
+const irParaPagina = (pagina) => {
+    if (pagina < 1 || pagina > totalPaginas.value) return;
+    paginaAtual.value = pagina;
+};
+
+// Reset de página quando filtros mudam
+watch([filtroStatus, searchValue], () => {
+    paginaAtual.value = 1;
+});
+
 const abrirNovoPaciente = () => {
     formNovoPaciente.value = {
         nome: '',
@@ -334,13 +378,13 @@ onMounted(() => {
                     <InputGroupAddon class="bg-white border-r border-gray-200">
                         <i class="pi pi-search text-emerald-600"></i>
                     </InputGroupAddon>
-                    <InputText v-model="searchValue" placeholder="Buscar por nome, email ou telefone..." class="w-full border-gray-200" />
+                    <InputText v-model="searchValue" type="text" placeholder="Buscar por nome, email ou telefone..." class="w-full border-gray-200" />
                 </InputGroup>
             </div>
 
             <!-- Filtros Pills -->
             <div class="flex flex-wrap gap-3 pt-2">
-                <Button :label="`Todos (${pacientes.length})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full" />
+                <Button :label="`Todos (${pacientesFiltrados().length})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full" />
                 <Button label="Ativos" icon="pi pi-check-circle" :severity="filtroStatus === 'ativo' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'ativo'" @click="filtroStatus = 'ativo'" size="small" class="rounded-full" />
                 <Button label="Arquivados" icon="pi pi-lock" :severity="filtroStatus === 'arquivado' ? 'secondary' : 'secondary'" :outlined="filtroStatus !== 'arquivado'" @click="filtroStatus = 'arquivado'" size="small" class="rounded-full" />
             </div>
@@ -358,48 +402,92 @@ onMounted(() => {
             <p class="text-gray-400 text-sm mt-1">Tente ajustar seus filtros ou buscar por outro termo</p>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="paciente in pacientesFiltrados()" :key="paciente.id" class="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100 flex flex-col">
-                <!-- Card Header with Gradient -->
-                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 p-6">
-                    <div class="flex items-center gap-4">
-                        <Avatar :label="paciente.iniciais" shape="circle" size="large" :class="`${getAvatarBgColor(paciente.iniciais)} font-bold text-lg ring-4 ring-white`" />
-                        <div class="flex-1 leading-tight">
-                            <h3 class="font-bold text-lg -mb-1">{{ paciente.nome }}</h3>
-                            <p class="font-semibold text-sm">{{ paciente.data_nascimento ? `${paciente.idade} anos` : 'Idade não informada' }}</p>
+        <div v-else class="space-y-6">
+            <!-- Grid com VirtualScroller -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div v-for="paciente in pacientesPaginados" :key="paciente.id" class="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100 flex flex-col">
+                    <!-- Card Header with Gradient -->
+                    <div class="bg-linear-to-r from-emerald-500 to-teal-500 p-6">
+                        <div class="flex items-center gap-4">
+                            <Avatar v-if="paciente.foto_perfil" :image="paciente.foto_perfil" shape="circle" size="large" class="ring-4 ring-white" />
+                            <Avatar v-else :label="paciente.iniciais" shape="circle" size="large" :class="`${getAvatarBgColor(paciente.iniciais)} font-bold text-lg ring-4 ring-white`" />
+                            <div class="flex-1 leading-tight">
+                                <h3 class="font-bold text-lg -mb-1">{{ paciente.nome }}</h3>
+                                <p class="font-semibold text-sm">{{ paciente.data_nascimento ? `${paciente.idade} anos` : 'Idade não informada' }}</p>
+                            </div>
+                            <Tag :value="getStatusLabel(paciente.status)" :severity="getStatusSeverity(paciente.status)" class="ml-auto" />
                         </div>
-                        <Tag :value="getStatusLabel(paciente.status)" :severity="getStatusSeverity(paciente.status)" class="ml-auto" severity="info" />
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="flex-1 p-6 space-y-4">
+                        <!-- Informações -->
+                        <div class="space-y-3 border-b border-gray-100 pb-4">
+                            <div class="flex items-center gap-3 text-sm">
+                                <i class="pi pi-envelope text-emerald-600 text-lg shrink-0"></i>
+                                <span class="text-gray-500 font-semibold uppercase text-xs tracking-wide w-20">Email:</span>
+                                <span class="text-gray-800 font-medium truncate">{{ paciente.email }}</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <i class="pi pi-calendar text-emerald-600 text-lg shrink-0"></i>
+                                <span class="text-gray-500 font-semibold uppercase text-xs tracking-wide w-20">Última:</span>
+                                <span class="text-gray-800 font-medium">{{ paciente.ultimaConsulta }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Telefone -->
+                        <div class="flex items-center gap-3">
+                            <i class="pi pi-phone text-emerald-600"></i>
+                            <p class="text-gray-700 text-sm">{{ paciente.telefone || paciente.whatsapp || 'Telefone não informado' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer with Buttons -->
+                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-2">
+                        <Button label="Ver perfil" icon="pi pi-eye" severity="success" text @click="verPerfil(paciente)" class="flex-1 text-xs font-medium" />
+                        <Button v-if="paciente.status === 'ativo'" label="Novo plano" icon="pi pi-plus" severity="secondary" text @click="novoPlano(paciente)" class="flex-1 text-xs font-medium" />
+                        <Button v-else label="Reativar" icon="pi pi-check" severity="warning" text @click="criarPlano(paciente)" class="flex-1 text-xs font-medium" />
                     </div>
                 </div>
+            </div>
 
-                <!-- Card Body -->
-                <div class="flex-1 p-6 space-y-4">
-                    <!-- Informações -->
-                    <div class="space-y-3 border-b border-gray-100 pb-4">
-                        <div class="flex items-center gap-3 text-sm">
-                            <i class="pi pi-envelope text-emerald-600 text-lg flex-shrink-0"></i>
-                            <span class="text-gray-500 font-semibold uppercase text-xs tracking-wide w-20">Email:</span>
-                            <span class="text-gray-800 font-medium truncate">{{ paciente.email }}</span>
-                        </div>
-                        <div class="flex items-center gap-3 text-sm">
-                            <i class="pi pi-calendar text-emerald-600 text-lg flex-shrink-0"></i>
-                            <span class="text-gray-500 font-semibold uppercase text-xs tracking-wide w-20">Última:</span>
-                            <span class="text-gray-800 font-medium">{{ paciente.ultimaConsulta }}</span>
-                        </div>
-                    </div>
+            <!-- Pagination Controls -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 p-6 bg-linear-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                <!-- Previous Button -->
+                <Button icon="pi pi-chevron-left" @click="irParaPagina(paginaAtual - 1)" :disabled="paginaAtual === 1" rounded text severity="secondary" class="w-full sm:w-auto" />
 
-                    <!-- Telefone -->
-                    <div class="flex items-center gap-3">
-                        <i class="pi pi-phone text-emerald-600"></i>
-                        <p class="text-gray-700 text-sm">{{ paciente.telefone || paciente.whatsapp || 'Telefone não informado' }}</p>
-                    </div>
+                <!-- Page Numbers -->
+                <div class="flex items-center gap-2 flex-wrap justify-center">
+                    <!-- First page button if not on first page -->
+                    <Button v-if="paginaAtual > 2" label="1" @click="irParaPagina(1)" rounded :severity="paginaAtual === 1 ? 'success' : 'secondary'" :outlined="paginaAtual !== 1" size="small" />
+
+                    <!-- Ellipsis if gap exists -->
+                    <span v-if="paginaAtual > 3" class="text-gray-400 px-2">...</span>
+
+                    <!-- Pages around current page -->
+                    <Button v-for="page in pageNumbers" :key="page" :label="String(page)" @click="irParaPagina(page)" rounded :severity="paginaAtual === page ? 'success' : 'secondary'" :outlined="paginaAtual !== page" size="small" />
+
+                    <!-- Ellipsis if gap exists -->
+                    <span v-if="paginaAtual < totalPaginas - 2" class="text-gray-400 px-2">...</span>
+
+                    <!-- Last page button if not on last page -->
+                    <Button
+                        v-if="paginaAtual < totalPaginas - 1"
+                        :label="String(totalPaginas)"
+                        @click="irParaPagina(totalPaginas)"
+                        rounded
+                        :severity="paginaAtual === totalPaginas ? 'success' : 'secondary'"
+                        :outlined="paginaAtual !== totalPaginas"
+                        size="small"
+                    />
                 </div>
 
-                <!-- Card Footer with Buttons -->
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-2">
-                    <Button label="Ver perfil" icon="pi pi-eye" severity="success" text @click="verPerfil(paciente)" class="flex-1 text-xs font-medium" />
-                    <Button v-if="paciente.status === 'ativo'" label="Novo plano" icon="pi pi-plus" severity="secondary" text @click="novoPlano(paciente)" class="flex-1 text-xs font-medium" />
-                    <Button v-else label="Reativar" icon="pi pi-check" severity="warning" text @click="criarPlano(paciente)" class="flex-1 text-xs font-medium" />
+                <!-- Page Info and Next Button -->
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600 font-medium whitespace-nowrap">
+                        Página <strong class="text-emerald-600">{{ paginaAtual }}</strong> de <strong class="text-emerald-600">{{ totalPaginas }}</strong>
+                    </span>
+                    <Button icon="pi pi-chevron-right" @click="irParaPagina(paginaAtual + 1)" :disabled="paginaAtual === totalPaginas" rounded text severity="secondary" class="w-full sm:w-auto" />
                 </div>
             </div>
         </div>
@@ -447,7 +535,7 @@ onMounted(() => {
                 <!-- Nome Completo -->
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Nome completo</label>
-                    <InputText v-model="formNovoPaciente.nome" placeholder="Ex.: João da Silva" class="w-full" autocomplete="off" :invalid="!!formErrors.nome" />
+                    <InputText v-model="formNovoPaciente.nome" type="text" placeholder="Ex.: João da Silva" class="w-full" autocomplete="off" :invalid="!!formErrors.nome" />
                     <small v-if="formErrors.nome" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.nome }}</small>
                 </div>
 
@@ -455,7 +543,7 @@ onMounted(() => {
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Apelido</label>
-                        <InputText v-model="formNovoPaciente.apelido" placeholder="Como ele prefere ser chamado" class="w-full" autocomplete="off" />
+                        <InputText v-model="formNovoPaciente.apelido" type="text" placeholder="Como ele prefere ser chamado" class="w-full" autocomplete="off" />
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Data de nascimento</label>
