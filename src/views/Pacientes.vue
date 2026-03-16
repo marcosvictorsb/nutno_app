@@ -25,7 +25,14 @@ const showDialog = ref(false);
 const loading = ref(true);
 const formErrors = ref({});
 const paginaAtual = ref(1);
-const itensPorPagina = ref(12);
+const limiteItens = ref(10);
+const paginacao = ref({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+});
+let debounceTimer = null;
 
 // Estados da foto de perfil
 // const imagemPreview = ref(null);
@@ -116,7 +123,17 @@ const getAvatarBgColor = (iniciais) => {
 const carregarPacientes = async () => {
     loading.value = true;
     try {
-        const response = await PacienteService.listarPacientes();
+        const params = {
+            page: paginaAtual.value,
+            limit: limiteItens.value
+        };
+        
+        // Adicionar busca se houver valor
+        if (searchValue.value?.trim()) {
+            params.busca = searchValue.value.trim();
+        }
+        
+        const response = await PacienteService.listarPacientes(params);
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
             pacientes.value = response.data.data.map((paciente) => ({
                 id: paciente.id,
@@ -134,6 +151,11 @@ const carregarPacientes = async () => {
                 idade: calcularIdade(paciente.data_nascimento),
                 ultimaConsulta: formatarDataBrasileira(paciente.criado_em)
             }));
+            
+            // Armazenar dados de paginação do backend
+            if (response.data.pagination) {
+                paginacao.value = response.data.pagination;
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar pacientes:', error);
@@ -178,34 +200,18 @@ const carregarPacientes = async () => {
 // };
 
 const pacientesFiltrados = () => {
-    let resultado = pacientes.value || [];
-
-    // Filtro por status
-    if (filtroStatus.value !== 'todos') {
-        resultado = resultado.filter((p) => p.status === filtroStatus.value);
-    }
-
-    // Filtro por busca
-    if (searchValue.value) {
-        const busca = searchValue.value.toLowerCase();
-        resultado = resultado.filter((p) => (p.nome && p.nome.toLowerCase().includes(busca)) || (p.email && p.email.toLowerCase().includes(busca)) || (p.telefone && p.telefone.toLowerCase().includes(busca)));
-    }
-
-    return resultado;
+    // Com paginação no backend, retornamos os pacientes já filtrados/paginados
+    return pacientes.value || [];
 };
 
-// Computed para pacientes da página atual
+// Computed para pacientes - agora já vêm filtrados/paginados do backend
 const pacientesPaginados = computed(() => {
-    const filtrados = pacientesFiltrados();
-    const inicio = (paginaAtual.value - 1) * itensPorPagina.value;
-    const fim = inicio + itensPorPagina.value;
-    return filtrados.slice(inicio, fim);
+    return pacientes.value || [];
 });
 
-// Computed para total de páginas
+// Computed para total de páginas (vem do backend)
 const totalPaginas = computed(() => {
-    const filtrados = pacientesFiltrados();
-    return Math.ceil(filtrados.length / itensPorPagina.value) || 1;
+    return paginacao.value.totalPages || 1;
 });
 
 // Computed para números das páginas a exibir (página atual ±1)
@@ -229,11 +235,22 @@ const pageNumbers = computed(() => {
 const irParaPagina = (pagina) => {
     if (pagina < 1 || pagina > totalPaginas.value) return;
     paginaAtual.value = pagina;
+    carregarPacientes();
 };
 
-// Reset de página quando filtros mudam
-watch([filtroStatus, searchValue], () => {
+// Reset de página quando status filtra - mas mantém busca
+watch(filtroStatus, () => {
     paginaAtual.value = 1;
+    carregarPacientes();
+});
+
+// Busca com debounce
+watch(searchValue, () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    paginaAtual.value = 1;
+    debounceTimer = setTimeout(() => {
+        carregarPacientes();
+    }, 500);
 });
 
 const abrirNovoPaciente = () => {
@@ -384,7 +401,7 @@ onMounted(() => {
 
             <!-- Filtros Pills -->
             <div class="flex flex-wrap gap-3 pt-2">
-                <Button :label="`Todos (${pacientesFiltrados().length})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full" />
+                <Button :label="`Todos (${paginacao.total})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full" />
                 <Button label="Ativos" icon="pi pi-check-circle" :severity="filtroStatus === 'ativo' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'ativo'" @click="filtroStatus = 'ativo'" size="small" class="rounded-full" />
                 <Button label="Arquivados" icon="pi pi-lock" :severity="filtroStatus === 'arquivado' ? 'secondary' : 'secondary'" :outlined="filtroStatus !== 'arquivado'" @click="filtroStatus = 'arquivado'" size="small" class="rounded-full" />
             </div>
