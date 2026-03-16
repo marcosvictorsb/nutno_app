@@ -48,7 +48,7 @@ const router = createRouter({
                     meta: {
                         breadcrumb: ['Alimentos']
                     },
-                    component: () => import('@/views/utilities/Blocks.vue')
+                    component: () => import('@/Alimentos/views/Alimentos.vue')
                 },
                 {
                     path: '/configuracao',
