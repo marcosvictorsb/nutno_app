@@ -133,11 +133,9 @@ const percentualConcluido = computed(() => {
 const inicializarFormulario = async () => {
     carregandoInicial.value = true;
     erroValidacao.value = null;
-    console.log('🔍 Iniciando validação do formulário com token da rota...');
 
     try {
         const token = route.params.id;
-        console.log('🔍 Token da rota:', token);
 
         if (!token) {
             erroValidacao.value = 'Token inválido ou não fornecido';
@@ -145,21 +143,16 @@ const inicializarFormulario = async () => {
             return;
         }
 
-        console.log('📡 Buscando formulário no endpoint: /api/formulario/' + token);
         const resultado = await AnamneseService.validarFormulario(token);
-
-        console.log('✅ Resposta do servidor:', resultado.data);
 
         if (resultado.data.success) {
             const { data } = resultado.data;
-            console.log('📋 Dados do paciente:', data);
 
             pacienteInfo.value = data;
             formularioPreenchido.value = data.formulario_preenchido;
 
             // Se o formulário ainda não foi preenchido, preencher etapa 1
             if (!data.formulario_preenchido) {
-                console.log('📝 Preenchendo etapa 1 com dados do paciente');
                 form.value.nome_completo = data.nome_paciente || '';
                 form.value.como_prefere_ser_chamado = data.como_prefere_ser_chamado || '';
                 form.value.data_nascimento = data.data_nascimento || '';
@@ -270,15 +263,8 @@ const enviarFormulario = async () => {
 
         const resposta = await AnamneseService.salvarAnamnesePublica(token, dados);
 
-        console.log('✅ Resposta do servidor:', resposta.data);
-
         // Validar resposta da API
         if (resposta.data && resposta.data.success === true) {
-            console.log('✅ Anamnese salva com sucesso!', {
-                id_anamnese: resposta.data.data?.id_anamnese,
-                id_paciente: resposta.data.data?.id_paciente
-            });
-
             // Mostrar mensagem de sucesso e manter na mesma tela
             formularioEnviado.value = true;
 
