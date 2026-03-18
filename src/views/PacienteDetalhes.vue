@@ -29,7 +29,7 @@ const confirm = useConfirm();
 const paciente = ref(null);
 const loading = ref(true);
 const erro = ref(null);
-const activeTab = ref('resumo');
+const activeTab = ref('anamnese');
 const showDialogEdicao = ref(false);
 const formErrors = ref({});
 const loadingAtualizacao = ref(false);
@@ -97,7 +97,8 @@ const formQuantidade = ref({
 });
 let debounceTimer = null;
 
-// Estados para adição de medidas
+// Estados do gráfico de evolução
+const periodoEvoucao = ref('6meses');
 const showDialogCriacaoMedida = ref(false);
 const loadingCriacaoMedida = ref(false);
 const formularioMedida = ref({
@@ -160,6 +161,147 @@ const rcqComClassificacao = computed(() => {
 // GET calculado automaticamente
 const getCalculado = computed(() => {
     return calcularGET(formularioMedida.value.tmb, formularioMedida.value.nivel_atividade);
+});
+
+// ===== COMPUTED PROPERTIES PARA ABA RESUMO =====
+
+// Plano alimentar ativo
+const planoAtivo = computed(() => {
+    return planos.value.find((p) => p.status === 'ativo') || null;
+});
+
+// Última medida registrada
+const ultimaMedida = computed(() => {
+    return medidas.value && medidas.value.length > 0 ? medidas.value[0] : null;
+});
+
+// Diferença de peso entre última e segunda última medida
+const diferencaPeso = computed(() => {
+    if (!ultimaMedida.value || medidas.value.length < 2) {
+        return null;
+    }
+    const ultima = parseFloat(ultimaMedida.value.peso);
+    const anterior = parseFloat(medidas.value[1].peso);
+    return ultima - anterior;
+});
+
+// Percentual de variação de peso
+const percentualVariacaoPeso = computed(() => {
+    if (!diferencaPeso.value || !medidas.value || medidas.value.length < 2) {
+        return null;
+    }
+    const anterior = parseFloat(medidas.value[1].peso);
+    if (anterior === 0) return null;
+    return ((diferencaPeso.value / anterior) * 100).toFixed(1);
+});
+
+// Melhor resultado (menor peso no histórico)
+const melhorPeso = computed(() => {
+    if (!medidas.value || medidas.value.length === 0) return null;
+    let melhor = parseFloat(medidas.value[0].peso);
+    let data = medidas.value[0].data_avaliacao;
+
+    medidas.value.forEach((m) => {
+        const peso = parseFloat(m.peso);
+        if (peso < melhor) {
+            melhor = peso;
+            data = m.data_avaliacao;
+        }
+    });
+
+    return { peso: melhor, data };
+});
+
+// Diferença total (primeira até hoje)
+const diferenceTotal = computed(() => {
+    if (!medidas.value || medidas.value.length < 2) return null;
+    const primeira = parseFloat(medidas.value[medidas.value.length - 1].peso);
+    const ultima = parseFloat(medidas.value[0].peso);
+    return ultima - primeira;
+});
+
+// Percentual de variação total
+const percentualVariacaoTotal = computed(() => {
+    if (!diferenceTotal.value || !medidas.value || medidas.value.length < 2) return null;
+    const primeira = parseFloat(medidas.value[medidas.value.length - 1].peso);
+    if (primeira === 0) return null;
+    return ((diferenceTotal.value / primeira) * 100).toFixed(1);
+});
+
+// Tendência de peso (baseado nas últimas 3 medidas)
+const tendenciaPeso = computed(() => {
+    if (!medidas.value || medidas.value.length < 3) {
+        return { tipo: 'insuficiente', label: 'Registre mais medidas' };
+    }
+
+    const ultima = parseFloat(medidas.value[0].peso);
+    const penultima = parseFloat(medidas.value[1].peso);
+    const antepenultima = parseFloat(medidas.value[2].peso);
+
+    const tendendo = antepenultima > penultima && penultima > ultima;
+    const subindo = antepenultima < penultima && penultima < ultima;
+
+    if (tendendo) {
+        return { tipo: 'descendo', label: 'Em queda', emoji: '↘', cor: 'success' };
+    } else if (subindo) {
+        return { tipo: 'subindo', label: 'Em alta', emoji: '↗', cor: 'danger' };
+    } else {
+        return { tipo: 'estavel', label: 'Estável', emoji: '→', cor: 'secondary' };
+    }
+});
+
+// Medidas filtradas por período de evolução
+const medidasPorPeriodo = computed(() => {
+    if (!medidas.value || medidas.value.length === 0) return [];
+
+    const hoje = new Date();
+    const dias = periodoEvoucao.value === '1ano' ? 365 : 180;
+    const dataLimite = new Date(hoje.getTime() - dias * 24 * 60 * 60 * 1000);
+
+    return medidas.value
+        .filter((m) => {
+            const dataMedida = new Date(m.data_avaliacao);
+            return dataMedida >= dataLimite;
+        })
+        .reverse();
+});
+
+// Dados formatados para o Chart.js da evolução de peso
+const chartDataEvolucaoPeso = computed(() => {
+    if (!medidasPorPeriodo.value || medidasPorPeriodo.value.length === 0) {
+        return {
+            labels: [],
+            datasets: []
+        };
+    }
+
+    // Extrair labels (datas formatadas) e dados (pesos)
+    const labels = medidasPorPeriodo.value.map((m) => {
+        const data = new Date(m.data_avaliacao);
+        return data.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
+    });
+
+    const pesos = medidasPorPeriodo.value.map((m) => parseFloat(m.peso) || 0);
+
+    return {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Peso (kg)',
+                data: pesos,
+                borderColor: 'rgb(22, 163, 74)', // green-600
+                backgroundColor: 'rgba(22, 163, 74, 0.1)', // green com transparência
+                fill: true,
+                tension: 0.4, // smooth line
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: 'rgb(22, 163, 74)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                borderWidth: 2
+            }
+        ]
+    };
 });
 
 // ===== WATCHERS PARA RECÁLCULOS AUTOMÁTICOS =====
@@ -1116,8 +1258,109 @@ watch(
         if (novaTab === 'planos' && !planosCarregada.value) {
             carregarPlanos();
         }
+        // Carregar dados para a aba resumo
+        if (novaTab === 'resumo') {
+            if (!anamneseCarregada.value) {
+                carregarAnamnese();
+            }
+            if (!medidasCarregada.value) {
+                carregarMedidas();
+            }
+            if (!planosCarregada.value) {
+                carregarPlanos();
+            }
+        }
     }
 );
+
+// ===== FUNÇÕES DE TRADUÇÃO PARA ABA RESUMO =====
+
+const traduzirObjetivo = (valor) => {
+    const mapa = {
+        emagrecer: 'Emagrecimento',
+        ganhar_massa: 'Ganho de Massa',
+        melhorar_saude: 'Melhorar Saúde',
+        controlar_doenca: 'Controlar Doença',
+        melhorar_performance: 'Performance',
+        outro: 'Outro'
+    };
+    return mapa[valor] || valor;
+};
+
+const traduzirRestricao = (valor) => {
+    const mapa = {
+        lactose: 'Intolerância à lactose',
+        gluten: 'Doença celíaca (glúten)',
+        vegetariano: 'Vegetariano',
+        vegano: 'Vegano',
+        religiao: 'Restrição religiosa',
+        outra: 'Outra restrição',
+        nenhuma: 'Nenhuma'
+    };
+    return mapa[valor] || valor;
+};
+
+const traduzirNivelAtividade = (valor) => {
+    const mapa = {
+        sedentario: 'Sedentário',
+        leve: 'Leve',
+        moderado: 'Moderado',
+        intenso: 'Intenso',
+        muito_intenso: 'Muito Intenso'
+    };
+    return mapa[valor] || valor;
+};
+
+const traduzirQualidadeSono = (valor) => {
+    const mapa = {
+        otimo: 'Ótimo',
+        bom: 'Bom',
+        ruim: 'Ruim',
+        pessimo: 'Péssimo'
+    };
+    return mapa[valor] || valor;
+};
+
+const traduzirConsumoAlcool = (valor) => {
+    const mapa = {
+        nao: 'Não consome',
+        socialmente: 'Socialmente',
+        frequentemente: 'Frequentemente'
+    };
+    return mapa[valor] || valor;
+};
+
+const obterCorSono = (valor) => {
+    const cores = {
+        otimo: 'success',
+        bom: 'info',
+        ruim: 'warning',
+        pessimo: 'danger'
+    };
+    return cores[valor] || 'secondary';
+};
+
+const obterCorEstresse = (nivel) => {
+    if (nivel <= 2) return 'success';
+    if (nivel === 3) return 'warning';
+    return 'danger';
+};
+
+const obterClassificacaoIMC = (imc) => {
+    if (imc < 18.5) {
+        return { label: 'Abaixo do peso', severity: 'info' };
+    } else if (imc < 25) {
+        return { label: 'Normal', severity: 'success' };
+    } else if (imc < 30) {
+        return { label: 'Sobrepeso', severity: 'warning' };
+    } else if (imc < 35) {
+        return { label: 'Obesidade I', severity: 'warning' };
+    } else if (imc < 40) {
+        return { label: 'Obesidade II', severity: 'danger' };
+    } else {
+        return { label: 'Obesidade III', severity: 'danger' };
+    }
+};
 
 const abrirCriacaoPlano = () => {
     stepAtualPlano.value = 1;
@@ -1561,15 +1804,15 @@ const calcularTotaisDia = () => {
 // ========== FUNÇÕES DO STEP 3 - REVISÃO ==========
 
 // Traduzir objetivo interno para texto legível
-const traduzirObjetivo = (objetivo) => {
-    const traducoes = {
-        Emagrecimento: 'Emagrecimento',
-        'Ganho de massa': 'Ganho de Massa',
-        Manutenção: 'Manutenção',
-        Performance: 'Performance'
-    };
-    return traducoes[objetivo] || objetivo;
-};
+// const traduzirObjetivo = (objetivo) => {
+//     const traducoes = {
+//         Emagrecimento: 'Emagrecimento',
+//         'Ganho de massa': 'Ganho de Massa',
+//         Manutenção: 'Manutenção',
+//         Performance: 'Performance'
+//     };
+//     return traducoes[objetivo] || objetivo;
+// };
 
 // Calcular diferença entre realizado e meta calórica
 const calcularDiferencaCalorica = () => {
@@ -1684,8 +1927,12 @@ const deletarPlano = async (idPlano) => {
     }
 };
 
-onMounted(() => {
-    carregarPaciente();
+onMounted(async () => {
+    await carregarPaciente();
+    // Carregar dados da aba padrão (anamnese)
+    if (activeTab.value === 'anamnese' && !anamneseCarregada.value) {
+        carregarAnamnese();
+    }
 });
 </script>
 
@@ -1758,12 +2005,12 @@ onMounted(() => {
 
             <!-- Tab Menu -->
             <nav class="mx-auto mt-8 flex border-b border-slate-100 gap-2 overflow-x-auto">
-                <button
+                <!-- <button
                     @click="activeTab = 'resumo'"
                     :class="['px-6 py-3 border-b-2 font-bold transition-all whitespace-nowrap', activeTab === 'resumo' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
                 >
                     Resumo
-                </button>
+                </button> -->
                 <button
                     @click="activeTab = 'anamnese'"
                     :class="['px-6 py-3 border-b-2 font-medium transition-all whitespace-nowrap', activeTab === 'anamnese' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
@@ -1794,76 +2041,434 @@ onMounted(() => {
 
         <!-- BEGIN: Content Area -->
         <div class="flex-1 overflow-y-auto mt-3">
-            <div v-if="activeTab === 'resumo'" class="mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Column 1: Personal Data -->
-                <section class="lg:col-span-4 flex flex-col gap-6">
-                    <!-- Dados Pessoais Card -->
-                    <div class="bg-white shadow-sm border border-emerald-50 p-6">
-                        <div class="flex items-center justify-between mb-6">
-                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <i class="pi pi-user text-emerald-500"></i>
-                                Dados Pessoais
-                            </h2>
-                            <Button label="Editar" text severity="success" size="small" @click="editarPaciente" />
-                        </div>
-                        <div class="space-y-4">
-                            <div class="p-3 bg-slate-50 rounded-xl">
-                                <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">E-mail</p>
-                                <p class="text-slate-700 font-medium">{{ paciente.email || 'Não informado' }}</p>
-                            </div>
-                            <div class="p-3 bg-slate-50 rounded-xl">
-                                <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Data de Nascimento</p>
-                                <p class="text-slate-700 font-medium">{{ paciente.data_nascimento ? formatarDataBrasileira(paciente.data_nascimento) : 'Não informado' }}</p>
-                            </div>
-                            <div class="p-3 bg-slate-50 rounded-xl">
-                                <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Telefone</p>
-                                <p class="text-slate-700 font-medium">{{ paciente.telefone || paciente.whatsapp || 'Não informado' }}</p>
-                            </div>
-                            <div class="p-3 bg-slate-50 rounded-xl">
-                                <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Sexo</p>
-                                <p class="text-slate-700 font-medium">
-                                    <span v-if="paciente.sexo === 'M'">Masculino</span>
-                                    <span v-else-if="paciente.sexo === 'F'">Feminino</span>
-                                    <span v-else-if="paciente.sexo === 'O'">Outro</span>
-                                    <span v-else>Não informado</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+            <!-- <div v-if="activeTab === 'resumo'" class="mx-auto max-w-7xl px-4 space-y-6">
 
-                <!-- Column 2: Metrics and Plan -->
-                <section class="lg:col-span-8 flex flex-col gap-6">
-                    <!-- Placeholder para futuras métricas -->
-                    <div class="bg-white shadow-sm border border-emerald-50 p-6">
-                        <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <i class="pi pi-info-circle text-emerald-500"></i>
-                            Informações Adicionais
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="p-4 border border-slate-100 rounded-2xl">
-                                <p class="text-xs text-slate-400 font-bold uppercase mb-2">Status</p>
-                                <Tag :value="paciente.status === 'ativo' ? 'Ativo' : 'Arquivado'" :severity="paciente.status === 'ativo' ? 'success' : 'secondary'" />
+                <div v-if="!anamnese || medidas.length === 0 || !planoAtivo || (planoAtivo && !planoAtivo.enviado_em)" class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+
+                    <div v-if="!anamnese" class="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-amber-600 text-xl">warning</span>
+                            <span class="text-slate-700 font-medium">Anamnese não preenchida</span>
+                        </div>
+                        <Button label="Enviar formulário" severity="warning" text size="small" @click="activeTab = 'anamnese'" />
+                    </div>
+
+
+                    <div v-if="medidas.length === 0" class="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-amber-600 text-xl">warning</span>
+                            <span class="text-slate-700 font-medium">Nenhuma medida registrada</span>
+                        </div>
+                        <Button label="Adicionar medida" severity="warning" text size="small" @click="abrirCriacaoMedida" />
+                    </div>
+
+
+                    <div v-if="!planoAtivo" class="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-amber-600 text-xl">warning</span>
+                            <span class="text-slate-700 font-medium">Paciente sem plano alimentar ativo</span>
+                        </div>
+                        <Button label="Criar plano" severity="warning" text size="small" @click="novoPlano" />
+                    </div>
+
+
+                    <div v-if="planoAtivo && !planoAtivo.enviado_em" class="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-amber-600 text-xl">warning</span>
+                            <span class="text-slate-700 font-medium">Plano criado mas não enviado ao paciente</span>
+                        </div>
+                        <Button label="Enviar agora" severity="warning" text size="small" @click="toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Enviar plano alimentar - a implementar' })" />
+                    </div>
+                </div>
+
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div class="lg:col-span-8 flex flex-col gap-6">
+
+                        <div class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                    <i class="pi pi-user text-emerald-500"></i>
+                                    Dados Pessoais
+                                </h2>
+                                <Button label="Editar" text severity="success" size="small" @click="editarPaciente" />
                             </div>
-                            <div class="p-4 border border-slate-100 rounded-2xl">
-                                <p class="text-xs text-slate-400 font-bold uppercase mb-2">Formulário Preenchido</p>
-                                <Tag :value="paciente.formulario_preenchido ? 'Sim' : 'Não'" :severity="paciente.formulario_preenchido ? 'success' : 'warning'" />
+                            <div class="space-y-4">
+                                <div class="p-3 bg-slate-50 rounded-xl">
+                                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">E-mail</p>
+                                    <p class="text-slate-700 font-medium">{{ paciente.email || 'Não informado' }}</p>
+                                </div>
+                                <div class="p-3 bg-slate-50 rounded-xl">
+                                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Data de Nascimento</p>
+                                    <p class="text-slate-700 font-medium">{{ paciente.data_nascimento ? formatarDataBrasileira(paciente.data_nascimento) : 'Não informado' }}</p>
+                                </div>
+                                <div class="p-3 bg-slate-50 rounded-xl">
+                                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Telefone</p>
+                                    <p class="text-slate-700 font-medium">{{ paciente.telefone || paciente.whatsapp || 'Não informado' }}</p>
+                                </div>
+                                <div class="p-3 bg-slate-50 rounded-xl">
+                                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Sexo</p>
+                                    <p class="text-slate-700 font-medium">
+                                        <span v-if="paciente.sexo === 'M'">Masculino</span>
+                                        <span v-else-if="paciente.sexo === 'F'">Feminino</span>
+                                        <span v-else-if="paciente.sexo === 'O'">Outro</span>
+                                        <span v-else>Não informado</span>
+                                    </p>
+                                </div>
+
+                                <div v-if="anamnese" class="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-emerald-600">target</span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-emerald-900">Objetivo: {{ traduzirObjetivo(anamnese.objetivo) }}</p>
+                                    </div>
+                                </div>
+
+                                <div v-if="anamnese && anamnese.restricao_alimentar && anamnese.restricao_alimentar !== 'nenhuma'" class="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-amber-600">warning</span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-amber-900">Restrição: {{ traduzirRestricao(anamnese.restricao_alimentar) }}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="p-4 border border-slate-100 rounded-2xl">
-                                <p class="text-xs text-slate-400 font-bold uppercase mb-2">Data de Criação</p>
-                                <p class="text-slate-700 font-medium">{{ paciente.dataCriacao }}</p>
+                        </div>
+
+                        <div v-if="loadingMedidas" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <div class="h-40 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="pi pi-spin pi-spinner text-3xl text-emerald-600 mb-2"></i>
+                                    <p class="text-slate-600">Carregando medidas...</p>
+                                </div>
                             </div>
-                            <div class="p-4 border border-slate-100 rounded-2xl">
-                                <p class="text-xs text-slate-400 font-bold uppercase mb-2">Última Atualização</p>
-                                <p class="text-slate-700 font-medium">{{ paciente.dataAtualizacao }}</p>
+                        </div>
+                        <div v-else-if="medidas.length === 0" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-8 text-center">
+                            <span class="material-symbols-outlined text-5xl text-slate-300 block mb-3">scale</span>
+                            <p class="text-slate-600 mb-4">Nenhuma avaliação registrada</p>
+                            <Button label="Registrar primeira medida" @click="abrirCriacaoMedida" />
+                        </div>
+                        <div v-else class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800">Última Avaliação</h3>
+                                    <p class="text-sm text-slate-500">Realizada em {{ formatarDataBrasileira(ultimaMedida.data_avaliacao) }}</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-emerald-500">trending_up</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 md:grid-cols-2 gap-4 mb-6">
+
+                                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-2">Peso</p>
+                                    <p class="text-2xl font-bold text-slate-900 mb-1">{{ ultimaMedida.peso }} kg</p>
+                                    <p v-if="diferencaPeso !== null" :class="['text-sm font-semibold', diferencaPeso < 0 ? 'text-green-600' : 'text-red-600']">
+                                        <span v-if="diferencaPeso < 0">▼ {{ Math.abs(diferencaPeso).toFixed(2) }} kg</span>
+                                        <span v-else>▲ +{{ diferencaPeso.toFixed(2) }} kg</span>
+                                    </p>
+                                </div>
+
+
+                                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-2">IMC</p>
+                                    <p class="text-2xl font-bold text-slate-900 mb-1">{{ parseFloat(ultimaMedida.imc).toFixed(1) }}</p>
+                                    <Tag v-if="ultimaMedida.imc" :value="obterClassificacaoIMC(parseFloat(ultimaMedida.imc)).label" :severity="obterClassificacaoIMC(parseFloat(ultimaMedida.imc)).severity" class="text-xs" />
+                                </div>
+
+
+                                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-2">% Gordura</p>
+                                    <p class="text-2xl font-bold text-slate-900">{{ ultimaMedida.perc_gordura_corporal || '—' }}%</p>
+                                </div>
+
+
+                                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-2">Cintura</p>
+                                    <p class="text-2xl font-bold text-slate-900 mb-1">{{ ultimaMedida.circunferencia_cintura || '—' }} cm</p>
+                                    <p v-if="ultimaMedida.relacao_cintura_quadril" class="text-xs text-slate-500">RCQ {{ ultimaMedida.relacao_cintura_quadril }}</p>
+                                </div>
+                            </div>
+
+
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-4 border-t border-slate-100">
+                                <div class="text-center pt-3">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">TMB</p>
+                                    <p class="text-lg font-bold text-slate-800">{{ ultimaMedida.tmb || '—' }}</p>
+                                    <p class="text-xs text-slate-500">kcal</p>
+                                </div>
+                                <div class="text-center pt-3">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">GET</p>
+                                    <p class="text-lg font-bold text-slate-800">{{ ultimaMedida.gasto_energetico_total || '—' }}</p>
+                                    <p class="text-xs text-slate-500">kcal</p>
+                                </div>
+                                <div class="text-center pt-3">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Nível</p>
+                                    <p class="text-sm font-bold text-slate-800">{{ traduzirNivelAtividade(ultimaMedida.nivel_atividade || '') }}</p>
+                                </div>
+                                <div class="text-center pt-3">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Pressão</p>
+                                    <p class="text-lg font-bold text-slate-800">{{ ultimaMedida.pressao_arterial_sistolica }}/{{ ultimaMedida.pressao_arterial_diastolica || '—' }}</p>
+                                </div>
+                                <div class="text-center pt-3">
+                                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Músculo</p>
+                                    <p class="text-lg font-bold text-slate-800">{{ ultimaMedida.perc_massa_magra || '—' }}%</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </section>
+
+
+                    <div class="lg:col-span-4 flex flex-col gap-6">
+
+                        <div v-if="loadingPlanos" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <div class="h-40 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="pi pi-spin pi-spinner text-3xl text-emerald-600 mb-2"></i>
+                                    <p class="text-slate-600">Carregando planos...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else-if="!planoAtivo" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6 text-center">
+                            <span class="material-symbols-outlined text-5xl text-slate-300 block mb-3">menu_book</span>
+                            <p class="text-slate-600 mb-4 font-medium">Sem plano alimentar ativo</p>
+                            <Button label="+ Criar plano" @click="novoPlano" icon="pi pi-plus" class="w-full" />
+                        </div>
+                        <div v-else class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-xs font-bold uppercase text-slate-500">Plano Alimentar</span>
+                                <Tag value="ATIVO" severity="success" class="text-xs" />
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-900 mb-3">{{ planoAtivo.nome }}</h3>
+
+                            <div v-if="planoAtivo.enviado_em" class="text-xs text-slate-500 mb-3">Enviado em {{ formatarDataBrasileira(planoAtivo.enviado_em) }}</div>
+                            <div v-else class="text-xs text-amber-600 font-semibold mb-3">⚠️ Não enviado ao paciente</div>
+
+                            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4 text-center">
+                                <p class="text-xs text-emerald-600 font-semibold uppercase mb-1">Meta Calórica</p>
+                                <p class="text-3xl font-bold text-emerald-700">{{ planoAtivo.calorias_objetivo }}</p>
+                                <p class="text-xs text-emerald-600">kcal/dia</p>
+                            </div>
+
+
+                            <div class="space-y-3 mb-4">
+
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-slate-600 uppercase">Proteína</span>
+                                        <span class="text-xs font-bold text-slate-700">{{ planoAtivo.proteinas_objetivo_pct }}%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-blue-500 h-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+
+
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-slate-600 uppercase">Carboidrato</span>
+                                        <span class="text-xs font-bold text-slate-700">{{ planoAtivo.carboidratos_objetivo_pct }}%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-amber-500 h-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+
+
+                                <div>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold text-slate-600 uppercase">Gordura</span>
+                                        <span class="text-xs font-bold text-slate-700">{{ planoAtivo.gorduras_objetivo_pct }}%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-red-500 h-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Button label="Ver plano completo →" @click="activeTab = 'planos'" text class="w-full justify-center text-emerald-600 font-semibold" />
+                        </div>
+
+
+                        <div v-if="loadingAnamnese" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <div class="h-40 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="pi pi-spin pi-spinner text-3xl text-emerald-600 mb-2"></i>
+                                    <p class="text-slate-600">Carregando saúde...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else-if="!anamnese" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6 text-center">
+                            <p class="text-slate-600 text-sm">Preencha a anamnese para ver informações de saúde</p>
+                        </div>
+                        <div v-else class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4">Saúde & Bem-estar</h3>
+                            <div class="space-y-3">
+
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-slate-600">dark_mode</span>
+                                        <span class="text-slate-700 font-medium">Sono</span>
+                                    </div>
+                                    <Tag :value="traduzirQualidadeSono(anamnese.qualidade_sono)" :severity="obterCorSono(anamnese.qualidade_sono)" class="text-xs" />
+                                </div>
+
+
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-slate-600">directions_run</span>
+                                        <span class="text-slate-700 font-medium">Exercícios</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-slate-700">
+                                        {{ anamnese.faz_exercicios ? `Sim, ${anamnese.frequencia_exercicio_semana}x/sem` : 'Não pratica' }}
+                                    </span>
+                                </div>
+
+
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-slate-600">water_drop</span>
+                                        <span class="text-slate-700 font-medium">Água</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-slate-700">{{ anamnese.copos_agua_por_dia || 0 }} copos/dia</span>
+                                </div>
+
+
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-slate-600">local_bar</span>
+                                        <span class="text-slate-700 font-medium">Álcool</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-slate-700">{{ traduzirConsumoAlcool(anamnese.consumo_alcool) }}</span>
+                                </div>
+
+                                <div class="border-t border-slate-200 pt-3"></div>
+
+
+                                <div class="mt-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-slate-600">sentiment_stress</span>
+                                            <span class="text-slate-700 font-medium">Stress</span>
+                                        </div>
+                                        <span :class="['text-sm font-bold', obterCorEstresse(anamnese.nivel_estresse) === 'success' ? 'text-green-600' : obterCorEstresse(anamnese.nivel_estresse) === 'warning' ? 'text-amber-600' : 'text-red-600']">
+                                            {{ anamnese.nivel_estresse }}/5
+                                        </span>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <div
+                                            v-for="n in 5"
+                                            :key="n"
+                                            :class="[
+                                                'flex-1 h-2 rounded',
+                                                n <= anamnese.nivel_estresse
+                                                    ? obterCorEstresse(anamnese.nivel_estresse) === 'success'
+                                                        ? 'bg-green-500'
+                                                        : obterCorEstresse(anamnese.nivel_estresse) === 'warning'
+                                                          ? 'bg-amber-500'
+                                                          : 'bg-red-500'
+                                                    : 'bg-slate-200'
+                                            ]"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div v-if="medidas.length < 2" class="bg-white shadow-sm border border-emerald-50 rounded-xl p-8 text-center">
+                    <p class="text-slate-600">Registre mais avaliações para visualizar a evolução do peso ao longo do tempo.</p>
+                </div>
+                <div v-else class="bg-white shadow-sm border border-emerald-50 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold text-slate-800 uppercase">Evolução do Peso</h3>
+                        <div class="flex gap-2">
+                            <button
+                                @click="periodoEvoucao = '6meses'"
+                                :class="['px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all', periodoEvoucao === '6meses' ? 'bg-slate-800 text-white border-slate-800' : 'border-slate-300 text-slate-600 hover:border-slate-400']"
+                            >
+                                6 Meses
+                            </button>
+                            <button
+                                @click="periodoEvoucao = '1ano'"
+                                :class="['px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all', periodoEvoucao === '1ano' ? 'bg-slate-800 text-white border-slate-800' : 'border-slate-300 text-slate-600 hover:border-slate-400']"
+                            >
+                                1 Ano
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <div class="bg-slate-50 rounded-lg p-4 mb-6">
+                        <Chart
+                            type="line"
+                            :data="chartDataEvolucaoPeso"
+                            :options="{
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        labels: {
+                                            color: '#64748b',
+                                            font: { weight: 'bold', size: 12 }
+                                        }
+                                    },
+                                    tooltip: {
+                                        backgroundColor: '#1e293b',
+                                        titleColor: '#fff',
+                                        bodyColor: '#fff',
+                                        padding: 12,
+                                        displayColors: true,
+                                        callbacks: {
+                                            label: function (context) {
+                                                return context.parsed.y.toFixed(2) + ' kg';
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: false,
+                                        ticks: { color: '#64748b' },
+                                        grid: { color: '#e2e8f0' },
+                                        title: { display: true, text: 'Peso (kg)', color: '#64748b' }
+                                    },
+                                    x: {
+                                        ticks: { color: '#64748b' },
+                                        grid: { color: '#e2e8f0' }
+                                    }
+                                }
+                            }"
+                            class="w-full"
+                            style="height: 300px"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-slate-50 rounded-xl p-4 text-center">
+                            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Início vs Agora</p>
+                            <p :class="['text-2xl font-bold', diferenceTotal && diferenceTotal < 0 ? 'text-green-600' : 'text-red-600']">{{ diferenceTotal ? (diferenceTotal < 0 ? '-' : '+') + Math.abs(diferenceTotal).toFixed(2) : '—' }} kg</p>
+                            <p v-if="percentualVariacaoTotal" :class="['text-sm', diferenceTotal && diferenceTotal < 0 ? 'text-green-600' : 'text-red-600']">({{ diferenceTotal && diferenceTotal < 0 ? '-' : '+' }}{{ percentualVariacaoTotal }}%)</p>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-xl p-4 text-center">
+                            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Melhor Resultado</p>
+                            <p class="text-2xl font-bold text-slate-900">{{ melhorPeso ? melhorPeso.peso : '—' }} kg</p>
+                            <p v-if="melhorPeso" class="text-sm text-slate-600">
+                                {{ new Date(melhorPeso.data).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) }}
+                            </p>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-xl p-4 text-center">
+                            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Tendência</p>
+                            <p :class="['text-2xl font-bold', tendenciaPeso.cor === 'success' ? 'text-green-600' : tendenciaPeso.cor === 'danger' ? 'text-red-600' : 'text-slate-600']">{{ tendenciaPeso.emoji }} {{ tendenciaPeso.label }}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+            -->
 
             <!-- Tab: Anamnese -->
-            <div v-else-if="activeTab === 'anamnese'" class="mx-auto">
+            <div v-if="activeTab === 'anamnese'" class="mx-auto">
                 <!-- Loading State -->
                 <div v-if="loadingAnamnese" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
                     <i class="pi pi-spin pi-spinner text-5xl text-emerald-600 mb-4"></i>
