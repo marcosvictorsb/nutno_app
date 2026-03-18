@@ -34,14 +34,13 @@ const handleSubmit = async (e) => {
 
         // Sucesso no login
         if (response.data.success && response.data.data.token) {
-            // Salva o token no localStorage
             AuthService.setToken(response.data.data.token);
 
             // Limpa a mensagem de conta criada
             contaCriadaMensagem.value = false;
 
             // Redireciona para o dashboard
-            router.push({ name: 'dashboard' });
+            router.push({ name: 'pacientes' });
         }
     } catch (error) {
         // Erro no login
