@@ -22,11 +22,6 @@ const router = createRouter({
             },
             children: [
                 {
-                    path: '/dashboard',
-                    name: 'dashboard',
-                    component: () => import('@/views/Dashboard.vue')
-                },
-                {
                     path: '/pacientes',
                     name: 'pacientes',
                     meta: {
@@ -57,21 +52,6 @@ const router = createRouter({
                         breadcrumb: ['Configuração']
                     },
                     component: () => import('@/views/utilities/Blocks.vue')
-                },
-                {
-                    path: '/pages/empty',
-                    name: 'empty',
-                    component: () => import('@/views/pages/Empty.vue')
-                },
-                {
-                    path: '/pages/crud',
-                    name: 'crud',
-                    component: () => import('@/views/pages/Crud.vue')
-                },
-                {
-                    path: '/start/documentation',
-                    name: 'documentation',
-                    component: () => import('@/views/pages/Documentation.vue')
                 }
             ]
         },
@@ -79,10 +59,6 @@ const router = createRouter({
             path: '/xyz/leads/campanha',
             name: 'leadsCampanha',
             component: () => import('@/views/pages/LeadsCampanha.vue')
-        },
-        {
-            path: '/landing',
-            redirect: '/'
         },
         {
             path: '/pages/notfound',
