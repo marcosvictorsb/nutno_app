@@ -1,104 +1,20 @@
 <script setup>
-import { LeadsService } from '@/service/LeadsService';
-import { useToast } from 'primevue/usetoast';
-import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-const toast = useToast();
-const heroName = ref('');
-const heroEmail = ref('');
-const ctaEmail = ref('');
-const isLoadingHero = ref(false);
-const isLoadingCta = ref(false);
-const totalLeads = ref(214);
+const router = useRouter();
 
-const fetchLeadsCount = async () => {
-    try {
-        const response = await LeadsService.getLeadsCount();
-        if (response.success && response.data && response.data.count) {
-            // Somar o count do backend + 214 (fictício)
-            totalLeads.value = response.data.count + 214;
-        }
-    } catch (error) {
-        console.error('Erro ao buscar contagem de leads:', error);
-        // Manter o valor padrão de 214 em caso de erro
-    }
+const irParaCadastro = () => {
+    router.push('/criar-conta-gratis');
 };
 
-onMounted(() => {
-    fetchLeadsCount();
-});
-
-const submitHeroLead = async () => {
-    if (!heroName.value.trim() || !heroEmail.value.trim()) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Campos obrigatórios',
-            detail: 'Por favor, preencha o nome e o email',
-            life: 3000
-        });
-        return;
-    }
-
-    isLoadingHero.value = true;
-    try {
-        await LeadsService.sendLead({
-            name: heroName.value,
-            email: heroEmail.value
-        });
-        toast.add({
-            severity: 'success',
-            summary: 'Sucesso!',
-            detail: 'Você foi adicionado à lista de espera',
-            life: 3000
-        });
-        heroName.value = '';
-        heroEmail.value = '';
-        fetchLeadsCount();
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Erro',
-            detail: 'Erro ao enviar. Por favor, tente novamente.',
-            life: 3000
-        });
-    } finally {
-        isLoadingHero.value = false;
-    }
+const irParaCadastroGratis = () => {
+    router.push('/criar-conta-gratis');
 };
 
-const submitCtaLead = async () => {
-    if (!ctaEmail.value.trim()) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Campo obrigatório',
-            detail: 'Por favor, preencha o email',
-            life: 3000
-        });
-        return;
-    }
-
-    isLoadingCta.value = true;
-    try {
-        await LeadsService.sendLead({
-            email: ctaEmail.value
-        });
-        toast.add({
-            severity: 'success',
-            summary: 'Sucesso!',
-            detail: 'Você foi adicionado à lista de espera',
-            life: 3000
-        });
-        ctaEmail.value = '';
-        fetchLeadsCount();
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Erro',
-            detail: 'Erro ao enviar. Por favor, tente novamente.',
-            life: 3000
-        });
-    } finally {
-        isLoadingCta.value = false;
+const scrollToPrecos = () => {
+    const element = document.getElementById('precos');
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
     }
 };
 </script>
@@ -117,7 +33,9 @@ const submitCtaLead = async () => {
                         <a class="hover:text-primary transition-colors" href="#problema">O Problema</a>
                         <a class="hover:text-primary transition-colors" href="#como-funciona">Como Funciona</a>
                         <a class="hover:text-primary transition-colors" href="#beneficios">Benefícios</a>
-                        <button class="bg-primary text-white px-5 py-2 rounded-lg font-bold hover:bg-primary-dark transition-all">Lista de Espera</button>
+                        <a class="hover:text-primary transition-colors" href="#precos">Preços</a>
+                        <button @click="router.push('/auth/login')" class="border border-primary text-primary px-5 py-2 rounded-lg font-bold hover:bg-primary/10 transition-all">Entrar</button>
+                        <button @click="irParaCadastroGratis()" class="bg-primary text-white px-5 py-2 rounded-lg font-bold hover:bg-primary-dark transition-all">Começar grátis</button>
                     </nav>
                 </div>
             </div>
@@ -127,40 +45,12 @@ const submitCtaLead = async () => {
             <div class="max-w-4xl mx-auto px-4 text-center">
                 <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">Monte a dieta do seu paciente em minutos e envie direto pelo celular</h1>
                 <p class="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto">Chega de planilhas e Word. Com o Nutno você cria, organiza e envia planos alimentares profissionais de forma simples e rápida.</p>
-                <!-- Lead Capture Form -->
-                <div class="bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 mb-6">
-                    <form @submit.prevent="submitHeroLead" class="flex flex-col lg:flex-row gap-2">
-                        <input v-model="heroName" class="flex-1 border-none focus:ring-0 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" placeholder="Seu Nome" type="text" :disabled="isLoadingHero" />
-                        <input v-model="heroEmail" class="flex-1 border-none focus:ring-0 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white" placeholder="Seu melhor e-mail" type="email" :disabled="isLoadingHero" />
-                        <button class="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-primary-dark transition-all whitespace-nowrap lg:w-auto w-full" type="submit" :disabled="isLoadingHero">
-                            {{ isLoadingHero ? 'Enviando...' : 'Quero conhecer primeiro — é grátis' }}
-                        </button>
-                    </form>
+                <!-- CTA Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+                    <button @click="irParaCadastroGratis()" class="bg-primary text-white font-bold px-8 py-4 rounded-xl hover:bg-primary-dark transition-all whitespace-nowrap">Começar grátis agora</button>
+                    <button @click="scrollToPrecos()" class="border-2 border-primary text-primary font-bold px-8 py-4 rounded-xl hover:bg-primary/10 transition-all whitespace-nowrap">Ver planos e preços</button>
                 </div>
-                <p class="text-sm text-slate-500 mb-8">Seja um dos primeiros a testar. Sem cartão de crédito. Sem compromisso.</p>
-                <div class="flex items-center justify-center gap-3">
-                    <div class="flex -space-x-2">
-                        <img
-                            alt="Nutri 1"
-                            class="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900"
-                            data-alt="Portrait of a female nutritionist"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnN-udeayiq38vIiqBDTEwPtp9wIoaWl3iL2ogkOL8TPLw0Sax52Fqhiyw9gY7R90ejjLg1aOswHn86SGs02BRFx8TbL7pzqZcp62zZaNhWVMYwSyBV6sJ-k-AtH5hckeqoFaazI1wH5U-9yp2vpemMpE8Ocl_w2ZlrjQdptpGo-fQhsdqUNZxotONFieFqjSAiA23xEo5Fq6MNlOLJKQQB7loMmocjlQWm95GFgEaxQ1SVGIQxbBACkimhRYCTuqFKdz9oxaztMay"
-                        />
-                        <img
-                            alt="Nutri 2"
-                            class="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900"
-                            data-alt="Portrait of a male health professional"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDN5M66-CpFp4Kb6i34FDsYE62n-2tY1RBJd661qEpSqQfcmB1-G9Blgty0iSUC_cUTO7NeYNanYjL_-ehgoAWhY6DGwkONNR9J7jBoMjcbQJYqqkutO9kc0PNafUrqBAjFb7WL0WzX_hvKsjrpjdnwhz8TiY7zct9oCHCLkrlnAzsGX81CEwOVM-70BSTV6coOcStu4S2rmXsZrRD3tgvFYSQsLirjCd0BXKmtSg21FF8ae8phH6MncL6AJLpOvlGTYtu4RclDt2N"
-                        />
-                        <img
-                            alt="Nutri 3"
-                            class="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900"
-                            data-alt="Close up of a professional doctor"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6fGys7XUAmpQiI9t93lloYIesSbu4oYI4a7a2omrpdmdMUtHwGIv5ryB6Yr_YeJBafuuZL1LviON8_GFopV2uCyn-hiXcHQ7zsA30W2kW5XJGTdjWGyRQt-zBY-IRwjxUHLlp3TaspVQ3SBzVB9g4w9u9Jmh2tlAl3H0U0JJPUstCOmAh_4H2F2IhJlzabe4tgrVC6eeK7OOLdXnm1wa_RJj7aLsWu3l_lLFX0xXkbwdAzfBVAlpwsxhYBfp9GLZZFabs-d75eg7a"
-                        />
-                    </div>
-                    <span class="text-primary font-semibold text-sm">🎉 {{ totalLeads }} nutricionistas já estão na lista de espera</span>
-                </div>
+                <p class="text-sm text-slate-500">Sem cartão de crédito</p>
             </div>
         </section>
         <!-- Problem Section -->
@@ -301,72 +191,179 @@ const submitCtaLead = async () => {
                 </div>
             </div>
         </section>
-        <!--
+
+        <!-- Pricing Section -->
+        <section class="py-20 bg-slate-50 dark:bg-slate-950/50" id="precos">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-4">Escolha seu plano</h2>
+                    <p class="text-lg text-slate-600 dark:text-slate-400">Comece grátis. Faça upgrade quando quiser. Cancele a qualquer momento.</p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                    <!-- Free Plan Card -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-800 p-8 flex flex-col">
+                        <div class="inline-block w-fit mb-4 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                            <span class="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Grátis para sempre</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Free</h3>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold text-slate-900 dark:text-white">R$ 0</span>
+                            <span class="text-slate-600 dark:text-slate-400">/mês</span>
+                        </div>
+                        <p class="text-slate-600 dark:text-slate-400 mb-8">Para começar sem risco</p>
+                        <ul class="space-y-4 mb-8 flex-grow">
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Até 3 pacientes ativos</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Planos alimentares ilimitados</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Banco TACO + TBCA completo</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Envio do plano por link</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Anamnese digital básica</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-slate-400 font-bold text-xl line-through">✗</span>
+                                <span class="text-slate-400">Personalização de logo</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-slate-400 font-bold text-xl line-through">✗</span>
+                                <span class="text-slate-400">Histórico de medidas</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-slate-400 font-bold text-xl line-through">✗</span>
+                                <span class="text-slate-400">Relatórios de adesão</span>
+                            </li>
+                        </ul>
+                        <button @click="irParaCadastroGratis()" class="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold px-6 py-3 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                            Criar conta grátis
+                        </button>
+                    </div>
+
+                    <!-- Pro Plan Card -->
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl border-2 border-primary bg-gradient-to-br from-primary/5 to-transparent p-8 flex flex-col ring-2 ring-primary/20">
+                        <div class="inline-block w-fit mb-4 px-3 py-1 bg-primary/20 rounded-full">
+                            <span class="text-xs font-bold text-primary uppercase">Mais popular</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Pro</h3>
+                        <div class="mb-2">
+                            <span class="text-4xl font-bold text-slate-900 dark:text-white">R$ 59,90</span>
+                            <span class="text-slate-600 dark:text-slate-400">/mês</span>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-slate-400 mb-8">ou R$ 47,90/mês no plano anual</p>
+                        <p class="text-slate-600 dark:text-slate-400 mb-8">Para nutricionistas que querem crescer</p>
+                        <ul class="space-y-4 mb-8 flex-grow">
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Pacientes ilimitados</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Planos alimentares ilimitados</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Banco TACO + TBCA completo</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Envio por WhatsApp e e-mail</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Anamnese completa com link para paciente</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Histórico de medidas e evolução</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Registro de adesão por refeição</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Relatórios de evolução do paciente</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Personalização de logo nos planos</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold text-xl">✓</span>
+                                <span class="text-slate-700 dark:text-slate-300">Suporte por e-mail</span>
+                            </li>
+                        </ul>
+                        <button @click="irParaCadastroGratis()" class="w-full bg-primary text-white font-bold px-6 py-3 rounded-lg hover:bg-primary-dark transition-all">Assinar Pro</button>
+                    </div>
+                </div>
+                <div class="text-center mt-12">
+                    <p class="text-sm text-slate-600 dark:text-slate-400">🔒 Pagamento seguro · Cancele quando quiser · Sem fidelidade</p>
+                </div>
+            </div>
+        </section>
+
         <section class="py-20 bg-slate-50 dark:bg-slate-950/50">
             <div class="max-w-7xl mx-auto px-4">
                 <h2 class="text-3xl font-bold text-center mb-16">O que dizem os primeiros usuários</h2>
                 <div class="grid md:grid-cols-3 gap-8">
                     <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm italic text-slate-600 dark:text-slate-400">
-                        <p class="mb-6">"Reduzi o tempo de montagem de dieta pela metade. O envio pelo WhatsApp mudou a relação com meus pacientes."</p>
+                        <p class="mb-6">"Finalmente consigo enviar a dieta de forma organizada e o paciente entende tudo direto no celular. Sem PDF, sem confusão."</p>
                         <div class="flex items-center gap-4 not-italic">
-                            <img
-                                alt="Dra. Camila"
-                                class="w-12 h-12 rounded-full"
-                                data-alt="Portrait of Dr. Camila Rocha"
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhgm_aB4cvJOARddBleWgRGrNgpQM5R_tlOrDKGoEz6CGxgAUF69MNrT0JX58HPMmL8svQnpLqGeE7vL7fhid4u4LlZjJoYZhYFzvwr5zX1yI1AYs3i-nTvJIbeiDzUAh7NSCuyPiWGC_KX5xBXnfoYYGipSeis0rI845Trfx7J1ipmmoRLkaC30ITjzfoP1Mrxu-xLF6IZfHjHHbSl2HdWHTsJ8gYf1-NldYF6qTK5H6F2an99vLbYFx9gG3CxwCdN4c3FvGFblkK"
-                            />
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">person</span>
+                            </div>
                             <div>
-                                <p class="font-bold text-slate-900 dark:text-white">Dra. Camila Rocha</p>
-                                <p class="text-xs text-slate-500 uppercase tracking-widest">CRN 4-12345</p>
+                                <p class="font-bold text-slate-900 dark:text-white">Nutricionista</p>
+                                <p class="text-xs text-slate-500">São Paulo</p>
                             </div>
                         </div>
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm italic text-slate-600 dark:text-slate-400">
-                        <p class="mb-6">"O suporte para a tabela TACO é sensacional. Tudo flui de uma maneira muito profissional."</p>
+                        <p class="mb-6">"A tabela TACO integrada faz toda a diferença. Monto o plano muito mais rápido do que no Word."</p>
                         <div class="flex items-center gap-4 not-italic">
-                            <img
-                                alt="Dra. Fernanda"
-                                class="w-12 h-12 rounded-full"
-                                data-alt="Portrait of Dr. Fernanda Lima"
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-L3bmYM3EKqGpyLjgu2TDZ4Gqn7qU93I1kM-JrP9QGm7DW_3mErRVSJWYTDGkLgc4QGsoUg8EUFdUfHs0mxGjwutZFJSXv38CwlXD8yeSKyzjtVU9dysW-V_-wEJnbHiM-0MfuHjsMtN5ItpFsITij3CN3vjueH75i5rh0AhXFFoRW49NkBEqxyyYyhj0tZ_BAcNyJhOkgoJQ08fq76BHnm-1CFAeVoZe0ZLi4dcA7PN3zi1IKcMwRv5v_FN6HTUVDrkhkLh1GBEl"
-                            />
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">person</span>
+                            </div>
                             <div>
-                                <p class="font-bold text-slate-900 dark:text-white">Dra. Fernanda Lima</p>
-                                <p class="text-xs text-slate-500 uppercase tracking-widest">CRN 2-98765</p>
+                                <p class="font-bold text-slate-900 dark:text-white">Nutricionista</p>
+                                <p class="text-xs text-slate-500">Rio de Janeiro</p>
                             </div>
                         </div>
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm italic text-slate-600 dark:text-slate-400">
-                        <p class="mb-6">"Os pacientes adoram o visual das dietas no celular. A adesão aumentou significativamente."</p>
+                        <p class="mb-6">"O paciente consegue registrar se seguiu ou não a refeição. Isso mudou como eu acompanho a adesão."</p>
                         <div class="flex items-center gap-4 not-italic">
-                            <img
-                                alt="Dra. Juliana"
-                                class="w-12 h-12 rounded-full"
-                                data-alt="Portrait of Dr. Juliana Matos"
-                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKpsp8jowIS3wjBzWo6D9AgKhjv3bHkz0DWgMthaZscSUoe_YlYDa9PfX7kDJm8YRmESvDTsJ6DbNUj-Zx8RKQ3rmz7tnhmd0Rb_liqLfakUl7m7L64VU5yprtH0Ivw6eOkkixiWBRnB4Da3xrdwPrBYAkLmZWFyw2MvldyMHKe-9ZiZBpT_Tis9unpq0UbsTJSVq6wisM3kPPEzQjhfaQTbn7X-QOLhu4lBKY2g2nihH6N3cisVk2bYWQmdyiECjk2BrrEm0a0zYl"
-                            />
+                            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">person</span>
+                            </div>
                             <div>
-                                <p class="font-bold text-slate-900 dark:text-white">Dra. Juliana Matos</p>
-                                <p class="text-xs text-slate-500 uppercase tracking-widest">CRN 1-54321</p>
+                                <p class="font-bold text-slate-900 dark:text-white">Nutricionista</p>
+                                <p class="text-xs text-slate-500">Minas Gerais</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
-        Testimonials -->
         <!-- Final CTA -->
         <section class="py-24 bg-primary-dark text-white">
             <div class="max-w-4xl mx-auto px-4 text-center">
-                <h2 class="text-3xl md:text-5xl font-bold mb-8 text-white">Pronto para transformar sua prática clínica?</h2>
-                <p class="text-xl text-white mb-12">Entre para a lista exclusiva de lançamento e ganhe benefícios vitalícios.</p>
-                <div class="bg-white/10 p-2 rounded-2xl shadow-xl border border-white/20 max-w-lg mx-auto">
-                    <form @submit.prevent="submitCtaLead" class="flex flex-col md:flex-row gap-2">
-                        <input v-model="ctaEmail" class="flex-1 border-none focus:ring-0 rounded-xl px-4 py-3 bg-white text-slate-900" placeholder="Seu melhor e-mail" type="email" :disabled="isLoadingCta" />
-                        <button class="bg-white text-primary-dark font-bold px-8 py-3 rounded-xl hover:bg-slate-100 transition-all whitespace-nowrap" type="submit" :disabled="isLoadingCta">
-                            {{ isLoadingCta ? 'Enviando...' : 'Quero participar agora' }}
-                        </button>
-                    </form>
+                <h2 class="text-3xl md:text-5xl font-bold mb-8 text-white">Pronto para simplificar sua prática clínica?</h2>
+                <p class="text-xl text-white mb-12">Junte-se a nutricionistas que já economizam horas toda semana.</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button @click="irParaCadastroGratis()" class="bg-white text-primary-dark font-bold px-8 py-3 rounded-lg hover:bg-slate-100 transition-all whitespace-nowrap">Criar conta grátis</button>
+                    <button @click="scrollToPrecos()" class="border-2 border-white text-white font-bold px-8 py-3 rounded-lg hover:bg-white/10 transition-all whitespace-nowrap">Ver planos e preços</button>
                 </div>
             </div>
         </section>
