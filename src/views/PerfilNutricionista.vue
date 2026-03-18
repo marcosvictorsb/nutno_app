@@ -213,12 +213,6 @@ const validarFormularioDados = () => {
         errosDados.value.nome = 'Nome deve ter pelo menos 3 caracteres';
     }
 
-    if (!formDados.value.email.trim()) {
-        errosDados.value.email = 'E-mail é obrigatório';
-    } else if (!validarEmail(formDados.value.email)) {
-        errosDados.value.email = 'E-mail inválido';
-    }
-
     return Object.keys(errosDados.value).length === 0;
 };
 
@@ -254,7 +248,6 @@ const salvarDados = async () => {
 
         await NutricionistaService.salvarDadosPessoais({
             nome: formDados.value.nome,
-            email: formDados.value.email,
             crn: formDados.value.crn || null,
             telefone: formDados.value.telefone || null,
             especialidade: formDados.value.especialidade || null
@@ -263,7 +256,6 @@ const salvarDados = async () => {
         // Atualizar valores originais
         dadosOriginais.value = { ...formDados.value };
         nutricionista.value.nome = formDados.value.nome;
-        nutricionista.value.email = formDados.value.email;
 
         showSuccessToast.value = true;
         setTimeout(() => {
@@ -372,7 +364,7 @@ onMounted(() => {
             <div class="h-32 w-full bg-emerald-900/60" />
 
             <!-- Avatar + Info Section -->
-            <div class="px-8 pb-8 flex flex-col sm:flex-row items-end sm:items-center gap-6 -mt-16">
+            <div class="px-8 pb-8 flex flex-col sm:flex-row items-end sm:items-center gap-6 -mt-12">
                 <!-- Avatar -->
                 <div class="relative group">
                     <div class="w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-sm flex items-center justify-center text-4xl font-bold text-emerald-600">
@@ -391,7 +383,7 @@ onMounted(() => {
                 <!-- Info -->
                 <div class="flex-1 pt-4 sm:pt-12">
                     <h2 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{{ nutricionista?.nome }}</h2>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 items-center -mt-4">
                         <span class="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
                             <span class="material-symbols-outlined text-base">mail</span>
                             {{ nutricionista?.email }}
@@ -430,7 +422,8 @@ onMounted(() => {
                         <input
                             v-model="formDados.email"
                             type="email"
-                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                            disabled
+                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none opacity-60 cursor-not-allowed"
                         />
                         <p v-if="errosDados.email" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosDados.email }}</p>
                     </div>
