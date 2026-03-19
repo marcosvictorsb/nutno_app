@@ -1,5 +1,5 @@
 <script setup>
-import ApiClient from '@/service/ApiClient';
+import { apiUrl } from '@/service/ApiClient';
 import NutricionistaService from '@/service/NutricionistaService';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
@@ -94,6 +94,15 @@ const podeAlterarSenha = computed(() => {
     return formSenha.value.senhaAtual.trim() !== '' && formSenha.value.novaSenha.trim() !== '' && formSenha.value.confirmarSenha.trim() !== '' && formSenha.value.novaSenha === formSenha.value.confirmarSenha && forcaSenha.value.forca >= 3;
 });
 
+// Construir URL completa da foto
+const construirUrlFoto = (caminho) => {
+    if (!caminho) return null;
+    if (caminho.startsWith('http')) return caminho;
+    const urlCompleta = `${apiUrl}/${caminho}`;
+    console.log('🖼️ URL da foto construída:', urlCompleta);
+    return urlCompleta;
+};
+
 // ===== FUNÇÕES DE CARREGAMENTO =====
 
 const carregarPerfil = async () => {
@@ -116,9 +125,15 @@ const carregarPerfil = async () => {
         dadosOriginais.value = { ...formDados.value };
 
         // Carregar foto se houver
-        if (response.data.foto_url) {
-            previewFoto.value = response.data.foto_url;
+        console.log('📸 Resposta do servidor:', response.data);
+        if (response.data.caminho_foto) {
+            console.log('📸 Usando caminho_foto:', response.data.caminho_foto);
+            previewFoto.value = construirUrlFoto(response.data.caminho_foto);
+        } else if (response.data.fotoUrl) {
+            console.log('📸 Usando fotoUrl:', response.data.fotoUrl);
+            previewFoto.value = construirUrlFoto(response.data.fotoUrl);
         }
+        console.log('📸 Preview foto final:', previewFoto.value);
     } catch (erro) {
         console.error('Erro ao carregar perfil:', erro);
         toast.add({
@@ -144,7 +159,7 @@ const selecionarFoto = () => {
         if (!arquivo) return;
 
         // Validar tamanho (máx 2MB)
-        if (arquivo.size > 2 * 1024 * 1024) {
+        if (arquivo.size > 5 * 1024 * 1024) {
             toast.add({
                 severity: 'error',
                 summary: 'Arquivo muito grande',
@@ -174,6 +189,7 @@ const selecionarFoto = () => {
 
         // Upload
         await enviarFoto(arquivo);
+        await carregarPerfil(); // Recarregar perfil para atualizar foto e dados
     };
     input.click();
 };
@@ -183,9 +199,7 @@ const enviarFoto = async (arquivo) => {
         const formData = new FormData();
         formData.append('foto', arquivo);
 
-        const response = await ApiClient.post('/nutricionistas/perfil/foto', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const response = await NutricionistaService.enviarFoto(formData);
 
         nutricionista.value.foto_url = response.data.foto_url;
 

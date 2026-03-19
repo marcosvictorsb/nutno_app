@@ -19,5 +19,12 @@ export default {
     // Alterar senha do nutricionista
     alterarSenha(dados) {
         return apiClient.put('/nutricionistas/seguranca', dados);
+    },
+
+    // Enviar foto do nutricionista
+    enviarFoto(formData) {
+        return apiClient.put('/nutricionistas/foto', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
     }
 };

@@ -72,4 +72,5 @@ apiClient.interceptors.response.use(
     }
 );
 
+export { apiUrl };
 export default apiClient;
