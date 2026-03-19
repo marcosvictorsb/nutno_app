@@ -108,6 +108,11 @@ const router = createRouter({
             path: '/formulario/:id',
             name: 'formularioAnamnese',
             component: () => import('@/views/FormularioAnamnese.vue')
+        },
+        {
+            path: '/:pathMatch(.*)*',
+            name: 'notFound',
+            component: () => import('@/views/pages/NotFound.vue')
         }
     ]
 });
