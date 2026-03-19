@@ -24,6 +24,13 @@ export default {
         });
     },
 
+    // Recuperar senha
+    recuperarSenha(dados) {
+        return apiClient.post('/auth/recuperar-senha', {
+            email: dados.email
+        });
+    },
+
     // Salva o token no localStorage
     setToken(token) {
         localStorage.setItem('authToken', token);

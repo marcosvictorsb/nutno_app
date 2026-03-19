@@ -182,8 +182,7 @@ const handleSubmit = async (e) => {
                         </button>
 
                         <p class="text-center text-sm text-gray-600 mt-6">
-                            Não tem conta?
-                            <router-link to="/criar-conta-gratis" class="font-semibold text-green-600 hover:underline">Crie uma gratuita</router-link>
+                            <router-link to="/recuperar-senha" class="font-semibold text-green-600 hover:underline">Esqueceu a senha?</router-link>
                         </p>
                     </form>
                 </div>

@@ -1,6 +1,15 @@
 <script setup>
+import AuthService from '@/service/AuthService';
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import AppMenuItem from './AppMenuItem.vue';
+
+const router = useRouter();
+
+const handleLogout = () => {
+    AuthService.clearToken();
+    router.push('/auth/login');
+};
 
 const model = ref([
     {
@@ -20,6 +29,21 @@ const model = ref([
                 label: 'Configuração',
                 icon: 'pi pi-fw pi-sliders-v',
                 to: '/configuracao'
+            }
+        ]
+    },
+    {
+        label: 'Conta',
+        items: [
+            {
+                label: 'Meu Perfil',
+                icon: 'pi pi-fw pi-user',
+                to: '/perfil'
+            },
+            {
+                label: 'Logout',
+                icon: 'pi pi-fw pi-sign-out',
+                command: handleLogout
             }
         ]
     }
