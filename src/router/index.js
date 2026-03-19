@@ -85,6 +85,11 @@ const router = createRouter({
             component: () => import('@/views/pages/auth/RecuperarSenha.vue')
         },
         {
+            path: '/reset-senha/:token',
+            name: 'resetSenha',
+            component: () => import('@/views/pages/auth/ResetSenha.vue')
+        },
+        {
             path: '/auth/access',
             name: 'accessDenied',
             component: () => import('@/views/pages/auth/Access.vue')

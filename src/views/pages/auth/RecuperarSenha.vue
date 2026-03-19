@@ -9,50 +9,35 @@ const email = ref('');
 const loading = ref(false);
 const mensagemErro = ref('');
 const mensagemSucesso = ref('');
-const testClick = ref(false);
 
 const emailValido = computed(() => {
     return email.value.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
 });
 
 const handleSubmit = async () => {
-    testClick.value = true;
-    console.log('BOTÃO CLICADO - handleSubmit foi chamado');
-
-    if (!emailValido.value) {
-        console.log('Email inválido');
-        return;
-    }
+    if (!emailValido.value) return;
 
     loading.value = true;
     mensagemErro.value = '';
     mensagemSucesso.value = '';
 
     try {
-        console.log('Fazendo requisição para recuperar senha com email:', email.value);
         const response = await AuthService.recuperarSenha({
             email: email.value
         });
-        console.log('Resposta recebida:', response);
 
-        // Verificar se a resposta foi bem-sucedida
         if (response.data && response.data.success) {
             mensagemSucesso.value = response.data.message || 'Um link de recuperação foi enviado para seu email. Verifique sua caixa de entrada.';
             email.value = '';
 
-            // Redireciona para login após 3 segundos
             setTimeout(() => {
                 router.push({ name: 'login' });
             }, 3000);
         } else {
-            // Se success é false, mostrar a mensagem de erro
             mensagemErro.value = response.data?.message || 'Erro ao processar solicitação. Tente novamente.';
         }
     } catch (error) {
-        console.error('Erro na requisição:', error);
-        // Erro na requisição
         if (error.response && error.response.data) {
-            // Se o servidor retornar uma resposta com success: false
             if (error.response.data.success === false) {
                 mensagemErro.value = error.response.data.message || 'Erro ao processar solicitação.';
             } else if (error.response.data.message) {
@@ -137,11 +122,6 @@ const voltarParaLogin = () => {
                         </div>
                     </div>
 
-                    <!-- Debug: Teste se o click está sendo disparado -->
-                    <div v-if="testClick" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <p class="text-sm font-semibold text-blue-900">✓ Botão clicado com sucesso! Verifique o console do navegador.</p>
-                    </div>
-
                     <!-- Formulário -->
                     <form class="space-y-5">
                         <div>
@@ -149,7 +129,15 @@ const voltarParaLogin = () => {
                             <input v-model="email" type="email" placeholder="seu@email.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition" />
                         </div>
 
-                        <button type="button" @click="handleSubmit" class="w-full font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer">
+                        <button
+                            type="button"
+                            @click="handleSubmit"
+                            :disabled="!emailValido || loading || mensagemSucesso"
+                            :class="[
+                                'w-full font-bold py-3 rounded-lg transition flex items-center justify-center gap-2',
+                                emailValido && !loading && !mensagemSucesso ? 'bg-green-600 hover:bg-green-700 text-white cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            ]"
+                        >
                             <span v-if="loading" class="inline-block animate-spin">⟳</span>
                             <span>{{ loading ? 'Enviando...' : 'Enviar Link de Recuperação' }}</span>
                         </button>

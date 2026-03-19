@@ -31,6 +31,30 @@ export default {
         });
     },
 
+    // Verificar se token de reset é válido
+    checkToken(token) {
+        return apiClient.get('/auth/check-token', {
+            params: {
+                reset_password_token: token
+            }
+        });
+    },
+
+    // Resetar senha com o token
+    resetarSenha(dados) {
+        return apiClient.post(
+            '/auth/redefinir-senha',
+            {
+                nova_senha: dados.senha
+            },
+            {
+                params: {
+                    token: dados.token
+                }
+            }
+        );
+    },
+
     // Salva o token no localStorage
     setToken(token) {
         localStorage.setItem('authToken', token);
