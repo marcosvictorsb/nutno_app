@@ -375,7 +375,7 @@ onMounted(() => {
         <!-- CARD 1: Header/Photo -->
         <section v-if="!loading" class="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden relative border border-slate-100/10 dark:border-slate-700/10">
             <!-- Dark Green Header -->
-            <div class="h-32 w-full bg-emerald-900/60" />
+            <div class="h-32 w-full bg-emerald-900/100" />
 
             <!-- Avatar + Info Section -->
             <div class="px-8 pb-8 flex flex-col sm:flex-row items-end sm:items-center gap-6 -mt-12">
