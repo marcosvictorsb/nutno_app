@@ -4,6 +4,7 @@ import AnamneseService from '@/service/AnamneseService';
 import MedidaService from '@/service/MedidaService';
 import PacienteService from '@/service/PacienteService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
+import { construirUrlFotoPaciente } from '@/utils/urlHelper';
 import { DatePicker } from 'primevue';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
@@ -33,6 +34,8 @@ const activeTab = ref('anamnese');
 const showDialogEdicao = ref(false);
 const formErrors = ref({});
 const loadingAtualizacao = ref(false);
+const loadingUploadFoto = ref(false);
+const inputFotoRef = ref(null);
 
 // Estados da anamnese
 const anamnese = ref(null);
@@ -161,6 +164,11 @@ const rcqComClassificacao = computed(() => {
 // GET calculado automaticamente
 const getCalculado = computed(() => {
     return calcularGET(formularioMedida.value.tmb, formularioMedida.value.nivel_atividade);
+});
+
+// URL da foto do paciente com base no ambiente
+const fotoPacienteUrl = computed(() => {
+    return construirUrlFotoPaciente(paciente.value?.foto_perfil);
 });
 
 // ===== COMPUTED PROPERTIES PARA ABA RESUMO =====
@@ -310,7 +318,32 @@ const chartDataEvolucaoPeso = computed(() => {
 watch(
     () => [formularioMedida.value.peso, formularioMedida.value.altura],
     () => {
-        // IMC é computed, então recalcula automaticamente
+        // Sincronizar IMC com o valor calculado
+        if (formularioMedida.value.peso && formularioMedida.value.altura) {
+            const peso = parseFloat(formularioMedida.value.peso);
+            const altura = parseFloat(formularioMedida.value.altura);
+            if (peso > 0 && altura > 0) {
+                const alturaMetros = altura / 100;
+                const imc = peso / (alturaMetros * alturaMetros);
+                formularioMedida.value.imc = parseFloat(imc.toFixed(2));
+                console.log('🔄 IMC recalculado:', imc);
+            }
+        }
+    }
+);
+
+// Recalcular TMB quando peso, altura ou nível de atividade mudam
+watch(
+    () => [formularioMedida.value.peso, formularioMedida.value.altura],
+    () => {
+        if (paciente.value?.data_nascimento && formularioMedida.value.peso && formularioMedida.value.altura) {
+            const idade = calcularIdade(paciente.value.data_nascimento);
+            const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
+            if (tmb) {
+                formularioMedida.value.tmb = tmb;
+                console.log('🔄 TMB recalculado:', tmb, 'kcal/dia');
+            }
+        }
     }
 );
 
@@ -318,7 +351,13 @@ watch(
 watch(
     () => formularioMedida.value.perc_gordura_corporal,
     () => {
-        // % Massa Magra é computed, então recalcula automaticamente
+        // Sincronizar % Massa Magra com o valor calculado
+        if (formularioMedida.value.perc_gordura_corporal !== null && formularioMedida.value.perc_gordura_corporal !== '') {
+            const perc_gordura = parseFloat(formularioMedida.value.perc_gordura_corporal);
+            const perc_massa_magra = 100 - perc_gordura;
+            formularioMedida.value.perc_massa_magra = perc_massa_magra;
+            console.log('🔄 % Massa Magra recalculada:', perc_massa_magra);
+        }
     }
 );
 
@@ -334,7 +373,12 @@ watch(
 watch(
     () => [formularioMedida.value.tmb, formularioMedida.value.nivel_atividade],
     () => {
-        // GET é computed, então recalcula automaticamente
+        // Sincronizar gasto_energetico_total com o valor calculado
+        const getCalculado = calcularGET(formularioMedida.value.tmb, formularioMedida.value.nivel_atividade);
+        if (getCalculado) {
+            formularioMedida.value.gasto_energetico_total = getCalculado;
+            console.log('🔄 GET recalculado:', getCalculado, 'kcal/dia');
+        }
     }
 );
 
@@ -726,6 +770,82 @@ const atualizarPaciente = async () => {
     }
 };
 
+// Função para abrir seletor de arquivo
+const selecionarFoto = () => {
+    inputFotoRef.value?.click();
+};
+
+// Função para fazer upload da foto
+const enviarFoto = async (event) => {
+    const arquivo = event.target.files?.[0];
+    if (!arquivo) return;
+
+    // Validar tipo de arquivo
+    if (!arquivo.type.startsWith('image/')) {
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Por favor, selecione um arquivo de imagem válido',
+            life: 3000
+        });
+        return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (arquivo.size > maxSize) {
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'A imagem não pode ser maior que 5MB',
+            life: 3000
+        });
+        return;
+    }
+
+    loadingUploadFoto.value = true;
+
+    try {
+        const formData = new FormData();
+        formData.append('foto', arquivo);
+
+        console.log('📸 Enviando foto para o paciente:', paciente.value.id);
+
+        // Chamar service para enviar foto
+        const response = await PacienteService.enviarFotoPaciente(paciente.value.id, formData);
+
+        console.log('✅ Foto enviada com sucesso:', response.data);
+
+        if (response.data.success) {
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Foto do paciente atualizada com sucesso',
+                life: 3000
+            });
+
+            // Recarregar dados do paciente para atualizar a foto
+            await carregarPaciente();
+        } else {
+            throw new Error(response.data.message || 'Erro ao enviar foto');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao enviar foto:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: error.response?.data?.message || 'Erro ao enviar a foto',
+            life: 3000
+        });
+    } finally {
+        loadingUploadFoto.value = false;
+        // Limpar input file
+        if (inputFotoRef.value) {
+            inputFotoRef.value.value = '';
+        }
+    }
+};
+
 // Watchers para remover erros quando o usuário edita os campos
 watch(
     () => formEdicaoPaciente.value.nome,
@@ -929,25 +1049,37 @@ const carregarMedidas = async () => {
         const response = await MedidaService.listarMedidasPaciente(idPaciente);
         console.log('✅ Resposta de medidas:', response.data);
 
-        if (response.data.success) {
-            if (response.data.data && Array.isArray(response.data.data)) {
-                medidas.value = response.data.data.sort((a, b) => new Date(b.data_avaliacao) - new Date(a.data_avaliacao));
-                if (medidas.value.length > 0) {
-                    medidaSelecionada.value = medidas.value[0];
-                }
+        if (response.data.success && response.data.data) {
+            if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+                // A API retorna os dados já ordenados por ID DESC (mais recente primeiro)
+                // Não é necessário fazer sort novamente
+                medidas.value = response.data.data;
+
+                // A primeira medida é sempre a mais recente - preencher a seleção
+                medidaSelecionada.value = medidas.value[0];
+                console.log('📍 Medida selecionada:', medidaSelecionada.value.id, '- Peso:', medidaSelecionada.value.peso, 'kg');
+                medidaSelecionada.value.imc = medidaSelecionada.value.gasto_energetico_total;
+
                 erroMedidas.value = null;
             } else {
+                // API retornou sucesso mas sem dados
                 medidas.value = [];
+                medidaSelecionada.value = null;
                 erroMedidas.value = null;
+                console.log('ℹ️ Nenhuma medida registrada para este paciente');
             }
         } else {
+            // API retornou erro
             erroMedidas.value = response.data.message || 'Erro ao listar medidas';
             medidas.value = [];
+            medidaSelecionada.value = null;
+            console.error('❌ Erro na resposta da API:', erroMedidas.value);
         }
     } catch (error) {
         console.error('❌ Erro ao carregar medidas:', error);
         erroMedidas.value = 'Erro ao carregar medidas. Tente novamente.';
         medidas.value = [];
+        medidaSelecionada.value = null;
     } finally {
         loadingMedidas.value = false;
         medidasCarregada.value = true;
@@ -963,7 +1095,8 @@ watch(
     }
 );
 
-const abrirCriacaoMedida = () => {
+const abrirCriacaoMedida = async () => {
+    // Inicializar formulário com valores padrão
     formularioMedida.value = {
         data_avaliacao: new Date(),
         peso: null,
@@ -997,6 +1130,55 @@ const abrirCriacaoMedida = () => {
         observacoes: ''
     };
     pressaoArterialCombinada.value = '';
+
+    // Buscar dados da última anamnese para preencher campos
+    try {
+        const response = await AnamneseService.obterAnamnesePaciente(paciente.value.id);
+        if (response.data.success && response.data.data) {
+            const anamneseData = response.data.data;
+
+            // Preencher peso
+            if (anamneseData.peso_atual) {
+                formularioMedida.value.peso = parseFloat(anamneseData.peso_atual);
+            }
+
+            // Preencher altura
+            if (anamneseData.altura) {
+                formularioMedida.value.altura = parseFloat(anamneseData.altura);
+            }
+
+            // Definir nível de atividade baseado nos dados da anamnese
+            if (anamneseData.faz_exercicios && anamneseData.frequencia_exercicio_semana) {
+                const frequencia = parseInt(anamneseData.frequencia_exercicio_semana);
+                if (frequencia >= 5) {
+                    formularioMedida.value.nivel_atividade = 'intenso';
+                } else if (frequencia >= 3) {
+                    formularioMedida.value.nivel_atividade = 'moderado';
+                } else if (frequencia > 0) {
+                    formularioMedida.value.nivel_atividade = 'leve';
+                } else {
+                    formularioMedida.value.nivel_atividade = 'sedentario';
+                }
+            } else {
+                formularioMedida.value.nivel_atividade = 'sedentario';
+            }
+
+            // Calcular TMB automaticamente se temos todos os dados necessários
+            if (paciente.value?.data_nascimento && formularioMedida.value.peso && formularioMedida.value.altura) {
+                await nextTick();
+                const idade = calcularIdade(paciente.value.data_nascimento);
+                const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
+                if (tmb) {
+                    formularioMedida.value.tmb = tmb;
+                    console.log('✅ TMB calculado automaticamente:', tmb, 'kcal/dia');
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('Erro ao buscar anamnese para preencher medida:', error);
+        // Continuar mesmo se não conseguir buscar a anamnese (valores padrão já estão definidos)
+    }
+
     showDialogCriacaoMedida.value = true;
 };
 
@@ -1049,27 +1231,37 @@ const salvarMedida = async () => {
             dataFormatada = `${year}-${month}-${day}`;
         }
 
-        // Preparar dados para enviar (apenas campos preenchidos e com valores)
+        // Preparar dados para enviar (todos os campos, apenas se preenchidos)
         const dadosMedida = {};
 
+        // Data
         if (dataFormatada) dadosMedida.data_avaliacao = dataFormatada;
+
+        // Dados Antropométricos Básicos
         if (formularioMedida.value.peso !== null && formularioMedida.value.peso !== '') {
             dadosMedida.peso = formularioMedida.value.peso.toString();
         }
         if (formularioMedida.value.altura !== null && formularioMedida.value.altura !== '') {
             dadosMedida.altura = formularioMedida.value.altura.toString();
         }
-        // IMC removido - é calculado no backend (peso / (altura²))
-        // RCQ removido - é calculado no backend (cintura / quadril)
-        // % Massa Magra removido - é calculado no backend (100 - % Gordura)
-        // GET removido - é calculado no backend (TMB × fator_atividade)
 
+        // IMC (enviar mesmo sendo calculado no backend, para consistência)
+        if (formularioMedida.value.imc !== null && formularioMedida.value.imc !== '') {
+            dadosMedida.imc = formularioMedida.value.imc.toString();
+        }
+
+        // Percentuais e Composição Corporal
         if (formularioMedida.value.perc_gordura_corporal !== null && formularioMedida.value.perc_gordura_corporal !== '') {
             dadosMedida.perc_gordura_corporal = formularioMedida.value.perc_gordura_corporal.toString();
+        }
+        if (formularioMedida.value.perc_massa_magra !== null && formularioMedida.value.perc_massa_magra !== '') {
+            dadosMedida.perc_massa_magra = formularioMedida.value.perc_massa_magra.toString();
         }
         if (formularioMedida.value.idade_metabolica !== null && formularioMedida.value.idade_metabolica !== '') {
             dadosMedida.idade_metabolica = formularioMedida.value.idade_metabolica;
         }
+
+        // Circunferências
         if (formularioMedida.value.circunferencia_cintura !== null && formularioMedida.value.circunferencia_cintura !== '') {
             dadosMedida.circunferencia_cintura = formularioMedida.value.circunferencia_cintura.toString();
         }
@@ -1094,6 +1286,8 @@ const salvarMedida = async () => {
         if (formularioMedida.value.circunferencia_torax !== null && formularioMedida.value.circunferencia_torax !== '') {
             dadosMedida.circunferencia_torax = formularioMedida.value.circunferencia_torax.toString();
         }
+
+        // Dobras Cutâneas
         if (formularioMedida.value.dobra_subescapular !== null && formularioMedida.value.dobra_subescapular !== '') {
             dadosMedida.dobra_subescapular = formularioMedida.value.dobra_subescapular.toString();
         }
@@ -1116,28 +1310,35 @@ const salvarMedida = async () => {
             dadosMedida.dobra_peitoral = formularioMedida.value.dobra_peitoral.toString();
         }
 
-        // Pressão arterial - enviar valores individuais se preenchidos
+        // Dados Cardiovasculares
         if (formularioMedida.value.pressao_arterial_sistolica !== null && formularioMedida.value.pressao_arterial_sistolica !== '') {
             dadosMedida.pressao_arterial_sistolica = formularioMedida.value.pressao_arterial_sistolica;
         }
         if (formularioMedida.value.pressao_arterial_diastolica !== null && formularioMedida.value.pressao_arterial_diastolica !== '') {
             dadosMedida.pressao_arterial_diastolica = formularioMedida.value.pressao_arterial_diastolica;
         }
-
         if (formularioMedida.value.frequencia_cardiaca !== null && formularioMedida.value.frequencia_cardiaca !== '') {
             dadosMedida.frequencia_cardiaca = formularioMedida.value.frequencia_cardiaca;
+        }
+
+        // Gasto Energético
+        if (formularioMedida.value.nivel_atividade) {
+            dadosMedida.nivel_atividade = formularioMedida.value.nivel_atividade;
         }
         if (formularioMedida.value.tmb !== null && formularioMedida.value.tmb !== '') {
             dadosMedida.tmb = formularioMedida.value.tmb.toString();
         }
-        // GET removido - é calculado no backend (TMB × fator_atividade)
-
-        if (formularioMedida.value.nivel_atividade) {
-            dadosMedida.nivel_atividade = formularioMedida.value.nivel_atividade;
+        if (formularioMedida.value.gasto_energetico_total !== null && formularioMedida.value.gasto_energetico_total !== '') {
+            dadosMedida.gasto_energetico_total = formularioMedida.value.gasto_energetico_total.toString();
         }
+
+        // Observações
         if (formularioMedida.value.observacoes) {
             dadosMedida.observacoes = formularioMedida.value.observacoes;
         }
+
+        console.log('📤 Dados da medida a serem enviados:', dadosMedida);
+        console.log(dadosMedida);
 
         const response = await MedidaService.criarMedida(idPaciente, dadosMedida);
 
@@ -1961,9 +2162,13 @@ onMounted(async () => {
         <header class="bg-white border-b border-emerald-100 p-8">
             <div class="mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div class="flex items-center gap-6">
-                    <!-- Avatar -->
-                    <div class="relative">
-                        <img v-if="paciente.foto_perfil" :src="paciente.foto_perfil" :alt="paciente.nome" class="w-24 h-24 rounded-2xl object-cover ring-4 ring-emerald-50 shadow-lg" />
+                    <!-- Avatar with Photo Upload -->
+                    <div class="relative group">
+                        <!-- Input File Hidden -->
+                        <input ref="inputFotoRef" type="file" accept="image/*" class="hidden" @change="enviarFoto" />
+
+                        <!-- Foto ou Avatar -->
+                        <img v-if="fotoPacienteUrl" :src="fotoPacienteUrl" :alt="paciente.nome" class="w-24 h-24 rounded-2xl object-cover ring-4 ring-emerald-50 shadow-lg" />
                         <div v-else class="w-24 h-24 rounded-2xl bg-emerald-100 ring-4 ring-emerald-50 shadow-lg flex items-center justify-center">
                             <Avatar
                                 :label="
@@ -1979,6 +2184,21 @@ onMounted(async () => {
                                 size="xlarge"
                                 class="bg-emerald-200 text-emerald-700 font-bold text-2xl"
                             />
+                        </div>
+
+                        <!-- Overlay com Ícone de Camera -->
+                        <div class="absolute inset-0 rounded-2xl bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center transition-all duration-300 cursor-pointer" @click="selecionarFoto">
+                            <!-- Loading Spinner -->
+                            <div v-if="loadingUploadFoto" class="flex flex-col items-center justify-center">
+                                <i class="pi pi-spin pi-spinner text-white text-3xl"></i>
+                                <p class="text-white text-xs mt-2 font-semibold">Enviando...</p>
+                            </div>
+
+                            <!-- Camera Icon (hidden no hover quando loading) -->
+                            <div v-else class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center gap-1">
+                                <i class="pi pi-camera text-white text-2xl"></i>
+                                <p class="text-white text-xs font-semibold">Alterar foto</p>
+                            </div>
                         </div>
                     </div>
 
@@ -3135,56 +3355,111 @@ onMounted(async () => {
                     </div>
                 </section>
 
-                <!-- Seção 1: Dados Antropométricos -->
+                <!-- Seção 1: Dados Antropométricos (expandida) -->
                 <section class="bg-white rounded-xl border-2 border-blue-100 p-4">
                     <div class="flex items-center gap-2 mb-3">
                         <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-base">⚖️</div>
                         <h3 class="text-base font-bold text-gray-900">Dados Antropométricos</h3>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <!-- Peso (editável) -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Peso (kg)</label>
-                            <InputNumber v-model="formularioMedida.peso" :maxFractionDigits="2" placeholder="00.00" />
-                        </div>
-
-                        <!-- Altura (editável) -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Altura (cm)</label>
-                            <InputNumber v-model="formularioMedida.altura" :maxFractionDigits="2" placeholder="00.00" />
-                        </div>
-
-                        <!-- IMC (calculado) -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">IMC <span class="text-gray-400 font-normal">(calculado)</span></label>
+                    <div class="space-y-4">
+                        <!-- Primeira linha: Peso, Altura, IMC -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- Peso (editável) -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Peso (kg)</label>
+                                <InputNumber v-model="formularioMedida.peso" :maxFractionDigits="2" placeholder="00.00" />
                             </div>
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center justify-between">
-                                <span class="text-sm font-semibold text-gray-800">{{ imcComClassificacao.valor }}</span>
-                                <Tag v-if="imcComClassificacao.classificacao" :value="imcComClassificacao.classificacao" :severity="imcComClassificacao.cor" class="text-xs" />
-                            </div>
-                        </div>
 
-                        <!-- % Gordura Corporal (editável) -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">% Gordura Corporal</label>
-                            <InputNumber v-model="formularioMedida.perc_gordura_corporal" :maxFractionDigits="2" placeholder="00.00" />
-                        </div>
-
-                        <!-- % Massa Magra (calculada) -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">% Massa Magra <span class="text-gray-400 font-normal">(calculada)</span></label>
+                            <!-- Altura (editável) -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Altura (cm)</label>
+                                <InputNumber v-model="formularioMedida.altura" :maxFractionDigits="2" placeholder="00.00" />
                             </div>
-                            <div class="bg-green-50 border border-green-200 rounded-lg p-2">
-                                <span class="text-sm font-semibold text-gray-800">{{ massaMagraCalculada }}</span>
+
+                            <!-- IMC (calculado) -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">IMC <span class="text-gray-400 font-normal">(calculado)</span></label>
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center justify-between">
+                                    <span class="text-sm font-semibold text-gray-800">{{ imcComClassificacao.valor }}</span>
+                                    <Tag v-if="imcComClassificacao.classificacao" :value="imcComClassificacao.classificacao" :severity="imcComClassificacao.cor" class="text-xs" />
+                                </div>
+                                <p class="text-xs text-gray-400 italic mt-1">Calculado automaticamente a partir do peso e altura.</p>
                             </div>
                         </div>
 
-                        <!-- Idade Metabólica (editável) -->
+                        <!-- Segunda linha: % Gordura, % Massa Magra, Idade Metabólica -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- % Gordura Corporal (editável) -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">% Gordura Corporal</label>
+                                <InputNumber v-model="formularioMedida.perc_gordura_corporal" :maxFractionDigits="2" placeholder="00.00" />
+                            </div>
+
+                            <!-- % Massa Magra (calculada) -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">% Massa Magra <span class="text-gray-400 font-normal">(calculada)</span></label>
+                                </div>
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-2">
+                                    <span class="text-sm font-semibold text-gray-800">{{ massaMagraCalculada }}</span>
+                                </div>
+                                <p class="text-xs text-gray-400 italic mt-1">100% − % Gordura Corporal</p>
+                            </div>
+
+                            <!-- Idade Metabólica (editável) -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Idade Metabólica (anos)</label>
+                                <InputNumber v-model="formularioMedida.idade_metabolica" :maxFractionDigits="0" placeholder="00" />
+                            </div>
+                        </div>
+
+                        <!-- Separador visual: Gasto Energético -->
+                        <div class="flex items-center gap-3 my-4">
+                            <div class="flex-1 h-px bg-blue-100"></div>
+                            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Gasto Energético</span>
+                            <div class="flex-1 h-px bg-blue-100"></div>
+                        </div>
+
+                        <!-- Nível de Atividade (largura total) -->
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Idade Metabólica (anos)</label>
-                            <InputNumber v-model="formularioMedida.idade_metabolica" :maxFractionDigits="0" placeholder="00" />
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Nível de Atividade</label>
+                            <div class="flex gap-1 flex-wrap">
+                                <button
+                                    v-for="nivel in ['sedentario', 'leve', 'moderado', 'intenso']"
+                                    :key="nivel"
+                                    @click="formularioMedida.nivel_atividade = nivel"
+                                    :class="['px-3 py-1 rounded-full text-xs font-medium transition-all', formularioMedida.nivel_atividade === nivel ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
+                                >
+                                    {{ MedidaService.formatarValor('nivel_atividade', nivel) }}
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-400 italic mt-2">Sedentário: sem exercício ou trabalho sentado · Leve: 1 a 3x por semana · Moderado: 3 a 5x por semana · Intenso: 6 a 7x por semana</p>
+                        </div>
+
+                        <!-- TMB e GET -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <!-- TMB com botão Calcular -->
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">TMB (kcal/dia)</label>
+                                <div class="flex gap-2">
+                                    <InputNumber v-model="formularioMedida.tmb" :maxFractionDigits="0" placeholder="0000" class="flex-1" />
+                                    <Button icon="pi pi-calculator" @click="calcularTMBParam" severity="secondary" class="px-3" title="Calcular usando Harris-Benedict" />
+                                </div>
+                                <p class="text-xs text-gray-400 italic mt-1">Taxa Metabólica Basal — energia mínima em repouso. Clique em 🧮 para calcular automaticamente usando Harris-Benedict.</p>
+                            </div>
+
+                            <!-- GET (calculado, readonly) -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">GET <span class="text-gray-400 font-normal">(calculada)</span></label>
+                                </div>
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                                    <span class="text-sm font-semibold text-gray-800">{{ getCalculado }} kcal/dia</span>
+                                </div>
+                                <p class="text-xs text-gray-400 italic mt-1">Gasto Energético Total — energia diária estimada com base na TMB e nível de atividade selecionado.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -3217,6 +3492,7 @@ onMounted(async () => {
                                 <span class="text-sm font-semibold text-gray-800">{{ rcqComClassificacao.valor }}</span>
                                 <Tag v-if="rcqComClassificacao.classificacao" :value="rcqComClassificacao.classificacao" :severity="rcqComClassificacao.cor" class="text-xs" />
                             </div>
+                            <p class="text-xs text-gray-400 italic mt-1">Cintura ÷ Quadril. Risco cardiovascular baseado no sexo do paciente.</p>
                         </div>
 
                         <!-- Abdominal (editável) -->
@@ -3295,18 +3571,20 @@ onMounted(async () => {
                     </div>
                 </section>
 
-                <!-- Seção 4: Dados Complementares -->
+                <!-- Seção 4: Dados Cardiovasculares e Observações -->
                 <section class="bg-white rounded-xl border-2 border-red-100 p-4">
                     <div class="flex items-center gap-2 mb-3">
                         <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-base">❤️</div>
-                        <h3 class="text-base font-bold text-gray-900">Dados Complementares</h3>
+                        <h3 class="text-base font-bold text-gray-900">Dados Cardiovasculares e Observações</h3>
                     </div>
-                    <div class="space-y-3">
+                    <div class="space-y-4">
+                        <!-- Pressão Arterial e Frequência Cardíaca -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <!-- Pressão Arterial (merged: 120/80) -->
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Pressão Arterial (mmHg)</label>
                                 <InputMask v-model="pressaoArterialCombinada" mask="999/99" placeholder="120/80" class="w-full" slotChar=" " />
+                                <p class="text-xs text-gray-400 italic mt-1">Formato: sistólica/diastólica. Ex: 120/80</p>
                             </div>
 
                             <!-- Frequência Cardíaca -->
@@ -3314,43 +3592,9 @@ onMounted(async () => {
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Frequência Cardíaca (bpm)</label>
                                 <InputNumber v-model="formularioMedida.frequencia_cardiaca" :maxFractionDigits="0" placeholder="72" />
                             </div>
-
-                            <!-- TMB com botão Calcular -->
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">TMB (kcal/dia)</label>
-                                <div class="flex gap-2">
-                                    <InputNumber v-model="formularioMedida.tmb" :maxFractionDigits="0" placeholder="0000" class="flex-1" />
-                                    <Button icon="pi pi-calculator" @click="calcularTMBParam" severity="secondary" class="px-3" title="Calcular usando Harris-Benedict" />
-                                </div>
-                            </div>
-
-                            <!-- GET (calculado, readonly) -->
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">GET <span class="text-gray-400 font-normal">(calculada)</span></label>
-                                </div>
-                                <div class="bg-red-50 border border-red-200 rounded-lg p-2">
-                                    <span class="text-sm font-semibold text-gray-800">{{ getCalculado }} kcal/dia</span>
-                                </div>
-                            </div>
                         </div>
 
-                        <!-- Nível de Atividade -->
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Nível de Atividade</label>
-                            <div class="flex gap-1 flex-wrap">
-                                <button
-                                    v-for="nivel in ['sedentario', 'leve', 'moderado', 'intenso']"
-                                    :key="nivel"
-                                    @click="formularioMedida.nivel_atividade = nivel"
-                                    :class="['px-3 py-1 rounded-full text-xs font-medium transition-all', formularioMedida.nivel_atividade === nivel ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
-                                >
-                                    {{ MedidaService.formatarValor('nivel_atividade', nivel) }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Observações -->
+                        <!-- Observações (largura total) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Observações</label>
                             <textarea

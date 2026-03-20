@@ -1,6 +1,7 @@
 <script setup>
 import AnamneseService from '@/service/AnamneseService';
 import PacienteService from '@/service/PacienteService';
+import { construirUrlFotoPaciente } from '@/utils/urlHelper';
 import { DatePicker } from 'primevue';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
@@ -121,6 +122,11 @@ const getAvatarBgColor = (iniciais) => {
 
     const hash = iniciais.charCodeAt(0) + iniciais.charCodeAt(1);
     return colorOptions[hash % colorOptions.length];
+};
+
+// Função para construir URL da foto do paciente com base no ambiente
+const obterUrlFotoPaciente = (fotoPerfil) => {
+    return construirUrlFotoPaciente(fotoPerfil);
 };
 
 const carregarPacientes = async () => {
@@ -488,7 +494,7 @@ onMounted(() => {
                     <!-- Card Header with Gradient -->
                     <div class="bg-linear-to-r from-emerald-500 to-teal-500 p-6">
                         <div class="flex items-center gap-4">
-                            <Avatar v-if="paciente.foto_perfil" :image="paciente.foto_perfil" shape="circle" size="large" class="ring-4 ring-white" />
+                            <Avatar v-if="paciente.foto_perfil" :image="obterUrlFotoPaciente(paciente.foto_perfil)" shape="circle" size="large" class="ring-4 ring-white" />
                             <Avatar v-else :label="paciente.iniciais" shape="circle" size="large" :class="`${getAvatarBgColor(paciente.iniciais)} font-bold text-lg ring-4 ring-white`" />
                             <div class="flex-1 leading-tight">
                                 <h3 class="font-bold text-lg -mb-1">{{ paciente.nome }}</h3>

@@ -1,5 +1,5 @@
 <script setup>
-import { apiUrl } from '@/service/ApiClient';
+import { construirUrlArquivo } from '@/utils/urlHelper';
 import NutricionistaService from '@/service/NutricionistaService';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
@@ -96,11 +96,7 @@ const podeAlterarSenha = computed(() => {
 
 // Construir URL completa da foto
 const construirUrlFoto = (caminho) => {
-    if (!caminho) return null;
-    if (caminho.startsWith('http')) return caminho;
-    const urlCompleta = `${apiUrl}/${caminho}`;
-    console.log('🖼️ URL da foto construída:', urlCompleta);
-    return urlCompleta;
+    return construirUrlArquivo(caminho);
 };
 
 // ===== FUNÇÕES DE CARREGAMENTO =====

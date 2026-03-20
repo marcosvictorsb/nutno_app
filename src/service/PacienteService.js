@@ -50,5 +50,14 @@ export default {
     // Desarquivar paciente
     desarquivarPaciente(id) {
         return apiClient.patch(`/pacientes/${id}/desarquivar`);
+    },
+
+    // Enviar foto do paciente
+    enviarFotoPaciente(id, formData) {
+        return apiClient.put(`/pacientes/${id}/foto`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     }
 };
