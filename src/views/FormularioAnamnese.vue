@@ -156,7 +156,7 @@ const inicializarFormulario = async () => {
                 form.value.nome_completo = data.nome_paciente || '';
                 form.value.como_prefere_ser_chamado = data.como_prefere_ser_chamado || '';
                 form.value.data_nascimento = data.data_nascimento || '';
-                form.value.sexo = data.sexo ? (data.sexo === 'M' ? 'masculino' : 'feminino') : '';
+                form.value.sexo = data.sexo || '';
                 form.value.telefone = data.telefone || '';
                 form.value.whatsapp = data.whatsapp || '';
             } else {
@@ -212,7 +212,7 @@ const validarEtapa = () => {
     });
 
     // Validações extras
-    if (etapaAtual.value === 4 && form.value.faz_exercicios && !form.value.frequencia_exercicio_semana) {
+    if (etapaAtual.value === 4 && form.value.faz_exercicios && form.value.frequencia_exercicio_semana == null) {
         erros.value.frequencia_exercicio_semana = 'Campo obrigatório quando pratica exercícios';
     }
 

@@ -1997,10 +1997,10 @@ onMounted(async () => {
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex gap-3">
+                <!-- <div class="flex gap-3">
                     <Button label="Nova medida" icon="pi pi-plus" severity="secondary" @click="novaMedida" class="whitespace-nowrap" />
                     <Button label="Novo plano" icon="pi pi-plus" severity="success" @click="novoPlano" class="whitespace-nowrap" />
-                </div>
+                </div> -->
             </div>
 
             <!-- Tab Menu -->

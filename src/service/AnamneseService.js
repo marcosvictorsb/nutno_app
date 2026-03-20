@@ -102,5 +102,9 @@ export default {
 
     formatarValor(campo, valor) {
         return formatarValorAnamnese(campo, valor);
+    },
+
+    enviarFormulario(dados) {
+        return apiClient.post('/anamnese/enviar-formulario', dados);
     }
 };

@@ -1,4 +1,5 @@
 <script setup>
+import AnamneseService from '@/service/AnamneseService';
 import PacienteService from '@/service/PacienteService';
 import { DatePicker } from 'primevue';
 import Avatar from 'primevue/avatar';
@@ -23,6 +24,7 @@ const filtroStatus = ref('todos');
 const searchValue = ref('');
 const showDialog = ref(false);
 const loading = ref(true);
+const loadingSalvarComAnamnese = ref(false);
 const formErrors = ref({});
 const paginaAtual = ref(1);
 const limiteItens = ref(10);
@@ -32,6 +34,7 @@ const paginacao = ref({
     limit: 10,
     totalPages: 0
 });
+const pacienteSalvo = ref(null);
 let debounceTimer = null;
 
 // Estados da foto de perfil
@@ -127,12 +130,12 @@ const carregarPacientes = async () => {
             page: paginaAtual.value,
             limit: limiteItens.value
         };
-        
+
         // Adicionar busca se houver valor
         if (searchValue.value?.trim()) {
             params.busca = searchValue.value.trim();
         }
-        
+
         const response = await PacienteService.listarPacientes(params);
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
             pacientes.value = response.data.data.map((paciente) => ({
@@ -151,7 +154,7 @@ const carregarPacientes = async () => {
                 idade: calcularIdade(paciente.data_nascimento),
                 ultimaConsulta: formatarDataBrasileira(paciente.criado_em)
             }));
-            
+
             // Armazenar dados de paginação do backend
             if (response.data.pagination) {
                 paginacao.value = response.data.pagination;
@@ -271,8 +274,7 @@ const abrirNovoPaciente = () => {
     showDialog.value = true;
 };
 
-const salvarNovoPaciente = async () => {
-    // Validar campos obrigatórios
+const validarFormulario = () => {
     formErrors.value = {};
 
     if (!formNovoPaciente.value.nome) {
@@ -287,24 +289,40 @@ const salvarNovoPaciente = async () => {
         formErrors.value.sexo = 'Sexo é obrigatório';
     }
 
-    if (Object.keys(formErrors.value).length > 0) {
+    return Object.keys(formErrors.value).length === 0;
+};
+
+const prepararDadosPaciente = () => {
+    return {
+        nome: formNovoPaciente.value.nome,
+        como_prefere_ser_chamado: formNovoPaciente.value.apelido,
+        data_nascimento: formNovoPaciente.value.data_nascimento,
+        email: formNovoPaciente.value.email,
+        whatsapp: formNovoPaciente.value.whatsapp,
+        sexo: formNovoPaciente.value.sexo
+    };
+};
+
+const extrairMensagemErro = (error) => {
+    if (error.response?.data?.message) {
+        return error.response.data.message;
+    }
+    if (error.response?.data?.error) {
+        return error.response.data.error;
+    }
+    if (error.message) {
+        return error.message;
+    }
+    return 'Não foi possível completar a operação';
+};
+
+const salvarNovoPaciente = async () => {
+    if (!validarFormulario()) {
         return;
     }
 
     try {
-        // Preparar dados para enviar no body
-        const dadosPaciente = {
-            nome: formNovoPaciente.value.nome,
-            como_prefere_ser_chamado: formNovoPaciente.value.apelido,
-            data_nascimento: formNovoPaciente.value.data_nascimento,
-            email: formNovoPaciente.value.email,
-            whatsapp: formNovoPaciente.value.whatsapp,
-            sexo: formNovoPaciente.value.sexo
-            // enviar_automatico: formNovoPaciente.value.enviar_automatico,
-            // canal: formNovoPaciente.value.canal
-        };
-
-        // Chamar service para salvar
+        const dadosPaciente = prepararDadosPaciente();
         await PacienteService.criarPaciente(dadosPaciente);
 
         toast.add({
@@ -314,17 +332,61 @@ const salvarNovoPaciente = async () => {
             life: 3000
         });
 
-        // Fechar dialog e recarregar lista
         showDialog.value = false;
         await carregarPacientes();
     } catch (error) {
         console.error('Erro ao salvar paciente:', error);
+        const mensagemErro = extrairMensagemErro(error);
         toast.add({
             severity: 'error',
-            summary: 'Erro',
-            detail: 'Não foi possível cadastrar o paciente',
-            life: 3000
+            summary: 'Erro ao cadastrar paciente',
+            detail: mensagemErro,
+            life: 5000
         });
+    }
+};
+
+const salvarPacienteEEnviarFormulario = async () => {
+    if (!validarFormulario()) {
+        return;
+    }
+
+    try {
+        loadingSalvarComAnamnese.value = true;
+        const dadosPaciente = prepararDadosPaciente();
+
+        // 1️⃣ Salvar o paciente
+        const responsePaciente = await PacienteService.criarPaciente(dadosPaciente);
+        pacienteSalvo.value = responsePaciente.data.data;
+        console.log('Paciente salvo com ID:', pacienteSalvo.value?.id);
+
+        // 2️⃣ Agora enviar o formulário de anamnese
+        if (pacienteSalvo.value?.id) {
+            await AnamneseService.enviarFormulario({ email: pacienteSalvo.value.email, nome: pacienteSalvo.value.nome, paciente_id: pacienteSalvo.value.id });
+            console.log('Anamnese criada para o paciente');
+
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Paciente cadastrado e formulário de anamnese enviado',
+                life: 3000
+            });
+        }
+
+        showDialog.value = false;
+        await carregarPacientes();
+    } catch (error) {
+        console.error('Erro ao salvar paciente e enviar anamnese:', error);
+        const mensagemErro = extrairMensagemErro(error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro ao processar operação',
+            detail: mensagemErro,
+            life: 5000
+        });
+        showDialog.value = false;
+    } finally {
+        loadingSalvarComAnamnese.value = false;
     }
 };
 
@@ -631,7 +693,8 @@ onMounted(() => {
 
         <template #footer>
             <Button label="Cancelar" severity="secondary" @click="showDialog = false" />
-            <Button label="Salvar paciente" severity="success" icon="pi pi-check" @click="salvarNovoPaciente" class="w-full" />
+            <Button label="Salvar paciente" severity="success" icon="pi pi-check" @click="salvarNovoPaciente" />
+            <Button label="Salvar e Enviar Anamnese" severity="info" icon="pi pi-send" @click="salvarPacienteEEnviarFormulario" :loading="loadingSalvarComAnamnese" :disabled="loadingSalvarComAnamnese" />
         </template>
     </Dialog>
 </template>
