@@ -1,10 +1,10 @@
 <script setup>
-import { Button } from 'primevue/button';
-import { DatePicker } from 'primevue/datepicker';
-import { Dialog } from 'primevue/dialog';
-import { InputMask } from 'primevue/inputmask';
-import { InputNumber } from 'primevue/inputnumber';
-import { Tag } from 'primevue/tag';
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
+import InputMask from 'primevue/inputmask';
+import InputNumber from 'primevue/inputnumber';
+import Tag from 'primevue/tag';
 
 import MedidaService from '@/service/MedidaService';
 

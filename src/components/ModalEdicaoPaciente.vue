@@ -1,10 +1,10 @@
 <script setup>
-import { Button } from 'primevue/button';
-import { DatePicker } from 'primevue/datepicker';
-import { Dialog } from 'primevue/dialog';
-import { InputMask } from 'primevue/inputmask';
-import { InputText } from 'primevue/inputtext';
-import { RadioButton } from 'primevue/radiobutton';
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
+import InputMask from 'primevue/inputmask';
+import InputText from 'primevue/inputtext';
+import RadioButton from 'primevue/radiobutton';
 
 const props = defineProps({
     visible: Boolean,

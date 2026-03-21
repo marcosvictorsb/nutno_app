@@ -3,6 +3,7 @@ import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
 import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
+import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
 import { useMedidas } from '@/composables/useMedidas';
 import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
 import AnamneseService from '@/service/AnamneseService';
@@ -31,7 +32,6 @@ const activeTab = ref('anamnese');
 const {
     medidas,
     loadingMedidas,
-    erroMedidas,
     medidasCarregada,
     medidaSelecionada,
     medidaMaisRecente,
@@ -52,8 +52,7 @@ const {
 } = useMedidas(null, paciente, activeTab);
 
 // ===== Composable usePlanosAlimentares =====
-const { distribuirCalorias, converterParaGramas, calcularNutrienteItem, calcularTotalRefeicao, calcularTotaisDia, calcularTotaisPlano, calcularDiferencaCalorica, obterStatusComparativo, formatarValor, inicializarRefeicoes, gerarMensagemPadrao } =
-    usePlanosAlimentares();
+const { inicializarRefeicoes } = usePlanosAlimentares();
 
 // Estados
 const loading = ref(true);
@@ -113,26 +112,6 @@ const objetivoPreSelecionadoCom = ref(null); // Rastreia qual objetivo foi pré-
 const macrosForamEditadosManualmente = ref(false); // Flag para rastrear edição manual de macros
 const macrosSugeridosPor = ref(null); // Armazena qual objetivo sugeriu os macros
 const atualizandoMacrosProgramaticamente = ref(false); // Flag interna para diferenciação de mudanças programáticas vs do usuário
-
-// Estados do Step 2 - Refeições
-const buscarAlimentoText = ref('');
-const resultadosBusca = ref([]);
-const loadingBusca = ref(false);
-const carregandoMaisAlimentos = ref(false);
-const paginaAtualAlimentos = ref(1);
-const totalPaginasAlimentos = ref(1);
-const refeicaoExpandida = ref(null);
-const seindoEditado = ref(null); // { refeicaoIndex: num, itemIndex: num }
-const dropdownObserver = ref(null); // Intersection Observer para detecção de scroll
-const formQuantidade = ref({
-    alimento_id: null,
-    nome_alimento: '',
-    grupo_alimento: '',
-    quantidade: 100,
-    unidade: 'g',
-    calorias_por_100: 0
-});
-let debounceTimer = null;
 
 // Estados do gráfico de evolução
 const periodoEvoucao = ref('6meses');
@@ -1622,13 +1601,6 @@ onMounted(async () => {
         carregarAnamnese();
     }
 });
-
-// Watcher para inicializar mensagem quando chegar ao Step 4
-watch(stepAtualPlano, (novoStep) => {
-    if (novoStep === 4 && !mensagemPersonalizada.value) {
-        mensagemPersonalizada.value = gerarMensagemPadrao(paciente.value?.nome || 'Paciente');
-    }
-});
 </script>
 
 <template>
@@ -2192,7 +2164,7 @@ watch(stepAtualPlano, (novoStep) => {
                 <!-- Anamnese Not Found / Error State -->
                 <div v-else-if="erroAnamnese && !anamnese" class="bg-white rounded-2xl shadow-sm border border-emerald-50 p-8">
                     <div class="flex items-start gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
                             <i class="pi pi-inbox text-2xl text-amber-500"></i>
                         </div>
                         <div class="flex-1">
@@ -2901,6 +2873,25 @@ watch(stepAtualPlano, (novoStep) => {
             @voltar-step="() => stepAtualPlano--"
             @salvar-plano="salvarPlano"
         >
+            <!-- STEP 1: Placeholder -->
+            <template #step-1> Step 1 content will be added here </template>
+
+            <!-- STEP 2: Refeições -->
+            <template #step-2>
+                <WizardStep2Refeicoes :formularioPlano="formularioPlano" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
+            </template>
+
+            <!-- STEP 3: Placeholder -->
+            <template #step-3> Step 3 content will be added here </template>
+
+            <!-- STEP 4: Placeholder -->
+            <template #step-4> Step 4 content will be added here </template>
+
+            <!-- Footer Buttons -->
+            <template #footer-buttons>
+                <Button v-if="stepAtualPlano < 4" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+                <Button v-else label="Salvar Plano" severity="success" @click="salvarPlano" icon="pi pi-check" icon-pos="right" :loading="loadingCriacaoPlano" />
+            </template>
         </ModalCriacaoPlano>
         <!-- END: Modal Criar Plano Alimentar -->
     </main>
