@@ -143,7 +143,6 @@ import AnamneseService from '@/service/AnamneseService';
 import MedidaService from '@/service/MedidaService';
 import PacienteService from '@/service/PacienteService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
-import { calcularGET, calcularTMB } from '@/utils/nutricionais';
 import { construirUrlFotoPaciente } from '@/utils/urlHelper';
 import Button from 'primevue/button';
 import ConfirmPopup from 'primevue/confirmpopup';
@@ -236,72 +235,6 @@ const atualizandoMacrosProgramaticamente = ref(false);
 const fotoPacienteUrl = computed(() => {
     return construirUrlFotoPaciente(paciente.value?.foto_perfil);
 });
-
-// ===== WATCHERS PARA RECÁLCULOS AUTOMÁTICOS =====
-
-// Recalcular IMC quando peso ou altura mudam
-watch(
-    () => [formularioMedida.value.peso, formularioMedida.value.altura],
-    () => {
-        // Sincronizar IMC com o valor calculado
-        if (formularioMedida.value.peso && formularioMedida.value.altura) {
-            const peso = parseFloat(formularioMedida.value.peso);
-            const altura = parseFloat(formularioMedida.value.altura);
-            if (peso > 0 && altura > 0) {
-                const alturaMetros = altura / 100;
-                const imc = peso / (alturaMetros * alturaMetros);
-                formularioMedida.value.imc = parseFloat(imc.toFixed(2));
-            }
-        }
-    }
-);
-
-// Recalcular TMB quando peso, altura ou nível de atividade mudam
-watch(
-    () => [formularioMedida.value.peso, formularioMedida.value.altura],
-    () => {
-        if (paciente.value?.data_nascimento && formularioMedida.value.peso && formularioMedida.value.altura) {
-            const idade = calcularIdade(paciente.value.data_nascimento);
-            const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
-            if (tmb) {
-                formularioMedida.value.tmb = tmb;
-            }
-        }
-    }
-);
-
-// Recalcular % Massa Magra quando % Gordura muda
-watch(
-    () => formularioMedida.value.perc_gordura_corporal,
-    () => {
-        // Sincronizar % Massa Magra com o valor calculado
-        if (formularioMedida.value.perc_gordura_corporal !== null && formularioMedida.value.perc_gordura_corporal !== '') {
-            const perc_gordura = parseFloat(formularioMedida.value.perc_gordura_corporal);
-            const perc_massa_magra = 100 - perc_gordura;
-            formularioMedida.value.perc_massa_magra = perc_massa_magra;
-        }
-    }
-);
-
-// Recalcular RCQ quando cintura ou quadril mudam
-watch(
-    () => [formularioMedida.value.circunferencia_cintura, formularioMedida.value.circunferencia_quadril],
-    () => {
-        // RCQ é computed, então recalcula automaticamente
-    }
-);
-
-// Recalcular GET quando TMB ou nível de atividade mudam
-watch(
-    () => [formularioMedida.value.tmb, formularioMedida.value.nivel_atividade],
-    () => {
-        // Sincronizar gasto_energetico_total com o valor calculado
-        const getCalculado = calcularGET(formularioMedida.value.tmb, formularioMedida.value.nivel_atividade);
-        if (getCalculado) {
-            formularioMedida.value.gasto_energetico_total = getCalculado;
-        }
-    }
-);
 
 const handleSalvarMedida = (dadosFormulario) => {
     formularioMedida.value = dadosFormulario;

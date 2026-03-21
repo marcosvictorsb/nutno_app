@@ -164,7 +164,7 @@ export function useMedidas(pacienteId, paciente, activeTab) {
     const abrirCriacaoMedida = async () => {
         // Inicializar formulário com valores padrão
         formularioMedida.value = {
-            data_avaliacao: new Date(),
+            data_avaliacao: null,
             peso: null,
             altura: null,
             imc: null,

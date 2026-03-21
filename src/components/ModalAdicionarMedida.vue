@@ -352,7 +352,10 @@ watch(
     (visible) => {
         if (visible) {
             formularioLocal.value = JSON.parse(JSON.stringify(props.formularioMedida || {}));
-
+            // Inicializar data_avaliacao com hoje se vier como null
+            if (!formularioLocal.value.data_avaliacao) {
+                formularioLocal.value.data_avaliacao = new Date();
+            }
             const sistolica = formularioLocal.value.pressao_arterial_sistolica;
             const diastolica = formularioLocal.value.pressao_arterial_diastolica;
 
