@@ -2,7 +2,7 @@
     <div class="space-y-4 overflow-y-auto pr-4">
         <!-- Seção 1: Configurações Básicas -->
         <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-            <div class="flex items-center gap-3 mb-4">
+            <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-base">⚙️</div>
                 <h3 class="text-lg font-bold text-slate-800">Configurações Básicas</h3>
             </div>

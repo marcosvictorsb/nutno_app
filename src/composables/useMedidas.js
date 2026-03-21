@@ -126,6 +126,7 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
                     // A primeira medida é sempre a mais recente - preencher a seleção
                     medidaSelecionada.value = medidas.value[0];
+                    medidaMaisRecente.value = medidas.value[0];
 
                     medidaSelecionada.value.imc = medidaSelecionada.value.imc ? parseFloat(medidaSelecionada.value.imc) : null;
 

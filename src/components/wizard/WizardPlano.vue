@@ -48,7 +48,6 @@ import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
 import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
 import WizardStep4Enviar from '@/components/wizard/WizardStep4Enviar.vue';
 import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
-import MedidaService from '@/service/MedidaService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
@@ -207,11 +206,20 @@ watch(
                     objetivoPreSelecionadoCom.value = null;
                     macrosSugeridosPor.value = null;
                 } else {
-                    // Modo criação - carregar medidas
-                    const response = await MedidaService.listarMedidasPaciente(idPaciente);
-                    if (response.data.success && response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-                        // Dados das medidas estarão disponíveis via props passadas do pai
+                    // Modo criação - inicializar com dados da medida mais recente
+                    if (props.medidaMaisRecente && props.medidaMaisRecente.gasto_energetico_total) {
+                        const getValor = Math.round(parseFloat(props.medidaMaisRecente.gasto_energetico_total));
+                        formularioPlano.value.calorias_meta = getValor;
+                        formularioPlanoCalorias_metaOriginal.value = getValor;
+
+                        // Recalcular gramas baseado no novo valor de calorias
+                        formularioPlano.value.proteina_g = Math.round((getValor * formularioPlano.value.proteina_perc) / 100 / 4);
+                        formularioPlano.value.carboidrato_g = Math.round((getValor * formularioPlano.value.carboidrato_perc) / 100 / 4);
+                        formularioPlano.value.gordura_g = Math.round((getValor * formularioPlano.value.gordura_perc) / 100 / 9);
                     }
+
+                    objetivoPreSelecionadoCom.value = null;
+                    macrosSugeridosPor.value = null;
                 }
             } catch (error) {
                 toast.add({
