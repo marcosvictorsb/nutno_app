@@ -64,6 +64,7 @@ const erroPlanos = ref(null);
 const planosCarregada = ref(false);
 const showDialogCriacaoPlano = ref(false);
 const loadingCriacaoPlano = ref(false);
+const editandoPlanoId = ref(null); // ID do plano sendo editado (null = modo criação)
 const stepAtualPlano = ref(1);
 const errosPlano = ref({});
 const formularioPlano = ref({
@@ -557,6 +558,19 @@ watch(
                 `Gord: ${formularioPlano.value.gordura_g}g (${formularioPlano.value.gordura_perc}%)`
             );
         }
+    }
+);
+
+// Monitorar mudanças no step para debugar refeições
+watch(
+    () => stepAtualPlano.value,
+    (novoStep, stepAnterior) => {
+        console.log(`📍 Step mudou de ${stepAnterior} → ${novoStep}`);
+        console.log(`   Refeições neste momento:`, {
+            qtde: formularioPlano.value.refeicoes.length,
+            refeicoes: formularioPlano.value.refeicoes,
+            formularioCompleto: formularioPlano.value
+        });
     }
 );
 
@@ -1935,9 +1949,230 @@ const obterClassificacaoIMC = (imc) => {
     }
 };
 
+const abrirEdicaoPlano = async (planoId) => {
+    try {
+        stepAtualPlano.value = 1;
+        errosPlano.value = {};
+        editandoPlanoId.value = planoId; // Rastrear que estamos em modo edição
+
+        // Resetar flags de edição
+        calorias_metaEditada.value = false;
+        calorias_metaSugeridaPor.value = null;
+        macrosForamEditadosManualmente.value = false;
+        macrosSugeridosPor.value = null;
+        atualizandoMacrosProgramaticamente.value = false;
+
+        loadingCriacaoPlano.value = true;
+        const idPaciente = route.params.id;
+
+        // 1️⃣ Carregar medidas do paciente primeiro (importante para os cálculos)
+        console.log('📊 Carregando medidas para preencher o modal...');
+        await carregarMedidas();
+
+        // Garantir que medidaMaisRecente seja preenchida (usada no template)
+        if (medidas.value && medidas.value.length > 0) {
+            medidaMaisRecente.value = medidas.value[0];
+            console.log('📍 Medida mais recente carregada:', medidaMaisRecente.value);
+        }
+
+        // 2️⃣ Carregar plano específico diretamente
+        console.log('🍽️ Buscando plano específico do paciente:', planoId);
+        const responsePlano = await PlanoAlimentarService.buscar(idPaciente, planoId);
+        console.log('📥 Resposta completa:', responsePlano);
+
+        // Extrair os dados do plano (vem dentro de 'dados')
+        const planoData = responsePlano.dados;
+
+        if (!planoData) {
+            throw new Error(`Plano com ID ${planoId} não encontrado`);
+        }
+
+        console.log('✏️ Plano carregado:', planoData);
+
+        // 3️⃣ Preencher formulário com dados do plano
+        console.log('📝 Tentando preencher formulário com dados:', {
+            nome: planoData.nome,
+            objetivo: planoData.objetivo,
+            calorias_objetivo: planoData.calorias_objetivo,
+            proteinas_objetivo_pct: planoData.proteinas_objetivo_pct,
+            carboidratos_objetivo_pct: planoData.carboidratos_objetivo_pct,
+            gorduras_objetivo_pct: planoData.gorduras_objetivo_pct,
+            refeicoes_length: planoData.refeicoes ? planoData.refeicoes.length : 'NÃO ENCONTRADO',
+            refeicoes: planoData.refeicoes
+        });
+        formularioPlano.value = {
+            nome: planoData.nome || '',
+            objetivo: planoData.objetivo || '',
+            calorias_meta: parseFloat(planoData.calorias_objetivo) || 2000,
+            refeicoes_dia: (planoData.refeicoes && planoData.refeicoes.length) || 5,
+            proteina_g: 150, // Será recalculado pelos watchers
+            proteina_perc: parseFloat(planoData.proteinas_objetivo_pct) || 30,
+            carboidrato_g: 250, // Será recalculado pelos watchers
+            carboidrato_perc: parseFloat(planoData.carboidratos_objetivo_pct) || 45,
+            gordura_g: 66, // Será recalculado pelos watchers
+            gordura_perc: parseFloat(planoData.gorduras_objetivo_pct) || 25,
+            refeicoes: [],
+            notas: planoData.observacoes || ''
+        };
+
+        // Recalcular gramas em base nos percentuais
+        formularioPlano.value.proteina_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.proteina_perc) / 100 / 4);
+        formularioPlano.value.carboidrato_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.carboidrato_perc) / 100 / 4);
+        formularioPlano.value.gordura_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.gordura_perc) / 100 / 9);
+
+        // 4️⃣ Estruturar refeições com dados da API
+        console.log('🔍 Verificando refeições do plano:', {
+            refeicoes: planoData.refeicoes,
+            isArray: Array.isArray(planoData.refeicoes),
+            length: planoData.refeicoes ? planoData.refeicoes.length : 'undefined'
+        });
+
+        if (planoData.refeicoes && Array.isArray(planoData.refeicoes) && planoData.refeicoes.length > 0) {
+            console.log(`📋 Encontradas ${planoData.refeicoes.length} refeições para mapear`);
+
+            formularioPlano.value.refeicoes = planoData.refeicoes.map((refeicaoApi) => {
+                // Distribuição padrão de calorias por tipo de refeição
+                const distribuicoes = {
+                    'Café da manhã': 0.25,
+                    'Lanche manhã': 0.1,
+                    Almoço: 0.35,
+                    'Lanche tarde': 0.1,
+                    Jantar: 0.2
+                };
+                const percDistribuicao = distribuicoes[refeicaoApi.nome] || 0.2;
+
+                // Mapear itens da refeição
+                const itensMap = (refeicaoApi.itens || []).map((item) => ({
+                    id: item.id,
+                    alimento_id: item.alimento_id,
+                    nome_alimento: item.alimento ? item.alimento.nome : '',
+                    grupo_alimento: item.alimento ? item.alimento.grupo : '',
+                    quantidade: parseFloat(item.quantidade),
+                    unidade: item.unidade,
+                    calorias_calculadas: parseFloat(item.calorias_calculadas),
+                    proteinas_calculadas: parseFloat(item.proteinas_calculadas),
+                    carboidratos_calculados: parseFloat(item.carboidratos_calculados),
+                    gorduras_calculadas: parseFloat(item.gorduras_calculadas)
+                }));
+
+                // Calcular totais a partir dos itens
+                let total_calorias = 0;
+                let total_proteinas_g = 0;
+                let total_carboidrato_g = 0;
+                let total_gordura_g = 0;
+
+                itensMap.forEach((item) => {
+                    total_calorias += item.calorias_calculadas;
+                    total_proteinas_g += item.proteinas_calculadas;
+                    total_carboidrato_g += item.carboidratos_calculados;
+                    total_gordura_g += item.gorduras_calculadas;
+                });
+
+                const refeicaoMapeada = {
+                    id: refeicaoApi.id,
+                    nome: refeicaoApi.nome || '',
+                    horario: refeicaoApi.horario_sugerido ? refeicaoApi.horario_sugerido.substring(0, 5) : '',
+                    ordem: refeicaoApi.ordem || 0,
+                    notas: refeicaoApi.observacoes || '',
+                    itens: itensMap,
+                    meta_calorias: Math.round(formularioPlano.value.calorias_meta * percDistribuicao),
+                    meta_proteinas_g: Math.round(formularioPlano.value.proteina_g * percDistribuicao),
+                    meta_carboidrato_g: Math.round(formularioPlano.value.carboidrato_g * percDistribuicao),
+                    meta_gordura_g: Math.round(formularioPlano.value.gordura_g * percDistribuicao),
+                    total_calorias: Math.round(total_calorias * 10) / 10,
+                    total_proteinas_g: Math.round(total_proteinas_g * 10) / 10,
+                    total_carboidrato_g: Math.round(total_carboidrato_g * 10) / 10,
+                    total_gordura_g: Math.round(total_gordura_g * 10) / 10
+                };
+
+                console.log(`  📌 Refeição "${refeicaoMapeada.nome}" mapeada: ${itensMap.length} itens, ${total_calorias.toFixed(2)} kcal`);
+                return refeicaoMapeada;
+            });
+
+            console.log(`✅ ${formularioPlano.value.refeicoes.length} refeições com itens preenchidas com sucesso`);
+        } else {
+            console.warn('⚠️ Plano sem refeições. Criando refeições padrão baseado em refeicoes_dia:', formularioPlano.value.refeicoes_dia);
+            // Se não tem refeições, criar baseado em refeicoes_dia
+            const refeicoesDia = formularioPlano.value.refeicoes_dia || 5;
+            const distribuirCal = (dias) => {
+                const distribuicoes = {
+                    3: [
+                        { nome: 'Almoço', horario: '13:00', perc: 0.4 },
+                        { nome: 'Lanches', horario: '10:00', perc: 0.3 },
+                        { nome: 'Jantar', horario: '19:00', perc: 0.3 }
+                    ],
+                    4: [
+                        { nome: 'Café da manhã', horario: '08:00', perc: 0.25 },
+                        { nome: 'Almoço', horario: '13:00', perc: 0.35 },
+                        { nome: 'Lanche tarde', horario: '16:00', perc: 0.15 },
+                        { nome: 'Jantar', horario: '19:30', perc: 0.25 }
+                    ],
+                    5: [
+                        { nome: 'Café da manhã', horario: '08:00', perc: 0.25 },
+                        { nome: 'Lanche manhã', horario: '10:00', perc: 0.1 },
+                        { nome: 'Almoço', horario: '13:00', perc: 0.35 },
+                        { nome: 'Lanche tarde', horario: '16:00', perc: 0.1 },
+                        { nome: 'Jantar', horario: '19:30', perc: 0.2 }
+                    ],
+                    6: [
+                        { nome: 'Café da manhã', horario: '08:00', perc: 0.25 },
+                        { nome: 'Lanche manhã', horario: '10:00', perc: 0.1 },
+                        { nome: 'Almoço', horario: '13:00', perc: 0.3 },
+                        { nome: 'Lanche tarde', horario: '16:00', perc: 0.1 },
+                        { nome: 'Café da tarde', horario: '17:30', perc: 0.05 },
+                        { nome: 'Jantar', horario: '19:30', perc: 0.2 }
+                    ]
+                };
+                return distribuicoes[dias] || distribuicoes[5];
+            };
+
+            formularioPlano.value.refeicoes = distribuirCal(refeicoesDia).map((ref, idx) => ({
+                nome: ref.nome,
+                horario: ref.horario,
+                ordem: idx + 1,
+                notas: '',
+                itens: [],
+                meta_calorias: Math.round(formularioPlano.value.calorias_meta * ref.perc),
+                meta_proteinas_g: Math.round(formularioPlano.value.proteina_g * ref.perc),
+                meta_carboidrato_g: Math.round(formularioPlano.value.carboidrato_g * ref.perc),
+                meta_gordura_g: Math.round(formularioPlano.value.gordura_g * ref.perc),
+                total_calorias: 0,
+                total_proteinas_g: 0,
+                total_carboidrato_g: 0,
+                total_gordura_g: 0
+            }));
+            console.log(`✅ ${formularioPlano.value.refeicoes.length} refeições padrão criadas`);
+        }
+
+        formularioPlanoCalorias_metaOriginal.value = formularioPlano.value.calorias_meta;
+        objetivoPreSelecionadoCom.value = null;
+        macrosSugeridosPor.value = null;
+
+        console.log('✅ Plano carregado com sucesso para edição:', formularioPlano.value);
+        console.log('📊 Estado das refeições após carregamento:', {
+            quantidadeRefeicoes: formularioPlano.value.refeicoes.length,
+            refeicoes: formularioPlano.value.refeicoes
+        });
+        console.log('✅ Medidas carregadas:', medidaMaisRecente.value);
+        showDialogCriacaoPlano.value = true;
+        console.log('🎯 Modal aberto e showDialogCriacaoPlano.value =', showDialogCriacaoPlano.value);
+    } catch (error) {
+        console.error('❌ Erro ao carregar plano para edição:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: error.message || 'Erro ao carregar plano para edição',
+            life: 3000
+        });
+    } finally {
+        loadingCriacaoPlano.value = false;
+    }
+};
+
 const abrirCriacaoPlano = async () => {
     stepAtualPlano.value = 1;
     errosPlano.value = {};
+    editandoPlanoId.value = null; // Modo criação
 
     // Resetar flags de edição
     calorias_metaEditada.value = false;
@@ -2030,6 +2265,7 @@ const abrirCriacaoPlano = async () => {
 const fecharCriacaoPlano = () => {
     showDialogCriacaoPlano.value = false;
     stepAtualPlano.value = 1;
+    editandoPlanoId.value = null; // Limpar ID de edição
     formularioPlano.value = {
         nome: '',
         objetivo: '',
@@ -2074,7 +2310,15 @@ const avancarStep = () => {
         if (validarStep1Plano()) {
             stepAtualPlano.value++;
             console.log('✅ Step 1 validado, avançando para Step 2');
-            inicializarRefeicoes();
+
+            // Só inicializar refeições se estiver em MODO CRIAÇÃO
+            // Se está editando (editandoPlanoId !== null), as refeições já foram carregadas do API
+            if (!editandoPlanoId.value) {
+                console.log('📝 Modo CRIAÇÃO - Inicializando refeições padrão');
+                inicializarRefeicoes();
+            } else {
+                console.log('✏️ Modo EDIÇÃO - Mantendo refeições carregadas do API');
+            }
         } else {
             toast.add({
                 severity: 'warn',
@@ -2119,19 +2363,34 @@ const salvarPlano = async () => {
             }))
         };
 
-        console.log('✏️ Salvando plano alimentar:', payload);
+        const idPaciente = paciente.value.id;
+        let response;
 
-        // Chamar serviço para criar plano
-        const response = await PlanoAlimentarService.criar(paciente.value.id, payload);
+        // Verificar se é modo edição ou criação
+        if (editandoPlanoId.value) {
+            console.log('✏️ Atualizando plano alimentar:', payload);
+            response = await PlanoAlimentarService.atualizar(idPaciente, editandoPlanoId.value, payload);
+            console.log('✅ Plano atualizado com sucesso:', response);
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Plano alimentar atualizado com sucesso!',
+                life: 3000
+            });
+        } else {
+            console.log('✏️ Criando novo plano alimentar:', payload);
+            response = await PlanoAlimentarService.criar(idPaciente, payload);
+            console.log('✅ Plano criado com sucesso:', response);
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Plano alimentar criado com sucesso!',
+                life: 3000
+            });
+        }
 
-        console.log('✅ Plano salvo com sucesso:', response);
-
-        toast.add({
-            severity: 'success',
-            summary: 'Sucesso',
-            detail: 'Plano alimentar salvo com sucesso!',
-            life: 3000
-        });
+        // Recarregar lista de planos
+        await carregarPlanos();
 
         // Avançar para Step 4 (Enviar)
         stepAtualPlano.value = 4;
@@ -2426,6 +2685,7 @@ const calcularTotalRefeicao = (refeicao) => {
 
 // Calcular totais do dia (para barra sticky)
 const calcularTotaisDia = () => {
+    console.log('🔢 Calculando totais do dia. Refeições:', formularioPlano.value.refeicoes);
     let total_calorias = 0;
     let total_proteinas = 0;
     let total_carboidrato = 0;
@@ -3749,7 +4009,7 @@ onMounted(async () => {
                                     <!-- Right: Actions -->
                                     <div class="flex items-center gap-2">
                                         <Button label="Deletar" text severity="danger" @click="deletarPlano(plano.id)" />
-                                        <Button label="Continuar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium" @click="router.push(`/pacientes/${paciente.id}/planos/${plano.id}`)" />
+                                        <Button label="Continuar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium" @click="abrirEdicaoPlano(plano.id)" />
                                     </div>
                                 </div>
                             </div>
@@ -4525,7 +4785,7 @@ onMounted(async () => {
             <div class="bg-white border-b border-slate-200 p-6 -m-6 mb-6">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h2 class="text-2xl font-bold text-slate-800">Novo plano — {{ paciente?.nome }}</h2>
+                        <h2 class="text-2xl font-bold text-slate-800">{{ editandoPlanoId ? '✏️ Editar plano' : 'Novo plano' }} — {{ paciente?.nome }}</h2>
                         <p class="text-xs text-slate-500 uppercase tracking-wider mt-1">Passo {{ stepAtualPlano }} de 4</p>
                     </div>
                     <button @click="fecharCriacaoPlano" class="text-slate-400 hover:text-slate-600">
@@ -4814,7 +5074,7 @@ onMounted(async () => {
                         </div>
 
                         <!-- **REGRA 4**: Card quando SEM medidas -->
-                        <div v-else class="p-3 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border-2 border-amber-200">
+                        <div v-else-if="!editandoPlanoId" class="p-3 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border-2 border-amber-200">
                             <div class="flex items-center gap-1.5 mb-2">
                                 <div class="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs">
                                     <i class="pi pi-exclamation-triangle text-xs"></i>
