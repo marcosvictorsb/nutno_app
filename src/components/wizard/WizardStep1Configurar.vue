@@ -176,39 +176,40 @@
                         </div>
                         <span class="text-xs font-semibold text-blue-900 uppercase">Referência</span>
                     </div>
+                    <div class="grid grid-cols-3">
+                        <div class="mb-2 pb-2 border-b border-blue-200">
+                            <p class="text-xs text-blue-700 font-medium">TMB</p>
+                            <p class="text-sm font-bold text-blue-900">{{ formatarCaloria(medidaMaisRecente.tmb) }} kcal</p>
+                        </div>
 
-                    <div class="mb-2 pb-2 border-b border-blue-200">
-                        <p class="text-xs text-blue-700 font-medium">TMB</p>
-                        <p class="text-sm font-bold text-blue-900">{{ formatarCaloria(medidaMaisRecente.tmb) }} kcal</p>
-                    </div>
+                        <div class="mb-2 pb-2 border-b border-blue-200">
+                            <p class="text-xs text-blue-700 font-medium">GET</p>
+                            <p class="text-sm font-bold text-blue-900">{{ formatarCaloria(medidaMaisRecente.gasto_energetico_total) }} kcal</p>
+                            <p class="text-xs text-blue-600">{{ traduzirNivelAtividadePlano(medidaMaisRecente.nivel_atividade) }}</p>
+                        </div>
 
-                    <div class="mb-2 pb-2 border-b border-blue-200">
-                        <p class="text-xs text-blue-700 font-medium">GET</p>
-                        <p class="text-sm font-bold text-blue-900">{{ formatarCaloria(medidaMaisRecente.gasto_energetico_total) }} kcal</p>
-                        <p class="text-xs text-blue-600">{{ traduzirNivelAtividadePlano(medidaMaisRecente.nivel_atividade) }}</p>
-                    </div>
+                        <div class="mb-2 pb-2 border-b border-blue-200">
+                            <p class="text-xs text-blue-700 font-medium">IMC</p>
+                            <div class="flex items-center gap-1.5 items-baseline">
+                                <p class="text-sm font-bold text-blue-900">{{ formatarIMC(medidaMaisRecente.imc) }}</p>
+                                <Tag :value="obterClassificacaoIMCPlano(medidaMaisRecente.imc).label" :severity="obterClassificacaoIMCPlano(medidaMaisRecente.imc).severity" class="text-xs" />
+                            </div>
+                        </div>
 
-                    <div class="mb-2 pb-2 border-b border-blue-200">
-                        <p class="text-xs text-blue-700 font-medium">IMC</p>
-                        <div class="flex items-center gap-1.5">
-                            <p class="text-sm font-bold text-blue-900">{{ formatarIMC(medidaMaisRecente.imc) }}</p>
-                            <Tag :value="obterClassificacaoIMCPlano(medidaMaisRecente.imc).label" :severity="obterClassificacaoIMCPlano(medidaMaisRecente.imc).severity" class="text-xs" />
+                        <div class="mb-2">
+                            <p class="text-xs text-blue-700 font-medium">Peso</p>
+                            <p class="text-sm font-bold text-blue-900">{{ formatarPeso(medidaMaisRecente.peso) }} kg</p>
                         </div>
                     </div>
 
-                    <div class="mb-2">
-                        <p class="text-xs text-blue-700 font-medium">Peso</p>
-                        <p class="text-sm font-bold text-blue-900">{{ formatarPeso(medidaMaisRecente.peso) }} kg</p>
-                    </div>
-
-                    <div class="border-t border-blue-200 pt-2 mt-2">
+                    <!-- <div class="border-t border-blue-200 pt-2 mt-2">
                         <p class="text-xs font-bold text-blue-700 mb-1.5 uppercase">Sugestões</p>
                         <div class="space-y-1 text-xs">
                             <p class="text-blue-800">🔥 Emagrecimento: {{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('emagrecer', medidaMaisRecente.gasto_energetico_total)) }} kcal</p>
                             <p class="text-blue-800">🌱 Saúde: {{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('melhorar_saude', medidaMaisRecente.gasto_energetico_total)) }} kcal</p>
                             <p class="text-blue-800">💪 Ganho de massa: {{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('ganhar_massa', medidaMaisRecente.gasto_energetico_total)) }} kcal</p>
                         </div>
-                    </div>
+                    </div> -->
 
                     <p class="text-xs text-blue-500 mt-1.5 text-center">Avaliação: {{ medidaMaisRecente.data_avaliacao ? new Date(medidaMaisRecente.data_avaliacao).toLocaleDateString('pt-BR') : '—' }}</p>
                 </div>
