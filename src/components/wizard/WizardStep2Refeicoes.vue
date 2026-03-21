@@ -1,42 +1,38 @@
 <template>
     <div class="space-y-3 overflow-y-auto pr-4">
-        <!-- Barra Sticky de Progresso -->
-        <div class="sticky top-0 z-30 bg-white rounded-lg border border-slate-200 p-3 shadow-md">
-            <div class="grid grid-cols-4 gap-2 md:grid-cols-4 lg:grid-cols-4">
-                <!-- Total Calorias -->
-                <div class="text-center">
-                    <div class="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-emerald-100">
-                        <i class="pi pi-fire text-emerald-600 text-xs"></i>
-                    </div>
-                    <p class="text-xs font-bold text-slate-800">{{ Math.round(calcularTotaisDia().total_calorias) }}</p>
-                    <p class="text-xs text-slate-600">kcal</p>
+        <!-- Barra Sticky de Progresso com Knobs -->
+        <div class="sticky top-0 z-30 bg-white rounded-lg border border-slate-200 p-4 shadow-md">
+            <div class="grid grid-cols-4 gap-4">
+                <!-- Calorias -->
+                <div class="flex flex-col items-center">
+                    <p class="text-xs font-bold text-slate-600 mb-1">Calorias</p>
+                    <Knob v-model="totaisDia.perc_calorias" :readonly="true" :size="60" :strokeWidth="8" :valueColor="obterCorCalorias(totaisDia.perc_calorias)" rangeColor="#e2e8f0" :showValue="false" />
+                    <p class="text-sm font-bold text-slate-800 mt-2">{{ Math.round(totaisDia.total_calorias) }} <span class="text-xs text-slate-600">kcal</span></p>
+                    <p class="text-xs text-slate-500">/ {{ formularioPlano.calorias_meta }} kcal</p>
                 </div>
 
                 <!-- Proteína -->
-                <div class="text-center">
-                    <div class="w-full h-1 rounded-full bg-slate-200 mb-1">
-                        <div class="h-full bg-emerald-600 rounded-full transition-all" :style="{ width: Math.min((calcularTotaisDia().total_proteinas / (formularioPlano.proteina_g || 1)) * 100, 100) + '%' }"></div>
-                    </div>
-                    <p class="text-xs font-bold text-emerald-700">{{ Math.round(calcularTotaisDia().total_proteinas) }}g</p>
-                    <p class="text-xs text-slate-600">Proteína</p>
+                <div class="flex flex-col items-center">
+                    <p class="text-xs font-bold text-emerald-700 mb-1">Proteína</p>
+                    <Knob v-model="totaisDia.perc_proteinas" :readonly="true" :size="60" :strokeWidth="8" valueColor="#16a34a" rangeColor="#e2e8f0" :showValue="false" />
+                    <p class="text-sm font-bold text-emerald-700 mt-2">{{ Math.round(totaisDia.total_proteinas) }} <span class="text-xs text-slate-600">g</span></p>
+                    <p class="text-xs text-slate-500">/ {{ formularioPlano.proteina_g }}g</p>
                 </div>
 
                 <!-- Carboidrato -->
-                <div class="text-center">
-                    <div class="w-full h-1 rounded-full bg-slate-200 mb-1">
-                        <div class="h-full bg-blue-600 rounded-full transition-all" :style="{ width: Math.min((calcularTotaisDia().total_carboidrato / (formularioPlano.carboidrato_g || 1)) * 100, 100) + '%' }"></div>
-                    </div>
-                    <p class="text-xs font-bold text-blue-700">{{ Math.round(calcularTotaisDia().total_carboidrato) }}g</p>
-                    <p class="text-xs text-slate-600">Carbo</p>
+                <div class="flex flex-col items-center">
+                    <p class="text-xs font-bold text-blue-700 mb-1">Carboidrato</p>
+                    <Knob v-model="totaisDia.perc_carboidrato" :readonly="true" :size="60" :strokeWidth="8" valueColor="#3b82f6" rangeColor="#e2e8f0" :showValue="false" />
+                    <p class="text-sm font-bold text-blue-700 mt-2">{{ Math.round(totaisDia.total_carboidrato) }} <span class="text-xs text-slate-600">g</span></p>
+                    <p class="text-xs text-slate-500">/ {{ formularioPlano.carboidrato_g }}g</p>
                 </div>
 
                 <!-- Gordura -->
-                <div class="text-center">
-                    <div class="w-full h-1 rounded-full bg-slate-200 mb-1">
-                        <div class="h-full bg-red-600 rounded-full transition-all" :style="{ width: Math.min((calcularTotaisDia().total_gordura / (formularioPlano.gordura_g || 1)) * 100, 100) + '%' }"></div>
-                    </div>
-                    <p class="text-xs font-bold text-red-700">{{ Math.round(calcularTotaisDia().total_gordura) }}g</p>
-                    <p class="text-xs text-slate-600">Gordura</p>
+                <div class="flex flex-col items-center">
+                    <p class="text-xs font-bold text-red-700 mb-1">Gordura</p>
+                    <Knob v-model="totaisDia.perc_gordura" :readonly="true" :size="60" :strokeWidth="8" valueColor="#ef4444" rangeColor="#e2e8f0" :showValue="false" />
+                    <p class="text-sm font-bold text-red-700 mt-2">{{ Math.round(totaisDia.total_gordura) }} <span class="text-xs text-slate-600">g</span></p>
+                    <p class="text-xs text-slate-500">/ {{ formularioPlano.gordura_g }}g</p>
                 </div>
             </div>
         </div>
@@ -137,10 +133,10 @@
                             </div>
 
                             <!-- Dropdown de Resultados -->
-                            <div v-if="resultadosBusca.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden max-h-64 overflow-y-auto">
+                            <div v-if="resultadosBusca.length > 0" class="top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden max-h-64 overflow-y-auto">
                                 <button
-                                    v-for="alimento in resultadosBusca"
-                                    :key="alimento.id"
+                                    v-for="(alimento, idx) in resultadosBusca"
+                                    :key="`${obterIdAlimento(alimento)}-${idx}`"
                                     @click="selecionarAlimento(alimento)"
                                     type="button"
                                     class="w-full px-4 py-3 flex justify-between items-center hover:bg-slate-50 border-b border-slate-100 text-left transition-colors group"
@@ -165,7 +161,7 @@
                                         () => {
                                             buscarAlimentoText = '';
                                             resultadosBusca = [];
-                                            formQuantidade = { alimento_id: null, nome_alimento: '', alimento: null, quantidade: 1, unidade: 'g' };
+                                            formQuantidade = { alimento_id: null, nome_alimento: '', alimento: null, quantidade: 100, unidade: 'g' };
                                         }
                                     "
                                     class="flex-1 py-1 px-2 text-xs bg-slate-300 text-slate-700 rounded-lg hover:bg-slate-400 transition-colors font-semibold"
@@ -189,7 +185,8 @@
 
 <script setup>
 import AlimentoService from '@/service/AlimentoService';
-import { defineExpose, ref } from 'vue';
+import Knob from 'primevue/knob';
+import { computed, defineExpose, ref } from 'vue';
 
 // Props
 const props = defineProps({
@@ -206,9 +203,11 @@ const emit = defineEmits(['update:formularioPlano', 'salvar', 'voltar']);
 const buscarAlimentoText = ref('');
 const resultadosBusca = ref([]);
 const refeicaoExpandida = ref(null);
-const formQuantidade = ref({ alimento_id: null, nome_alimento: '', alimento: null, quantidade: 1, unidade: 'g' });
+const formQuantidade = ref({ alimento_id: null, nome_alimento: '', alimento: null, quantidade: 100, unidade: 'g' });
 const paginaAtualAlimentos = ref(1);
 const totalPaginasAlimentos = ref(1);
+const totalAlimentos = ref(0);
+const loading = ref(false);
 let searchTimeout = null;
 
 // Helper function to calculate daily totals
@@ -242,6 +241,21 @@ const calcularTotaisDia = () => {
     return totais;
 };
 
+// Computed para totais do dia (reativo)
+const totaisDia = computed(() => calcularTotaisDia());
+
+// Função para calcular cor dinâmica das calorias
+const obterCorCalorias = (percentual) => {
+    if (percentual < 90) return '#16a34a'; // verde
+    if (percentual <= 100) return '#ca8a04'; // amarelo
+    return '#dc2626'; // vermelho
+};
+
+// Função helper para obter ID do alimento (compatível com diferentes backends)
+const obterIdAlimento = (alimento) => {
+    return alimento.id || alimento._id || `temp-${Math.random()}`;
+};
+
 // Debounce search function
 const buscarAlimentosDebounce = (texto) => {
     if (texto.length < 2) {
@@ -255,39 +269,40 @@ const buscarAlimentosDebounce = (texto) => {
 
     searchTimeout = setTimeout(async () => {
         try {
+            loading.value = true;
             const response = await AlimentoService.buscarAlimentos({
                 busca: texto,
                 limite: 20,
                 pagina: 1
             });
-            console.log('🔍 Resposta API AlimentoService:', response);
-            console.log('🔍 response.data:', response.data);
 
-            // Tentar múltiplos caminhos de dados
-            let alimentos = [];
-            if (Array.isArray(response.data)) {
-                alimentos = response.data;
-            } else if (response.data?.alimentos && Array.isArray(response.data.alimentos)) {
-                alimentos = response.data.alimentos;
-            } else if (response.data?.data && Array.isArray(response.data.data)) {
-                alimentos = response.data.data;
+            // Estrutura correta: response.data.data.dados
+            const alimentos = response.data?.data?.dados || [];
+
+            console.log('✅ Busca de alimentos realizada');
+            console.log('📊 Resposta completa:', response);
+            console.log('📝 Alimentos encontrados:', alimentos.length);
+            if (alimentos.length > 0) {
+                console.log('🟢 Primeiro alimento:', alimentos[0]);
             }
 
-            console.log('🔍 Alimentos extraídos:', alimentos);
             resultadosBusca.value = alimentos;
             paginaAtualAlimentos.value = 1;
-            totalPaginasAlimentos.value = response.data?.total_paginas || response.data?.totalPages || 1;
+            totalPaginasAlimentos.value = response.data?.data?.totalPaginas || 1;
         } catch (error) {
             console.error('❌ Erro ao buscar alimentos:', error);
-            console.error('❌ Error details:', error.response?.data || error.message);
+            console.error('❌ Status:', error.response?.status);
+            console.error('❌ Mensagem:', error.response?.data?.message);
             resultadosBusca.value = [];
+        } finally {
+            loading.value = false;
         }
     }, 300);
 };
 
 // Calculate nutrient item
 const calcularNutrienteItem = (alimento, quantidade, unidade) => {
-    if (!alimento) return { calorias: 0 };
+    if (!alimento) return { calorias: 0, proteina: 0, carboidrato: 0, gordura: 0 };
 
     const conversoes = {
         g: quantidade,
@@ -302,19 +317,26 @@ const calcularNutrienteItem = (alimento, quantidade, unidade) => {
     const fator = gramasTotal / 100;
 
     const energiaKcal = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : alimento.energiaKcal;
+    const proteina = typeof alimento.proteina === 'string' ? parseFloat(alimento.proteina) : alimento.proteina || 0;
+    const carboidrato = typeof alimento.carboidrato === 'string' ? parseFloat(alimento.carboidrato) : alimento.carboidrato || 0;
+    const lipidios = typeof alimento.lipidios === 'string' ? parseFloat(alimento.lipidios) : alimento.lipidios || 0;
 
     return {
-        calorias: Math.round(energiaKcal * fator * 10) / 10
+        calorias: Math.round(energiaKcal * fator * 10) / 10,
+        proteina: Math.round(proteina * fator * 10) / 10,
+        carboidrato: Math.round(carboidrato * fator * 10) / 10,
+        gordura: Math.round(lipidios * fator * 10) / 10
     };
 };
 
 // Select alimento
 const selecionarAlimento = (alimento) => {
+    const idAlimento = obterIdAlimento(alimento);
     formQuantidade.value = {
-        alimento_id: alimento.id,
+        alimento_id: idAlimento,
         nome_alimento: alimento.nome,
         alimento: alimento,
-        quantidade: 1,
+        quantidade: 100,
         unidade: 'g'
     };
     buscarAlimentoText.value = alimento.nome;
@@ -341,9 +363,9 @@ const adicionarItem = (refeicaoIndex) => {
         quantidade: formQuantidade.value.quantidade,
         unidade: formQuantidade.value.unidade,
         calorias_calculadas: nutrientes.calorias,
-        proteinas_calculadas: 0,
-        carboidratos_calculados: 0,
-        gorduras_calculadas: 0
+        proteinas_calculadas: nutrientes.proteina,
+        carboidratos_calculados: nutrientes.carboidrato,
+        gorduras_calculadas: nutrientes.gordura
     });
 
     // Recalculate refeição totals
@@ -355,7 +377,7 @@ const adicionarItem = (refeicaoIndex) => {
     emit('update:formularioPlano', { ...props.formularioPlano, refeicoes: novas_refeicoes });
 
     // Reset form
-    formQuantidade.value = { alimento_id: null, nome_alimento: '', alimento: null, quantidade: 1, unidade: 'g' };
+    formQuantidade.value = { alimento_id: null, nome_alimento: '', alimento: null, quantidade: 100, unidade: 'g' };
     buscarAlimentoText.value = '';
     resultadosBusca.value = [];
 };
