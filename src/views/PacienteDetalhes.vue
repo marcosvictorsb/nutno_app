@@ -7,6 +7,7 @@ import AbaAnamnese from '@/components/paciente/AbaAnamnese.vue';
 import AbaMedidas from '@/components/paciente/AbaMedidas.vue';
 import AbaPlanos from '@/components/paciente/AbaPlanos.vue';
 import AbaResumo from '@/components/paciente/AbaResumo.vue';
+import PacienteHeader from '@/components/paciente/PacienteHeader.vue';
 import WizardPlano from '@/components/wizard/WizardPlano.vue';
 import { useMedidas } from '@/composables/useMedidas';
 import AnamneseService from '@/service/AnamneseService';
@@ -15,10 +16,8 @@ import PacienteService from '@/service/PacienteService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
 import { calcularGET, calcularTMB, parsePressoArterial } from '@/utils/nutricionais';
 import { construirUrlFotoPaciente } from '@/utils/urlHelper';
-import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
 import ConfirmPopup from 'primevue/confirmpopup';
-import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
@@ -61,7 +60,6 @@ const showDialogEdicao = ref(false);
 const formErrors = ref({});
 const loadingAtualizacao = ref(false);
 const loadingUploadFoto = ref(false);
-const inputFotoRef = ref(null);
 
 // Estados da anamnese
 const anamnese = ref(null);
@@ -129,7 +127,6 @@ watch(
                 const alturaMetros = altura / 100;
                 const imc = peso / (alturaMetros * alturaMetros);
                 formularioMedida.value.imc = parseFloat(imc.toFixed(2));
-                console.log('🔄 IMC recalculado:', imc);
             }
         }
     }
@@ -144,7 +141,6 @@ watch(
             const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
             if (tmb) {
                 formularioMedida.value.tmb = tmb;
-                console.log('🔄 TMB recalculado:', tmb, 'kcal/dia');
             }
         }
     }
@@ -159,7 +155,6 @@ watch(
             const perc_gordura = parseFloat(formularioMedida.value.perc_gordura_corporal);
             const perc_massa_magra = 100 - perc_gordura;
             formularioMedida.value.perc_massa_magra = perc_massa_magra;
-            console.log('🔄 % Massa Magra recalculada:', perc_massa_magra);
         }
     }
 );
@@ -180,7 +175,6 @@ watch(
         const getCalculado = calcularGET(formularioMedida.value.tmb, formularioMedida.value.nivel_atividade);
         if (getCalculado) {
             formularioMedida.value.gasto_energetico_total = getCalculado;
-            console.log('🔄 GET recalculado:', getCalculado, 'kcal/dia');
         }
     }
 );
@@ -408,11 +402,6 @@ const fecharEdicaoPaciente = () => {
     formErrors.value = {};
 };
 
-// Função para abrir seletor de arquivo
-const selecionarFoto = () => {
-    inputFotoRef.value?.click();
-};
-
 // Função para fazer upload da foto
 const enviarFoto = async (event) => {
     const arquivo = event.target.files?.[0];
@@ -447,12 +436,8 @@ const enviarFoto = async (event) => {
         const formData = new FormData();
         formData.append('foto', arquivo);
 
-        console.log('📸 Enviando foto para o paciente:', paciente.value.id);
-
         // Chamar service para enviar foto
         const response = await PacienteService.enviarFotoPaciente(paciente.value.id, formData);
-
-        console.log('✅ Foto enviada com sucesso:', response.data);
 
         if (response.data.success) {
             toast.add({
@@ -478,8 +463,8 @@ const enviarFoto = async (event) => {
     } finally {
         loadingUploadFoto.value = false;
         // Limpar input file
-        if (inputFotoRef.value) {
-            inputFotoRef.value.value = '';
+        if (event?.target) {
+            event.target.value = '';
         }
     }
 };
@@ -530,12 +515,8 @@ const carregarAnamnese = async () => {
 
     try {
         const idPaciente = route.params.id;
-        console.log('📋 Carregando anamnese do paciente:', idPaciente);
 
         const response = await AnamneseService.obterAnamnesePaciente(idPaciente);
-        console.log('-----------------------------> buscou a anamnese do paciente:', idPaciente);
-
-        console.log('✅ Resposta da anamnese:', response.data);
 
         if (response.data.success && response.data.data) {
             anamnese.value = response.data.data;
@@ -627,8 +608,6 @@ const salvarEdicaoAnamnese = async () => {
 
     try {
         const idPaciente = route.params.id;
-        const acao = modoEdicao.value ? 'edição' : 'criação';
-        console.log(`📝 Salvando ${acao} de anamnese para paciente:`, idPaciente);
 
         let response;
         if (modoEdicao.value) {
@@ -638,8 +617,6 @@ const salvarEdicaoAnamnese = async () => {
             // Modo criação - POST
             response = await AnamneseService.criarAnamnesePaciente(idPaciente, anamneseEditando.value);
         }
-
-        console.log(`✅ Resposta da ${acao}:`, response.data);
 
         if (response.data.success) {
             // Fechar o dialog
@@ -688,10 +665,8 @@ const carregarPlanos = async () => {
 
     try {
         const idPaciente = route.params.id;
-        console.log('🍽️ Carregando planos alimentares do paciente:', idPaciente);
 
         const response = await PlanoAlimentarService.listar(idPaciente);
-        console.log('✅ Resposta de planos:', response);
 
         if (response.dados && Array.isArray(response.dados)) {
             planos.value = response.dados;
@@ -751,20 +726,15 @@ const abrirEdicaoPlano = async (planoId) => {
         const idPaciente = route.params.id;
 
         // 1️⃣ Carregar medidas do paciente primeiro (importante para os cálculos)
-        console.log('📊 Carregando medidas para preencher o modal...');
         await carregarMedidas();
 
         // Garantir que medidaMaisRecente seja preenchida (usada no template)
         if (medidas.value && medidas.value.length > 0) {
             medidaMaisRecente.value = medidas.value[0];
-            console.log('📍 Medida mais recente carregada:', medidaMaisRecente.value);
         }
 
         // 2️⃣ Carregar plano específico diretamente
-        console.log('🍽️ Buscando plano específico do paciente:', planoId);
         const responsePlano = await PlanoAlimentarService.buscar(idPaciente, planoId);
-        console.log('📥 Resposta completa:', responsePlano);
-
         // Extrair os dados do plano (vem dentro de 'dados')
         const planoData = responsePlano.dados;
 
@@ -772,19 +742,6 @@ const abrirEdicaoPlano = async (planoId) => {
             throw new Error(`Plano com ID ${planoId} não encontrado`);
         }
 
-        console.log('✏️ Plano carregado:', planoData);
-
-        // 3️⃣ Preencher formulário com dados do plano
-        console.log('📝 Tentando preencher formulário com dados:', {
-            nome: planoData.nome,
-            objetivo: planoData.objetivo,
-            calorias_objetivo: planoData.calorias_objetivo,
-            proteinas_objetivo_pct: planoData.proteinas_objetivo_pct,
-            carboidratos_objetivo_pct: planoData.carboidratos_objetivo_pct,
-            gorduras_objetivo_pct: planoData.gorduras_objetivo_pct,
-            refeicoes_length: planoData.refeicoes ? planoData.refeicoes.length : 'NÃO ENCONTRADO',
-            refeicoes: planoData.refeicoes
-        });
         formularioPlano.value = {
             nome: planoData.nome || '',
             objetivo: planoData.objetivo || '',
@@ -805,16 +762,7 @@ const abrirEdicaoPlano = async (planoId) => {
         formularioPlano.value.carboidrato_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.carboidrato_perc) / 100 / 4);
         formularioPlano.value.gordura_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.gordura_perc) / 100 / 9);
 
-        // 4️⃣ Estruturar refeições com dados da API
-        console.log('🔍 Verificando refeições do plano:', {
-            refeicoes: planoData.refeicoes,
-            isArray: Array.isArray(planoData.refeicoes),
-            length: planoData.refeicoes ? planoData.refeicoes.length : 'undefined'
-        });
-
         if (planoData.refeicoes && Array.isArray(planoData.refeicoes) && planoData.refeicoes.length > 0) {
-            console.log(`📋 Encontradas ${planoData.refeicoes.length} refeições para mapear`);
-
             formularioPlano.value.refeicoes = planoData.refeicoes.map((refeicaoApi) => {
                 // Distribuição padrão de calorias por tipo de refeição
                 const distribuicoes = {
@@ -870,13 +818,9 @@ const abrirEdicaoPlano = async (planoId) => {
                     total_gordura_g: Math.round(total_gordura_g * 10) / 10
                 };
 
-                console.log(`  📌 Refeição "${refeicaoMapeada.nome}" mapeada: ${itensMap.length} itens, ${total_calorias.toFixed(2)} kcal`);
                 return refeicaoMapeada;
             });
-
-            console.log(`✅ ${formularioPlano.value.refeicoes.length} refeições com itens preenchidas com sucesso`);
         } else {
-            console.warn('⚠️ Plano sem refeições. Criando refeições padrão baseado em refeicoes_dia:', formularioPlano.value.refeicoes_dia);
             // Se não tem refeições, criar baseado em refeicoes_dia
             const refeicoesDia = formularioPlano.value.refeicoes_dia || 5;
             const distribuirCal = (dias) => {
@@ -926,21 +870,12 @@ const abrirEdicaoPlano = async (planoId) => {
                 total_carboidrato_g: 0,
                 total_gordura_g: 0
             }));
-            console.log(`✅ ${formularioPlano.value.refeicoes.length} refeições padrão criadas`);
         }
 
         formularioPlanoCalorias_metaOriginal.value = formularioPlano.value.calorias_meta;
         objetivoPreSelecionadoCom.value = null;
         macrosSugeridosPor.value = null;
-
-        console.log('✅ Plano carregado com sucesso para edição:', formularioPlano.value);
-        console.log('📊 Estado das refeições após carregamento:', {
-            quantidadeRefeicoes: formularioPlano.value.refeicoes.length,
-            refeicoes: formularioPlano.value.refeicoes
-        });
-        console.log('✅ Medidas carregadas:', medidaMaisRecente.value);
         showDialogCriacaoPlano.value = true;
-        console.log('🎯 Modal aberto e showDialogCriacaoPlano.value =', showDialogCriacaoPlano.value);
     } catch (error) {
         console.error('❌ Erro ao carregar plano para edição:', error);
         toast.add({
@@ -981,8 +916,6 @@ const abrirCriacaoPlano = async () => {
         medidaMaisRecente.value = medidas.value[0];
     }
 
-    console.log('📋 Wizard de plano aberto - medida mais recente:', medidaMaisRecente.value);
-
     showDialogCriacaoPlano.value = true;
 };
 
@@ -993,7 +926,6 @@ const deletarPlano = async (idPlano) => {
 
     try {
         const idPaciente = route.params.id;
-        console.log('🗑️ Deletando plano:', idPlano);
 
         await PlanoAlimentarService.deletar(idPaciente, idPlano);
 
@@ -1046,106 +978,7 @@ onMounted(async () => {
 
     <!-- Main Content -->
     <main v-else-if="paciente" class="flex-1 flex flex-col overflow-hidden">
-        <!-- BEGIN: Profile Header -->
-        <header class="bg-white border-b border-emerald-100 p-8">
-            <div class="mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div class="flex items-center gap-6">
-                    <!-- Avatar with Photo Upload -->
-                    <div class="relative group">
-                        <!-- Input File Hidden -->
-                        <input ref="inputFotoRef" type="file" accept="image/*" class="hidden" @change="enviarFoto" />
-
-                        <!-- Foto ou Avatar -->
-                        <img v-if="fotoPacienteUrl" :src="fotoPacienteUrl" :alt="paciente.nome" class="w-24 h-24 rounded-2xl object-cover ring-4 ring-emerald-50 shadow-lg" />
-                        <div v-else class="w-24 h-24 rounded-2xl bg-emerald-100 ring-4 ring-emerald-50 shadow-lg flex items-center justify-center">
-                            <Avatar
-                                :label="
-                                    paciente.nome
-                                        ? paciente.nome
-                                              .split(' ')
-                                              .slice(0, 2)
-                                              .map((n) => n[0])
-                                              .join('')
-                                        : 'XX'
-                                "
-                                shape="circle"
-                                size="xlarge"
-                                class="bg-emerald-200 text-emerald-700 font-bold text-2xl"
-                            />
-                        </div>
-
-                        <!-- Overlay com Ícone de Camera -->
-                        <div class="absolute inset-0 rounded-2xl bg-black bg-opacity-0 group-hover:bg-opacity-50 flex items-center justify-center transition-all duration-300 cursor-pointer" @click="selecionarFoto">
-                            <!-- Loading Spinner -->
-                            <div v-if="loadingUploadFoto" class="flex flex-col items-center justify-center">
-                                <i class="pi pi-spin pi-spinner text-white text-3xl"></i>
-                                <p class="text-white text-xs mt-2 font-semibold">Enviando...</p>
-                            </div>
-
-                            <!-- Camera Icon (hidden no hover quando loading) -->
-                            <div v-else class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center gap-1">
-                                <i class="pi pi-camera text-white text-2xl"></i>
-                                <p class="text-white text-xs font-semibold">Alterar foto</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Patient Info -->
-                    <div>
-                        <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-3xl font-bold text-slate-800">{{ paciente.nome }}</h1>
-                            <Tag :value="paciente.status === 'ativo' ? 'Ativo' : 'Arquivado'" :severity="paciente.status === 'ativo' ? 'success' : 'secondary'" class="uppercase tracking-wider" />
-                        </div>
-                        <p class="text-slate-500 flex items-center gap-4 flex-wrap">
-                            <span class="flex items-center gap-1"> <i class="pi pi-calendar text-sm"></i> {{ paciente.idade > 0 ? `${paciente.idade} anos` : 'Idade não informada' }} </span>
-                            <span v-if="paciente.email" class="flex items-center gap-1"> <i class="pi pi-envelope text-sm"></i> {{ paciente.email }} </span>
-                            <span v-if="paciente.telefone" class="flex items-center gap-1"> <i class="pi pi-phone text-sm"></i> {{ paciente.telefone }} </span>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <!-- <div class="flex gap-3">
-                    <Button label="Nova medida" icon="pi pi-plus" severity="secondary" @click="novaMedida" class="whitespace-nowrap" />
-                    <Button label="Novo plano" icon="pi pi-plus" severity="success" @click="novoPlano" class="whitespace-nowrap" />
-                </div> -->
-            </div>
-
-            <!-- Tab Menu -->
-            <nav class="mx-auto mt-8 flex border-b border-slate-100 gap-2 overflow-x-auto">
-                <button
-                    @click="activeTab = 'resumo'"
-                    :class="['px-6 py-3 border-b-2 font-bold transition-all whitespace-nowrap', activeTab === 'resumo' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
-                >
-                    Resumo
-                </button>
-                <button
-                    @click="activeTab = 'anamnese'"
-                    :class="['px-6 py-3 border-b-2 font-medium transition-all whitespace-nowrap', activeTab === 'anamnese' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
-                >
-                    Anamnese
-                </button>
-                <button
-                    @click="activeTab = 'medidas'"
-                    :class="['px-6 py-3 border-b-2 font-medium transition-all whitespace-nowrap', activeTab === 'medidas' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
-                >
-                    Medidas
-                </button>
-                <button
-                    @click="activeTab = 'planos'"
-                    :class="['px-6 py-3 border-b-2 font-medium transition-all whitespace-nowrap', activeTab === 'planos' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
-                >
-                    Planos Alimentares
-                </button>
-                <button
-                    @click="activeTab = 'adesao'"
-                    :class="['px-6 py-3 border-b-2 font-medium transition-all whitespace-nowrap', activeTab === 'adesao' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-emerald-500']"
-                >
-                    Adesão
-                </button>
-            </nav>
-        </header>
-        <!-- END: Profile Header -->
+        <PacienteHeader :paciente="paciente" :fotoPacienteUrl="fotoPacienteUrl" :loadingUploadFoto="loadingUploadFoto" :activeTab="activeTab" @update:activeTab="activeTab = $event" @foto-change="enviarFoto" />
 
         <!-- BEGIN: Content Area -->
         <div class="flex-1 overflow-y-auto mt-3">
