@@ -86,8 +86,6 @@
             :formErrors="formErrors"
             :loading="loadingAtualizacao"
             @update:visible="showDialogEdicao = $event"
-            @update:formEdicaoPaciente="formEdicaoPaciente = $event"
-            @update:formErrors="formErrors = $event"
             @fechar="fecharEdicaoPaciente"
             @salvar="atualizarPaciente"
         />
@@ -379,7 +377,10 @@ const voltarPacientes = () => {
     router.push('/pacientes');
 };
 
-const atualizarPaciente = async () => {
+const atualizarPaciente = async (dadosFormulario) => {
+    // Atualizar formEdicaoPaciente com dados do modal
+    formEdicaoPaciente.value = dadosFormulario;
+
     // Validar campos obrigatórios
     formErrors.value = {};
 
