@@ -1,226 +1,3 @@
-<script setup>
-import Dialog from 'primevue/dialog';
-import { computed, ref, watch } from 'vue';
-
-const props = defineProps({
-    aberto: {
-        type: Boolean,
-        default: false
-    },
-    alimento: {
-        type: Object,
-        default: null
-    },
-    salvando: {
-        type: Boolean,
-        default: false
-    },
-    erros: {
-        type: Object,
-        default: () => ({})
-    }
-});
-
-const emit = defineEmits(['fechar', 'salvar']);
-
-const expandirGorduras = ref(false);
-const editando = ref(false);
-const errosLocais = ref({});
-
-const grupos = [
-    'Cereais e derivados',
-    'Frutas e derivados',
-    'Hortaliças e derivados',
-    'Leguminosas e derivados',
-    'Carnes e derivados',
-    'Pescados e frutos do mar',
-    'Laticínios e derivados',
-    'Ovos e derivados',
-    'Óleos e gorduras',
-    'Açúcares e doces',
-    'Bebidas',
-    'Suplementos',
-    'Outros'
-];
-
-const formulario = ref({
-    nome: '',
-    nomeCientifico: '',
-    grupo: '',
-    energiaKcal: null,
-    energiaKj: null,
-    proteina: null,
-    lipidios: null,
-    carboidrato: null,
-    fibra: null,
-    sodio: null,
-    umidade: null,
-    calcio: null,
-    ferro: null,
-    potassio: null,
-    magnesio: null,
-    fosforo: null,
-    zinco: null,
-    vitaminaC: null,
-    vitaminaA_re: null,
-    colesterol: null,
-    gorduraSaturada: null,
-    gordurasTrans: null
-});
-
-const podeEditar = computed(() => {
-    return props.alimento && props.alimento.fonte === 'personalizado';
-});
-
-const formatarValor = (valor, unidade = '') => {
-    if (valor === null || valor === undefined) {
-        return '—';
-    }
-    if (valor === 0.001) {
-        return 'tr';
-    }
-    if (typeof valor === 'number') {
-        const formatado = valor.toFixed(1);
-        return unidade ? `${formatado} ${unidade}` : formatado;
-    }
-    return valor;
-};
-
-const getBadgeClassModal = (fonte) => {
-    switch (fonte) {
-        case 'taco':
-            return 'bg-[#dcfce7] text-[#16a34a]';
-        case 'tbca':
-            return 'bg-[#dbeafe] text-[#1d4ed8]';
-        case 'personalizado':
-            return 'bg-[#fef9c3] text-[#854d0e]';
-        default:
-            return 'bg-gray-100 text-gray-700';
-    }
-};
-
-const getLabelFonte = (fonte) => {
-    switch (fonte) {
-        case 'taco':
-            return 'TACO';
-        case 'tbca':
-            return 'TBCA';
-        case 'personalizado':
-            return 'Meu';
-        default:
-            return fonte;
-    }
-};
-
-const getFonteDescricao = (fonte) => {
-    switch (fonte) {
-        case 'taco':
-            return 'Fonte: Tabela TACO — UNICAMP';
-        case 'tbca':
-            return 'Fonte: TBCA — USP/IBGE';
-        case 'personalizado':
-            return 'Alimento personalizado';
-        default:
-            return '';
-    }
-};
-
-const iniciarEdicao = () => {
-    if (!props.alimento) return;
-
-    formulario.value = {
-        nome: props.alimento.nome || '',
-        nomeCientifico: props.alimento.nomeCientifico || '',
-        grupo: props.alimento.grupo || '',
-        energiaKcal: props.alimento.energiaKcal,
-        energiaKj: props.alimento.energiaKj,
-        proteina: props.alimento.proteina,
-        lipidios: props.alimento.lipidios,
-        carboidrato: props.alimento.carboidrato,
-        fibra: props.alimento.fibra,
-        sodio: props.alimento.sodio,
-        umidade: props.alimento.umidade,
-        calcio: props.alimento.calcio,
-        ferro: props.alimento.ferro,
-        potassio: props.alimento.potassio,
-        magnesio: props.alimento.magnesio,
-        fosforo: props.alimento.fosforo,
-        zinco: props.alimento.zinco,
-        vitaminaC: props.alimento.vitaminaC,
-        vitaminaA_re: props.alimento.vitaminaA_re,
-        colesterol: props.alimento.colesterol,
-        gorduraSaturada: props.alimento.gorduraSaturada,
-        gordurasTrans: props.alimento.gordurasTrans
-    };
-
-    errosLocais.value = {};
-    editando.value = true;
-};
-
-const cancelarEdicao = () => {
-    editando.value = false;
-    errosLocais.value = {};
-};
-
-const validarFormulario = () => {
-    const erros = {};
-
-    if (!formulario.value.nome || formulario.value.nome.trim() === '') {
-        erros.nome = 'Nome é obrigatório';
-    } else if (formulario.value.nome.length < 3) {
-        erros.nome = 'Mínimo 3 caracteres';
-    }
-
-    if (!formulario.value.grupo) {
-        erros.grupo = 'Grupo é obrigatório';
-    }
-
-    if (formulario.value.energiaKcal === null || formulario.value.energiaKcal === '' || formulario.value.energiaKcal < 0) {
-        erros.energiaKcal = 'Obrigatório';
-    }
-
-    if (formulario.value.proteina === null || formulario.value.proteina === '' || formulario.value.proteina < 0) {
-        erros.proteina = 'Obrigatório';
-    }
-
-    if (formulario.value.lipidios === null || formulario.value.lipidios === '' || formulario.value.lipidios < 0) {
-        erros.lipidios = 'Obrigatório';
-    }
-
-    if (formulario.value.carboidrato === null || formulario.value.carboidrato === '' || formulario.value.carboidrato < 0) {
-        erros.carboidrato = 'Obrigatório';
-    }
-
-    errosLocais.value = erros;
-    return Object.keys(erros).length === 0;
-};
-
-const salvar = () => {
-    if (!validarFormulario()) {
-        return;
-    }
-
-    emit('salvar', props.alimento.id, formulario.value);
-};
-
-watch(
-    () => props.aberto,
-    (novoValor) => {
-        if (!novoValor) {
-            editando.value = false;
-            errosLocais.value = {};
-        }
-    }
-);
-
-watch(
-    () => props.erros,
-    (novoErros) => {
-        errosLocais.value = { ...novoErros };
-    }
-);
-</script>
-
 <template>
     <Dialog :visible="aberto" :modal="true" :style="{ width: '100%', maxWidth: '800px' }" :breakpoints="{ '1199px': '85vw', '575px': '100vw' }" @update:visible="(val) => !val && $emit('fechar')">
         <template #header v-if="alimento">
@@ -574,6 +351,229 @@ watch(
         </template>
     </Dialog>
 </template>
+
+<script setup>
+import Dialog from 'primevue/dialog';
+import { computed, ref, watch } from 'vue';
+
+const props = defineProps({
+    aberto: {
+        type: Boolean,
+        default: false
+    },
+    alimento: {
+        type: Object,
+        default: null
+    },
+    salvando: {
+        type: Boolean,
+        default: false
+    },
+    erros: {
+        type: Object,
+        default: () => ({})
+    }
+});
+
+const emit = defineEmits(['fechar', 'salvar']);
+
+const expandirGorduras = ref(false);
+const editando = ref(false);
+const errosLocais = ref({});
+
+const grupos = [
+    'Cereais e derivados',
+    'Frutas e derivados',
+    'Hortaliças e derivados',
+    'Leguminosas e derivados',
+    'Carnes e derivados',
+    'Pescados e frutos do mar',
+    'Laticínios e derivados',
+    'Ovos e derivados',
+    'Óleos e gorduras',
+    'Açúcares e doces',
+    'Bebidas',
+    'Suplementos',
+    'Outros'
+];
+
+const formulario = ref({
+    nome: '',
+    nomeCientifico: '',
+    grupo: '',
+    energiaKcal: null,
+    energiaKj: null,
+    proteina: null,
+    lipidios: null,
+    carboidrato: null,
+    fibra: null,
+    sodio: null,
+    umidade: null,
+    calcio: null,
+    ferro: null,
+    potassio: null,
+    magnesio: null,
+    fosforo: null,
+    zinco: null,
+    vitaminaC: null,
+    vitaminaA_re: null,
+    colesterol: null,
+    gorduraSaturada: null,
+    gordurasTrans: null
+});
+
+const podeEditar = computed(() => {
+    return props.alimento && props.alimento.fonte === 'personalizado';
+});
+
+const formatarValor = (valor, unidade = '') => {
+    if (valor === null || valor === undefined) {
+        return '—';
+    }
+    if (valor === 0.001) {
+        return 'tr';
+    }
+    if (typeof valor === 'number') {
+        const formatado = valor.toFixed(1);
+        return unidade ? `${formatado} ${unidade}` : formatado;
+    }
+    return valor;
+};
+
+const getBadgeClassModal = (fonte) => {
+    switch (fonte) {
+        case 'taco':
+            return 'bg-[#dcfce7] text-[#16a34a]';
+        case 'tbca':
+            return 'bg-[#dbeafe] text-[#1d4ed8]';
+        case 'personalizado':
+            return 'bg-[#fef9c3] text-[#854d0e]';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
+};
+
+const getLabelFonte = (fonte) => {
+    switch (fonte) {
+        case 'taco':
+            return 'TACO';
+        case 'tbca':
+            return 'TBCA';
+        case 'personalizado':
+            return 'Meu';
+        default:
+            return fonte;
+    }
+};
+
+const getFonteDescricao = (fonte) => {
+    switch (fonte) {
+        case 'taco':
+            return 'Fonte: Tabela TACO — UNICAMP';
+        case 'tbca':
+            return 'Fonte: TBCA — USP/IBGE';
+        case 'personalizado':
+            return 'Alimento personalizado';
+        default:
+            return '';
+    }
+};
+
+const iniciarEdicao = () => {
+    if (!props.alimento) return;
+
+    formulario.value = {
+        nome: props.alimento.nome || '',
+        nomeCientifico: props.alimento.nomeCientifico || '',
+        grupo: props.alimento.grupo || '',
+        energiaKcal: props.alimento.energiaKcal,
+        energiaKj: props.alimento.energiaKj,
+        proteina: props.alimento.proteina,
+        lipidios: props.alimento.lipidios,
+        carboidrato: props.alimento.carboidrato,
+        fibra: props.alimento.fibra,
+        sodio: props.alimento.sodio,
+        umidade: props.alimento.umidade,
+        calcio: props.alimento.calcio,
+        ferro: props.alimento.ferro,
+        potassio: props.alimento.potassio,
+        magnesio: props.alimento.magnesio,
+        fosforo: props.alimento.fosforo,
+        zinco: props.alimento.zinco,
+        vitaminaC: props.alimento.vitaminaC,
+        vitaminaA_re: props.alimento.vitaminaA_re,
+        colesterol: props.alimento.colesterol,
+        gorduraSaturada: props.alimento.gorduraSaturada,
+        gordurasTrans: props.alimento.gordurasTrans
+    };
+
+    errosLocais.value = {};
+    editando.value = true;
+};
+
+const cancelarEdicao = () => {
+    editando.value = false;
+    errosLocais.value = {};
+};
+
+const validarFormulario = () => {
+    const erros = {};
+
+    if (!formulario.value.nome || formulario.value.nome.trim() === '') {
+        erros.nome = 'Nome é obrigatório';
+    } else if (formulario.value.nome.length < 3) {
+        erros.nome = 'Mínimo 3 caracteres';
+    }
+
+    if (!formulario.value.grupo) {
+        erros.grupo = 'Grupo é obrigatório';
+    }
+
+    if (formulario.value.energiaKcal === null || formulario.value.energiaKcal === '' || formulario.value.energiaKcal < 0) {
+        erros.energiaKcal = 'Obrigatório';
+    }
+
+    if (formulario.value.proteina === null || formulario.value.proteina === '' || formulario.value.proteina < 0) {
+        erros.proteina = 'Obrigatório';
+    }
+
+    if (formulario.value.lipidios === null || formulario.value.lipidios === '' || formulario.value.lipidios < 0) {
+        erros.lipidios = 'Obrigatório';
+    }
+
+    if (formulario.value.carboidrato === null || formulario.value.carboidrato === '' || formulario.value.carboidrato < 0) {
+        erros.carboidrato = 'Obrigatório';
+    }
+
+    errosLocais.value = erros;
+    return Object.keys(erros).length === 0;
+};
+
+const salvar = () => {
+    if (!validarFormulario()) {
+        return;
+    }
+
+    emit('salvar', props.alimento.id, formulario.value);
+};
+
+watch(
+    () => props.aberto,
+    (novoValor) => {
+        if (!novoValor) {
+            editando.value = false;
+            errosLocais.value = {};
+        }
+    }
+);
+
+watch(
+    () => props.erros,
+    (novoErros) => {
+        errosLocais.value = { ...novoErros };
+    }
+);
+</script>
 
 <style scoped>
 .expand-enter-active,

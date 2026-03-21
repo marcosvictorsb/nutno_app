@@ -1,3 +1,18 @@
+<template>
+    <div class="layout-wrapper" :class="containerClass">
+        <AppTopbar />
+        <AppSidebar />
+        <div class="layout-main-container">
+            <div class="layout-main">
+                <router-view />
+            </div>
+            <AppFooter />
+        </div>
+        <div class="layout-mask animate-fadein" @click="hideMobileMenu" />
+    </div>
+    <Toast />
+</template>
+
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
 import { computed } from 'vue';
@@ -17,18 +32,3 @@ const containerClass = computed(() => {
     };
 });
 </script>
-
-<template>
-    <div class="layout-wrapper" :class="containerClass">
-        <AppTopbar />
-        <AppSidebar />
-        <div class="layout-main-container">
-            <div class="layout-main">
-                <router-view />
-            </div>
-            <AppFooter />
-        </div>
-        <div class="layout-mask animate-fadein" @click="hideMobileMenu" />
-    </div>
-    <Toast />
-</template>

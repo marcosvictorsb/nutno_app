@@ -1,24 +1,3 @@
-<script setup>
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
-
-const irParaCadastro = () => {
-    router.push('/criar-conta-gratis');
-};
-
-const irParaCadastroGratis = () => {
-    router.push('/criar-conta-gratis');
-};
-
-const scrollToPrecos = () => {
-    const element = document.getElementById('precos');
-    if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-    }
-};
-</script>
-
 <template>
     <div class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased">
         <!-- Header / Nav -->
@@ -388,5 +367,26 @@ const scrollToPrecos = () => {
         </footer>
     </div>
 </template>
+
+<script setup>
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const irParaCadastro = () => {
+    router.push('/criar-conta-gratis');
+};
+
+const irParaCadastroGratis = () => {
+    router.push('/criar-conta-gratis');
+};
+
+const scrollToPrecos = () => {
+    const element = document.getElementById('precos');
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+    }
+};
+</script>
 
 <style scoped></style>

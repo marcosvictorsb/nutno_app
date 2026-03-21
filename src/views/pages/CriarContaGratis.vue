@@ -1,84 +1,3 @@
-<script setup>
-import AuthService from '@/service/AuthService.js';
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
-
-const tabAtivo = ref('criar');
-const nomeCompleto = ref('');
-const email = ref('');
-const password = ref('');
-const confirmPassword = ref('');
-const aceitoTermos = ref(false);
-const loading = ref(false);
-const mensagemErro = ref('');
-const mensagemSucesso = ref('');
-
-// Validações de senha
-const validacoes = computed(() => ({
-    minLength: password.value.length >= 8,
-    maiuscula: /[A-Z]/.test(password.value),
-    minuscula: /[a-z]/.test(password.value),
-    numero: /\d/.test(password.value),
-    especial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password.value)
-}));
-
-const senhasCorrespondem = computed(() => {
-    return password.value && confirmPassword.value && password.value === confirmPassword.value;
-});
-
-const senhaValida = computed(() => {
-    return Object.values(validacoes.value).every((v) => v === true);
-});
-
-const formularioValido = computed(() => {
-    return nomeCompleto.value.trim() !== '' && email.value.trim() !== '' && senhaValida.value && senhasCorrespondem.value && aceitoTermos.value;
-});
-
-const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formularioValido.value) return;
-
-    loading.value = true;
-    mensagemErro.value = '';
-    mensagemSucesso.value = '';
-
-    try {
-        const response = await AuthService.criarContaGratis({
-            nome: nomeCompleto.value,
-            email: email.value,
-            senha: password.value
-        });
-
-        // Sucesso
-        if (response.status === 201 && response.data.success) {
-            mensagemSucesso.value = response.data.message;
-
-            // Aguarda um pouco para mostrar a mensagem de sucesso, depois redireciona
-            setTimeout(() => {
-                router.push({
-                    name: 'login',
-                    query: { contaCriada: true, email: email.value }
-                });
-            }, 2000);
-        }
-    } catch (error) {
-        // Erro
-        if (error.response && error.response.data && error.response.data.message) {
-            mensagemErro.value = error.response.data.message;
-        } else if (error.response && error.response.status === 400) {
-            mensagemErro.value = 'Erro ao criar conta. Tente novamente.';
-        } else {
-            mensagemErro.value = 'Erro de conexão. Verifique sua internet e tente novamente.';
-        }
-    } finally {
-        loading.value = false;
-    }
-};
-</script>
-
 <template>
     <div class="min-h-screen flex bg-gradient-to-br from-green-50 to-green-100">
         <!-- Lado Esquerdo -->
@@ -279,5 +198,86 @@ const handleSubmit = async (e) => {
         </div>
     </div>
 </template>
+
+<script setup>
+import AuthService from '@/service/AuthService.js';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const tabAtivo = ref('criar');
+const nomeCompleto = ref('');
+const email = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const aceitoTermos = ref(false);
+const loading = ref(false);
+const mensagemErro = ref('');
+const mensagemSucesso = ref('');
+
+// Validações de senha
+const validacoes = computed(() => ({
+    minLength: password.value.length >= 8,
+    maiuscula: /[A-Z]/.test(password.value),
+    minuscula: /[a-z]/.test(password.value),
+    numero: /\d/.test(password.value),
+    especial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password.value)
+}));
+
+const senhasCorrespondem = computed(() => {
+    return password.value && confirmPassword.value && password.value === confirmPassword.value;
+});
+
+const senhaValida = computed(() => {
+    return Object.values(validacoes.value).every((v) => v === true);
+});
+
+const formularioValido = computed(() => {
+    return nomeCompleto.value.trim() !== '' && email.value.trim() !== '' && senhaValida.value && senhasCorrespondem.value && aceitoTermos.value;
+});
+
+const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formularioValido.value) return;
+
+    loading.value = true;
+    mensagemErro.value = '';
+    mensagemSucesso.value = '';
+
+    try {
+        const response = await AuthService.criarContaGratis({
+            nome: nomeCompleto.value,
+            email: email.value,
+            senha: password.value
+        });
+
+        // Sucesso
+        if (response.status === 201 && response.data.success) {
+            mensagemSucesso.value = response.data.message;
+
+            // Aguarda um pouco para mostrar a mensagem de sucesso, depois redireciona
+            setTimeout(() => {
+                router.push({
+                    name: 'login',
+                    query: { contaCriada: true, email: email.value }
+                });
+            }, 2000);
+        }
+    } catch (error) {
+        // Erro
+        if (error.response && error.response.data && error.response.data.message) {
+            mensagemErro.value = error.response.data.message;
+        } else if (error.response && error.response.status === 400) {
+            mensagemErro.value = 'Erro ao criar conta. Tente novamente.';
+        } else {
+            mensagemErro.value = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        }
+    } finally {
+        loading.value = false;
+    }
+};
+</script>
 
 <style scoped></style>

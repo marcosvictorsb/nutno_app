@@ -1,3 +1,140 @@
+<template>
+    <!-- ConfirmPopup -->
+    <ConfirmPopup />
+
+    <!-- Loading State -->
+    <div v-if="loading" class="flex flex-col items-center justify-center h-96">
+        <i class="pi pi-spin pi-spinner text-5xl text-emerald-600 mb-4"></i>
+        <p class="text-gray-600 font-medium">Carregando paciente...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="erro" class="p-8">
+        <div class="flex flex-col items-center justify-center py-20 bg-red-50 rounded-2xl border border-red-100">
+            <i class="pi pi-exclamation-circle text-5xl text-red-400 mb-4"></i>
+            <p class="text-red-700 font-medium text-lg">{{ erro }}</p>
+            <Button label="Voltar para Pacientes" severity="danger" @click="voltarPacientes" class="mt-4" />
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main v-else-if="paciente" class="flex-1 flex flex-col overflow-hidden">
+        <PacienteHeader :paciente="paciente" :fotoPacienteUrl="fotoPacienteUrl" :loadingUploadFoto="loadingUploadFoto" :activeTab="activeTab" @update:activeTab="activeTab = $event" @foto-change="enviarFoto" />
+
+        <!-- BEGIN: Content Area -->
+        <div class="flex-1 overflow-y-auto mt-3">
+            <AbaResumo v-if="activeTab === 'resumo'" @ir-para-anamnese="activeTab = 'anamnese'" @ir-para-medidas="activeTab = 'medidas'" @ir-para-planos="activeTab = 'planos'" />
+
+            <AbaAnamnese
+                v-else-if="activeTab === 'anamnese'"
+                :loadingAnamnese="loadingAnamnese"
+                :erroAnamnese="erroAnamnese"
+                :anamnese="anamnese"
+                @criar-anamnese="abrirCriacaoAnamnese"
+                @editar-anamnese="abrirEdicaoAnamnese"
+                @enviar-formulario="() => toast.add({ severity: 'info', summary: 'Email sera enviado', detail: 'Funcionalidade em desenvolvimento' })"
+            />
+
+            <AbaMedidas
+                v-else-if="activeTab === 'medidas'"
+                :loadingMedidas="loadingMedidas"
+                :medidas="medidas"
+                :medidaSelecionada="medidaSelecionada"
+                @criar-medida="abrirCriacaoMedida"
+                @visualizar-medida="visualizarMedida"
+                @deletar-medida="deletarMedida"
+            />
+
+            <AbaPlanos
+                v-else-if="activeTab === 'planos'"
+                :loadingPlanos="loadingPlanos"
+                :planos="planos"
+                :formatarDataBrasileira="formatarDataBrasileira"
+                @criar-plano="abrirCriacaoPlano"
+                @editar-plano="abrirEdicaoPlano"
+                @deletar-plano="deletarPlano"
+                @enviar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Enviar plano alimentar - a implementar' })"
+                @arquivar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Arquivar plano - a implementar' })"
+            />
+
+            <AbaAdesao v-else-if="activeTab === 'adesao'" />
+
+            <div v-else class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-emerald-50 p-12 text-center">
+                <i class="pi pi-home text-4xl text-slate-300 mb-4"></i>
+                <p class="text-slate-500 text-lg">Conteudo da aba "{{ activeTab }}" em breve...</p>
+            </div>
+        </div>
+        <!-- END: Content Area -->
+
+        <!-- Modal Adicionar Medida (Componente Extraído) -->
+        <ModalAdicionarMedida
+            :visible="showDialogCriacaoMedida"
+            :formularioMedida="formularioMedida"
+            :imcComClassificacao="imcComClassificacao"
+            :massaMagraCalculada="massaMagraCalculada"
+            :rcqComClassificacao="rcqComClassificacao"
+            :getCalculado="getCalculado"
+            :pressaoArterialCombinada="pressaoArterialCombinada"
+            :loading="loadingCriacaoMedida"
+            :calcularTMBParam="calcularTMBParam"
+            @update:visible="showDialogCriacaoMedida = $event"
+            @update:formularioMedida="formularioMedida = $event"
+            @update:pressaoArterialCombinada="pressaoArterialCombinada = $event"
+            @fechar="fecharCriacaoMedida"
+            @salvar-medida="salvarMedida"
+        />
+        <!-- END: Modal Adicionar Medida -->
+
+        <!-- BEGIN: Modal Editar Paciente (Componente Extraído) -->
+        <ModalEdicaoPaciente
+            :visible="showDialogEdicao"
+            :formEdicaoPaciente="formEdicaoPaciente"
+            :formErrors="formErrors"
+            :loading="loadingAtualizacao"
+            @update:visible="showDialogEdicao = $event"
+            @update:formEdicaoPaciente="formEdicaoPaciente = $event"
+            @update:formErrors="formErrors = $event"
+            @fechar="fecharEdicaoPaciente"
+            @salvar="atualizarPaciente"
+        />
+        <!-- END: Modal Editar Paciente -->
+
+        <!-- BEGIN: Dialog Editar Anamnese -->
+        <ModalEdicaoAnamnese
+            :visible="showDialogEdicaoAnamnese"
+            :anamneseEditando="anamneseEditando"
+            :modoEdicao="modoEdicao"
+            :loading="loadingEdicaoAnamnese"
+            :opcoesTempo="opcoesTempo"
+            :opcoesObjetivo="opcoesObjetivo"
+            :opcoesTrabalhoCasaOuFora="opcoesTrabalhoCasaOuFora"
+            :opcoesTempoCozinhar="opcoesTempoCozinhar"
+            :opcoesRestricao="opcoesRestricao"
+            :opcoesConsumoAlcool="opcoesConsumoAlcool"
+            :opcoesQualidadeSono="opcoesQualidadeSono"
+            @update:visible="showDialogEdicaoAnamnese = $event"
+            @update:anamneseEditando="anamneseEditando = $event"
+            @fechar="fecharEdicaoAnamnese"
+            @salvar="salvarEdicaoAnamnese"
+        />
+        <!-- END: Dialog Editar Anamnese -->
+
+        <!-- BEGIN: Modal Criar Plano Alimentar (4 Steps) -->
+        <WizardPlano
+            :visible="showDialogCriacaoPlano"
+            :paciente="paciente"
+            :editandoPlanoId="editandoPlanoId"
+            :medidaMaisRecente="medidaMaisRecente"
+            :anamnese="anamnese"
+            :linkPlano="linkPlano"
+            @update:visible="showDialogCriacaoPlano = $event"
+            @fechar="showDialogCriacaoPlano = false"
+            @concluido="carregarPlanos"
+        />
+        <!-- END: Modal Criar Plano Alimentar -->
+    </main>
+</template>
+
 <script setup>
 import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
@@ -956,143 +1093,6 @@ onMounted(async () => {
     }
 });
 </script>
-
-<template>
-    <!-- ConfirmPopup -->
-    <ConfirmPopup />
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex flex-col items-center justify-center h-96">
-        <i class="pi pi-spin pi-spinner text-5xl text-emerald-600 mb-4"></i>
-        <p class="text-gray-600 font-medium">Carregando paciente...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="erro" class="p-8">
-        <div class="flex flex-col items-center justify-center py-20 bg-red-50 rounded-2xl border border-red-100">
-            <i class="pi pi-exclamation-circle text-5xl text-red-400 mb-4"></i>
-            <p class="text-red-700 font-medium text-lg">{{ erro }}</p>
-            <Button label="Voltar para Pacientes" severity="danger" @click="voltarPacientes" class="mt-4" />
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <main v-else-if="paciente" class="flex-1 flex flex-col overflow-hidden">
-        <PacienteHeader :paciente="paciente" :fotoPacienteUrl="fotoPacienteUrl" :loadingUploadFoto="loadingUploadFoto" :activeTab="activeTab" @update:activeTab="activeTab = $event" @foto-change="enviarFoto" />
-
-        <!-- BEGIN: Content Area -->
-        <div class="flex-1 overflow-y-auto mt-3">
-            <AbaResumo v-if="activeTab === 'resumo'" @ir-para-anamnese="activeTab = 'anamnese'" @ir-para-medidas="activeTab = 'medidas'" @ir-para-planos="activeTab = 'planos'" />
-
-            <AbaAnamnese
-                v-else-if="activeTab === 'anamnese'"
-                :loadingAnamnese="loadingAnamnese"
-                :erroAnamnese="erroAnamnese"
-                :anamnese="anamnese"
-                @criar-anamnese="abrirCriacaoAnamnese"
-                @editar-anamnese="abrirEdicaoAnamnese"
-                @enviar-formulario="() => toast.add({ severity: 'info', summary: 'Email sera enviado', detail: 'Funcionalidade em desenvolvimento' })"
-            />
-
-            <AbaMedidas
-                v-else-if="activeTab === 'medidas'"
-                :loadingMedidas="loadingMedidas"
-                :medidas="medidas"
-                :medidaSelecionada="medidaSelecionada"
-                @criar-medida="abrirCriacaoMedida"
-                @visualizar-medida="visualizarMedida"
-                @deletar-medida="deletarMedida"
-            />
-
-            <AbaPlanos
-                v-else-if="activeTab === 'planos'"
-                :loadingPlanos="loadingPlanos"
-                :planos="planos"
-                :formatarDataBrasileira="formatarDataBrasileira"
-                @criar-plano="abrirCriacaoPlano"
-                @editar-plano="abrirEdicaoPlano"
-                @deletar-plano="deletarPlano"
-                @enviar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Enviar plano alimentar - a implementar' })"
-                @arquivar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Arquivar plano - a implementar' })"
-            />
-
-            <AbaAdesao v-else-if="activeTab === 'adesao'" />
-
-            <div v-else class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-emerald-50 p-12 text-center">
-                <i class="pi pi-home text-4xl text-slate-300 mb-4"></i>
-                <p class="text-slate-500 text-lg">Conteudo da aba "{{ activeTab }}" em breve...</p>
-            </div>
-        </div>
-        <!-- END: Content Area -->
-
-        <!-- Modal Adicionar Medida (Componente Extraído) -->
-        <ModalAdicionarMedida
-            :visible="showDialogCriacaoMedida"
-            :formularioMedida="formularioMedida"
-            :imcComClassificacao="imcComClassificacao"
-            :massaMagraCalculada="massaMagraCalculada"
-            :rcqComClassificacao="rcqComClassificacao"
-            :getCalculado="getCalculado"
-            :pressaoArterialCombinada="pressaoArterialCombinada"
-            :loading="loadingCriacaoMedida"
-            :calcularTMBParam="calcularTMBParam"
-            @update:visible="showDialogCriacaoMedida = $event"
-            @update:formularioMedida="formularioMedida = $event"
-            @update:pressaoArterialCombinada="pressaoArterialCombinada = $event"
-            @fechar="fecharCriacaoMedida"
-            @salvar-medida="salvarMedida"
-        />
-        <!-- END: Modal Adicionar Medida -->
-
-        <!-- BEGIN: Modal Editar Paciente (Componente Extraído) -->
-        <ModalEdicaoPaciente
-            :visible="showDialogEdicao"
-            :formEdicaoPaciente="formEdicaoPaciente"
-            :formErrors="formErrors"
-            :loading="loadingAtualizacao"
-            @update:visible="showDialogEdicao = $event"
-            @update:formEdicaoPaciente="formEdicaoPaciente = $event"
-            @update:formErrors="formErrors = $event"
-            @fechar="fecharEdicaoPaciente"
-            @salvar="atualizarPaciente"
-        />
-        <!-- END: Modal Editar Paciente -->
-
-        <!-- BEGIN: Dialog Editar Anamnese -->
-        <ModalEdicaoAnamnese
-            :visible="showDialogEdicaoAnamnese"
-            :anamneseEditando="anamneseEditando"
-            :modoEdicao="modoEdicao"
-            :loading="loadingEdicaoAnamnese"
-            :opcoesTempo="opcoesTempo"
-            :opcoesObjetivo="opcoesObjetivo"
-            :opcoesTrabalhoCasaOuFora="opcoesTrabalhoCasaOuFora"
-            :opcoesTempoCozinhar="opcoesTempoCozinhar"
-            :opcoesRestricao="opcoesRestricao"
-            :opcoesConsumoAlcool="opcoesConsumoAlcool"
-            :opcoesQualidadeSono="opcoesQualidadeSono"
-            @update:visible="showDialogEdicaoAnamnese = $event"
-            @update:anamneseEditando="anamneseEditando = $event"
-            @fechar="fecharEdicaoAnamnese"
-            @salvar="salvarEdicaoAnamnese"
-        />
-        <!-- END: Dialog Editar Anamnese -->
-
-        <!-- BEGIN: Modal Criar Plano Alimentar (4 Steps) -->
-        <WizardPlano
-            :visible="showDialogCriacaoPlano"
-            :paciente="paciente"
-            :editandoPlanoId="editandoPlanoId"
-            :medidaMaisRecente="medidaMaisRecente"
-            :anamnese="anamnese"
-            :linkPlano="linkPlano"
-            @update:visible="showDialogCriacaoPlano = $event"
-            @fechar="showDialogCriacaoPlano = false"
-            @concluido="carregarPlanos"
-        />
-        <!-- END: Modal Criar Plano Alimentar -->
-    </main>
-</template>
 
 <style scoped>
 ::-webkit-scrollbar {

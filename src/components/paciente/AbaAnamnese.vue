@@ -1,26 +1,3 @@
-<script setup>
-import AnamneseService from '@/service/AnamneseService';
-import Button from 'primevue/button';
-import Tag from 'primevue/tag';
-
-defineProps({
-    loadingAnamnese: {
-        type: Boolean,
-        default: false
-    },
-    erroAnamnese: {
-        type: [String, Object],
-        default: null
-    },
-    anamnese: {
-        type: Object,
-        default: null
-    }
-});
-
-defineEmits(['criar-anamnese', 'editar-anamnese', 'enviar-formulario']);
-</script>
-
 <template>
     <div class="mx-auto">
         <div v-if="loadingAnamnese" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
@@ -235,3 +212,26 @@ defineEmits(['criar-anamnese', 'editar-anamnese', 'enviar-formulario']);
         </div>
     </div>
 </template>
+
+<script setup>
+import AnamneseService from '@/service/AnamneseService';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+
+defineProps({
+    loadingAnamnese: {
+        type: Boolean,
+        default: false
+    },
+    erroAnamnese: {
+        type: [String, Object],
+        default: null
+    },
+    anamnese: {
+        type: Object,
+        default: null
+    }
+});
+
+defineEmits(['criar-anamnese', 'editar-anamnese', 'enviar-formulario']);
+</script>

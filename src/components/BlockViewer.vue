@@ -1,57 +1,3 @@
-<script setup>
-import { reactive, ref } from 'vue';
-
-const props = defineProps({
-    header: {
-        type: String,
-        default: null
-    },
-    code: null,
-    recent: {
-        type: Boolean,
-        default: false
-    },
-    free: {
-        type: Boolean,
-        default: false
-    },
-    containerClass: null,
-    previewStyle: null
-});
-
-const BlockView = reactive({
-    PREVIEW: 0,
-    CODE: 1
-});
-const blockView = ref(0);
-const codeCopied = ref(false);
-const codeCopyLoading = ref(false);
-
-function activateView(event, blockViewValue) {
-    blockView.value = blockViewValue;
-    event.preventDefault();
-}
-
-async function copyCode(event) {
-    if (codeCopied.value || codeCopyLoading.value) return;
-
-    codeCopyLoading.value = true;
-    event.preventDefault();
-
-    try {
-        await navigator.clipboard.writeText(props.code);
-        codeCopyLoading.value = false;
-        codeCopied.value = true;
-        setTimeout(() => {
-            codeCopied.value = false;
-        }, 2000);
-    } catch (err) {
-        console.error('Clipboard write failed:', err);
-        codeCopyLoading.value = false;
-    }
-}
-</script>
-
 <template>
     <div class="mb-16 overflow-hidden">
         <div class="flex flex-col lg:flex-row justify-between py-4 gap-4 lg:gap-2 px-0!">
@@ -131,6 +77,60 @@ async function copyCode(event) {
         </div>
     </div>
 </template>
+
+<script setup>
+import { reactive, ref } from 'vue';
+
+const props = defineProps({
+    header: {
+        type: String,
+        default: null
+    },
+    code: null,
+    recent: {
+        type: Boolean,
+        default: false
+    },
+    free: {
+        type: Boolean,
+        default: false
+    },
+    containerClass: null,
+    previewStyle: null
+});
+
+const BlockView = reactive({
+    PREVIEW: 0,
+    CODE: 1
+});
+const blockView = ref(0);
+const codeCopied = ref(false);
+const codeCopyLoading = ref(false);
+
+function activateView(event, blockViewValue) {
+    blockView.value = blockViewValue;
+    event.preventDefault();
+}
+
+async function copyCode(event) {
+    if (codeCopied.value || codeCopyLoading.value) return;
+
+    codeCopyLoading.value = true;
+    event.preventDefault();
+
+    try {
+        await navigator.clipboard.writeText(props.code);
+        codeCopyLoading.value = false;
+        codeCopied.value = true;
+        setTimeout(() => {
+            codeCopied.value = false;
+        }, 2000);
+    } catch (err) {
+        console.error('Clipboard write failed:', err);
+        codeCopyLoading.value = false;
+    }
+}
+</script>
 
 <style scoped lang="scss">
 pre {

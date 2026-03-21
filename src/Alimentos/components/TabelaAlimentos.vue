@@ -1,123 +1,3 @@
-<script setup>
-import { computed } from 'vue';
-
-const props = defineProps({
-    alimentos: {
-        type: Array,
-        required: true
-    },
-    carregando: {
-        type: Boolean,
-        default: false
-    },
-    pagina: {
-        type: Number,
-        default: 1
-    },
-    totalPaginas: {
-        type: Number,
-        default: 1
-    },
-    total: {
-        type: Number,
-        default: 0
-    },
-    limite: {
-        type: Number,
-        default: 20
-    }
-});
-
-const emit = defineEmits(['abrirDetalhes', 'deletar', 'mudarPagina', 'abrirNovo', 'mudarLimite']);
-
-// Calcular páginas para exibir
-const paginasDisponiveis = computed(() => {
-    const paginas = [];
-    const totalPaginas = props.totalPaginas;
-    const paginaAtual = props.pagina;
-    const maxPaginas = 7;
-
-    if (totalPaginas <= maxPaginas) {
-        for (let i = 1; i <= totalPaginas; i++) {
-            paginas.push(i);
-        }
-    } else {
-        let inicio = Math.max(1, paginaAtual - 3);
-        let fim = Math.min(totalPaginas, paginaAtual + 3);
-
-        if (inicio > 1) {
-            paginas.push(1);
-            if (inicio > 2) {
-                paginas.push('...');
-            }
-        }
-
-        for (let i = inicio; i <= fim; i++) {
-            paginas.push(i);
-        }
-
-        if (fim < totalPaginas) {
-            if (fim < totalPaginas - 1) {
-                paginas.push('...');
-            }
-            paginas.push(totalPaginas);
-        }
-    }
-
-    return paginas;
-});
-
-// Calcular intervalo de itens exibidos
-const intervaloItens = computed(() => {
-    const inicio = (props.pagina - 1) * props.limite + 1;
-    const fim = Math.min(props.pagina * props.limite, props.total);
-    return { inicio, fim };
-});
-
-const formatarValor = (valor) => {
-    if (valor === null || valor === undefined) {
-        return '—';
-    }
-    if (valor === 0.001) {
-        return 'tr';
-    }
-    if (typeof valor === 'number') {
-        return valor.toFixed(1);
-    }
-    return valor;
-};
-
-const getBadgeClass = (fonte) => {
-    switch (fonte) {
-        case 'taco':
-            return 'bg-[#dcfce7] text-[#16a34a]';
-        case 'tbca':
-            return 'bg-[#dbeafe] text-[#1d4ed8]';
-        case 'personalizado':
-            return 'bg-[#fef9c3] text-[#854d0e]';
-        default:
-            return 'bg-gray-100 text-gray-700';
-    }
-};
-
-const getLabelFonte = (fonte) => {
-    switch (fonte) {
-        case 'taco':
-            return 'TACO';
-        case 'tbca':
-            return 'TBCA';
-        case 'personalizado':
-            return 'Meu';
-        default:
-            return fonte;
-    }
-};
-
-const podeEditarDeletar = (alimento) => {
-    return alimento.fonte === 'personalizado';
-};
-</script>
-
 <template>
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <!-- Badge informativo -->
@@ -329,3 +209,123 @@ const podeEditarDeletar = (alimento) => {
         </div>
     </div>
 </template>
+
+<script setup>
+import { computed } from 'vue';
+
+const props = defineProps({
+    alimentos: {
+        type: Array,
+        required: true
+    },
+    carregando: {
+        type: Boolean,
+        default: false
+    },
+    pagina: {
+        type: Number,
+        default: 1
+    },
+    totalPaginas: {
+        type: Number,
+        default: 1
+    },
+    total: {
+        type: Number,
+        default: 0
+    },
+    limite: {
+        type: Number,
+        default: 20
+    }
+});
+
+const emit = defineEmits(['abrirDetalhes', 'deletar', 'mudarPagina', 'abrirNovo', 'mudarLimite']);
+
+// Calcular páginas para exibir
+const paginasDisponiveis = computed(() => {
+    const paginas = [];
+    const totalPaginas = props.totalPaginas;
+    const paginaAtual = props.pagina;
+    const maxPaginas = 7;
+
+    if (totalPaginas <= maxPaginas) {
+        for (let i = 1; i <= totalPaginas; i++) {
+            paginas.push(i);
+        }
+    } else {
+        let inicio = Math.max(1, paginaAtual - 3);
+        let fim = Math.min(totalPaginas, paginaAtual + 3);
+
+        if (inicio > 1) {
+            paginas.push(1);
+            if (inicio > 2) {
+                paginas.push('...');
+            }
+        }
+
+        for (let i = inicio; i <= fim; i++) {
+            paginas.push(i);
+        }
+
+        if (fim < totalPaginas) {
+            if (fim < totalPaginas - 1) {
+                paginas.push('...');
+            }
+            paginas.push(totalPaginas);
+        }
+    }
+
+    return paginas;
+});
+
+// Calcular intervalo de itens exibidos
+const intervaloItens = computed(() => {
+    const inicio = (props.pagina - 1) * props.limite + 1;
+    const fim = Math.min(props.pagina * props.limite, props.total);
+    return { inicio, fim };
+});
+
+const formatarValor = (valor) => {
+    if (valor === null || valor === undefined) {
+        return '—';
+    }
+    if (valor === 0.001) {
+        return 'tr';
+    }
+    if (typeof valor === 'number') {
+        return valor.toFixed(1);
+    }
+    return valor;
+};
+
+const getBadgeClass = (fonte) => {
+    switch (fonte) {
+        case 'taco':
+            return 'bg-[#dcfce7] text-[#16a34a]';
+        case 'tbca':
+            return 'bg-[#dbeafe] text-[#1d4ed8]';
+        case 'personalizado':
+            return 'bg-[#fef9c3] text-[#854d0e]';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
+};
+
+const getLabelFonte = (fonte) => {
+    switch (fonte) {
+        case 'taco':
+            return 'TACO';
+        case 'tbca':
+            return 'TBCA';
+        case 'personalizado':
+            return 'Meu';
+        default:
+            return fonte;
+    }
+};
+
+const podeEditarDeletar = (alimento) => {
+    return alimento.fonte === 'personalizado';
+};
+</script>

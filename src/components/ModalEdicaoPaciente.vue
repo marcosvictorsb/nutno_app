@@ -1,39 +1,3 @@
-<script setup>
-import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
-import Dialog from 'primevue/dialog';
-import InputMask from 'primevue/inputmask';
-import InputText from 'primevue/inputtext';
-import RadioButton from 'primevue/radiobutton';
-
-const props = defineProps({
-    visible: Boolean,
-    formEdicaoPaciente: Object,
-    formErrors: Object,
-    loading: {
-        type: Boolean,
-        default: false
-    }
-});
-
-const emit = defineEmits(['update:visible', 'update:formEdicaoPaciente', 'update:formErrors', 'fechar', 'salvar']);
-
-const handleClose = () => {
-    emit('update:visible', false);
-    emit('fechar');
-};
-
-const handleSave = () => {
-    emit('salvar');
-};
-
-const updateFormField = (field, value) => {
-    const updated = { ...props.formEdicaoPaciente };
-    updated[field] = value;
-    emit('update:formEdicaoPaciente', updated);
-};
-</script>
-
 <template>
     <Dialog :visible="visible" header="Editar Paciente" :modal="true" :style="{ width: '60vw' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" @update:visible="$emit('update:visible', $event)" @hide="handleClose">
         <div v-if="formEdicaoPaciente" class="space-y-6">
@@ -107,3 +71,39 @@ const updateFormField = (field, value) => {
         </template>
     </Dialog>
 </template>
+
+<script setup>
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
+import InputMask from 'primevue/inputmask';
+import InputText from 'primevue/inputtext';
+import RadioButton from 'primevue/radiobutton';
+
+const props = defineProps({
+    visible: Boolean,
+    formEdicaoPaciente: Object,
+    formErrors: Object,
+    loading: {
+        type: Boolean,
+        default: false
+    }
+});
+
+const emit = defineEmits(['update:visible', 'update:formEdicaoPaciente', 'update:formErrors', 'fechar', 'salvar']);
+
+const handleClose = () => {
+    emit('update:visible', false);
+    emit('fechar');
+};
+
+const handleSave = () => {
+    emit('salvar');
+};
+
+const updateFormField = (field, value) => {
+    const updated = { ...props.formEdicaoPaciente };
+    updated[field] = value;
+    emit('update:formEdicaoPaciente', updated);
+};
+</script>

@@ -1,3 +1,223 @@
+<template>
+    <main class="flex-1 w-full mx-auto px-6 space-y-8">
+        <!-- Toast Success Notification -->
+        <div v-if="showSuccessToast" class="fixed top-20 right-6 z-50 flex items-center gap-3 bg-white dark:bg-slate-800 border-l-4 border-green-600 px-4 py-3 rounded-lg shadow-lg animate-bounce">
+            <span class="material-symbols-outlined text-green-600">check_circle</span>
+            <p class="text-sm font-medium text-slate-900 dark:text-white">Perfil atualizado com sucesso!</p>
+        </div>
+
+        <!-- CARD 1: Header/Photo (Loading State) -->
+        <section v-if="loading" class="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden border border-slate-100/10 dark:border-slate-700/10 h-80 flex items-center justify-center">
+            <div class="text-center">
+                <i class="pi pi-spin pi-spinner text-4xl text-emerald-600 mb-3"></i>
+                <p class="text-slate-600 dark:text-slate-300">Carregando perfil...</p>
+            </div>
+        </section>
+
+        <!-- CARD 1: Header/Photo -->
+        <section v-if="!loading" class="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden relative border border-slate-100/10 dark:border-slate-700/10">
+            <!-- Dark Green Header -->
+            <div class="h-32 w-full bg-emerald-900/100" />
+
+            <!-- Avatar + Info Section -->
+            <div class="px-8 pb-8 flex flex-col sm:flex-row items-end sm:items-center gap-6 -mt-12">
+                <!-- Avatar -->
+                <div class="relative group">
+                    <div class="w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-sm flex items-center justify-center text-4xl font-bold text-emerald-600">
+                        <img v-if="previewFoto" :src="previewFoto" alt="Avatar" class="w-full h-full object-cover" />
+                        <span v-else>{{ obterInicial() }}</span>
+                    </div>
+                    <!-- Camera Button -->
+                    <button
+                        @click="selecionarFoto"
+                        class="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-sm hover:shadow-md transition-colors active:scale-90 dark:bg-emerald-700 dark:hover:bg-emerald-800"
+                    >
+                        <span class="material-symbols-outlined text-sm">photo_camera</span>
+                    </button>
+                </div>
+
+                <!-- Info -->
+                <div class="flex-1 pt-4 sm:pt-12">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{{ nutricionista?.nome }}</h2>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 items-center -mt-4">
+                        <span class="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-base">mail</span>
+                            {{ nutricionista?.email }}
+                        </span>
+                        <span v-if="nutricionista?.crn" class="text-xs text-slate-500 dark:text-slate-500 font-medium"> CRN {{ nutricionista.crn }} </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CARD 2: Personal Data -->
+        <section class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100/10 dark:border-slate-700/10">
+            <!-- Header -->
+            <div class="px-8 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                <span class="material-symbols-outlined text-emerald-600" style="font-variation-settings: 'FILL' 1">person</span>
+                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Dados Pessoais</h3>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="salvarDados" class="p-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Nome (Full Width) -->
+                    <div class="md:col-span-2 space-y-1.5">
+                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Nome Completo </label>
+                        <input
+                            v-model="formDados.nome"
+                            type="text"
+                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                        />
+                        <p v-if="errosDados.nome" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosDados.nome }}</p>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="space-y-1.5">
+                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Email </label>
+                        <input
+                            v-model="formDados.email"
+                            type="email"
+                            disabled
+                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none opacity-60 cursor-not-allowed"
+                        />
+                        <p v-if="errosDados.email" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosDados.email }}</p>
+                    </div>
+
+                    <!-- CRN -->
+                    <div class="space-y-1.5">
+                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> CRN </label>
+                        <input
+                            v-model="formDados.crn"
+                            type="text"
+                            placeholder="Ex: 12345/SP"
+                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                        />
+                    </div>
+
+                    <!-- Telefone -->
+                    <div class="space-y-1.5">
+                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> WhatsApp </label>
+                        <input
+                            v-model="formDados.telefone"
+                            type="text"
+                            placeholder="(11) 99999-9999"
+                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                        />
+                    </div>
+
+                    <!-- Especialidade -->
+                    <div class="md:col-span-2 space-y-1.5">
+                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Especialidade </label>
+                        <input
+                            v-model="formDados.especialidade"
+                            type="text"
+                            placeholder="Ex: Nutrição Esportiva, Clínica"
+                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                        />
+                    </div>
+
+                    <!-- Button -->
+                    <div class="md:col-span-2 pt-2 flex justify-end">
+                        <Button severity="success" type="submit" :loading="carregandoDados" :disabled="!dadosAlterados || carregandoDados" label="Salvar alterações" icon="pi pi-save" class="px-6" />
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- CARD 3: Security -->
+        <section class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100/10 dark:border-slate-700/10 mb-12">
+            <!-- Header -->
+            <div class="px-8 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
+                <span class="material-symbols-outlined text-emerald-600" style="font-variation-settings: 'FILL' 1">lock</span>
+                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Segurança</h3>
+            </div>
+
+            <!-- Form -->
+            <form @submit.prevent="alterarSenha" class="p-8">
+                <div class="space-y-6">
+                    <!-- Senha Atual -->
+                    <div class="space-y-1.5">
+                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Senha Atual </label>
+                        <div class="relative">
+                            <input
+                                v-model="formSenha.senhaAtual"
+                                :type="mostrarSenha.atual ? 'text' : 'password'"
+                                placeholder="••••••••"
+                                class="w-full h-11 px-4 pr-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                            />
+                            <span @click="mostrarSenha.atual = !mostrarSenha.atual" class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 cursor-pointer text-xl hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                                {{ mostrarSenha.atual ? 'visibility_off' : 'visibility' }}
+                            </span>
+                        </div>
+                        <p v-if="errosSenha.senhaAtual" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosSenha.senhaAtual }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Nova Senha -->
+                        <div class="space-y-1.5">
+                            <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Nova Senha </label>
+                            <div class="relative">
+                                <input
+                                    v-model="formSenha.novaSenha"
+                                    :type="mostrarSenha.nova ? 'text' : 'password'"
+                                    placeholder="Mínimo 8 caracteres"
+                                    class="w-full h-11 px-4 pr-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                                />
+                                <span @click="mostrarSenha.nova = !mostrarSenha.nova" class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 cursor-pointer text-xl hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                                    {{ mostrarSenha.nova ? 'visibility_off' : 'visibility' }}
+                                </span>
+                            </div>
+
+                            <!-- Strength Indicator -->
+                            <div v-if="formSenha.novaSenha" class="mt-2 space-y-1">
+                                <div class="flex gap-1 h-1.5">
+                                    <div v-for="(ativa, i) in barraSenha" :key="i" :class="[ativa ? corBarraSenha : 'bg-slate-200 dark:bg-slate-700', 'flex-1 rounded-full transition-colors']"></div>
+                                </div>
+                                <p
+                                    :class="[
+                                        'text-xs font-semibold uppercase tracking-wider',
+                                        forcaSenha.cor === 'success' ? 'text-green-600 dark:text-green-400' : forcaSenha.cor === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
+                                    ]"
+                                >
+                                    {{ forcaSenha.label }}
+                                </p>
+                            </div>
+
+                            <p v-if="errosSenha.novaSenha" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosSenha.novaSenha }}</p>
+                        </div>
+
+                        <!-- Confirmar Senha -->
+                        <div class="space-y-1.5">
+                            <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Confirmar Nova Senha </label>
+                            <div class="relative">
+                                <input
+                                    v-model="formSenha.confirmarSenha"
+                                    :type="mostrarSenha.confirmar ? 'text' : 'password'"
+                                    placeholder="Repita a nova senha"
+                                    class="w-full h-11 px-4 pr-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
+                                />
+                                <span
+                                    @click="mostrarSenha.confirmar = !mostrarSenha.confirmar"
+                                    class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 cursor-pointer text-xl hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                >
+                                    {{ mostrarSenha.confirmar ? 'visibility_off' : 'visibility' }}
+                                </span>
+                            </div>
+                            <p v-if="errosSenha.confirmarSenha" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosSenha.confirmarSenha }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Button -->
+                    <div class="pt-2 flex justify-end">
+                        <Button type="submit" :loading="carregandoSenha" :disabled="!podeAlterarSenha || carregandoSenha" label="Alterar senha" icon="pi pi-lock" class="px-6" />
+                    </div>
+                </div>
+            </form>
+        </section>
+    </main>
+</template>
+
 <script setup>
 import { construirUrlArquivo } from '@/utils/urlHelper';
 import NutricionistaService from '@/service/NutricionistaService';
@@ -351,226 +571,6 @@ onMounted(() => {
     carregarPerfil();
 });
 </script>
-
-<template>
-    <main class="flex-1 w-full mx-auto px-6 space-y-8">
-        <!-- Toast Success Notification -->
-        <div v-if="showSuccessToast" class="fixed top-20 right-6 z-50 flex items-center gap-3 bg-white dark:bg-slate-800 border-l-4 border-green-600 px-4 py-3 rounded-lg shadow-lg animate-bounce">
-            <span class="material-symbols-outlined text-green-600">check_circle</span>
-            <p class="text-sm font-medium text-slate-900 dark:text-white">Perfil atualizado com sucesso!</p>
-        </div>
-
-        <!-- CARD 1: Header/Photo (Loading State) -->
-        <section v-if="loading" class="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden border border-slate-100/10 dark:border-slate-700/10 h-80 flex items-center justify-center">
-            <div class="text-center">
-                <i class="pi pi-spin pi-spinner text-4xl text-emerald-600 mb-3"></i>
-                <p class="text-slate-600 dark:text-slate-300">Carregando perfil...</p>
-            </div>
-        </section>
-
-        <!-- CARD 1: Header/Photo -->
-        <section v-if="!loading" class="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden relative border border-slate-100/10 dark:border-slate-700/10">
-            <!-- Dark Green Header -->
-            <div class="h-32 w-full bg-emerald-900/100" />
-
-            <!-- Avatar + Info Section -->
-            <div class="px-8 pb-8 flex flex-col sm:flex-row items-end sm:items-center gap-6 -mt-12">
-                <!-- Avatar -->
-                <div class="relative group">
-                    <div class="w-28 h-28 rounded-full border-4 border-white dark:border-slate-900 overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-sm flex items-center justify-center text-4xl font-bold text-emerald-600">
-                        <img v-if="previewFoto" :src="previewFoto" alt="Avatar" class="w-full h-full object-cover" />
-                        <span v-else>{{ obterInicial() }}</span>
-                    </div>
-                    <!-- Camera Button -->
-                    <button
-                        @click="selecionarFoto"
-                        class="absolute bottom-0 right-0 w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-sm hover:shadow-md transition-colors active:scale-90 dark:bg-emerald-700 dark:hover:bg-emerald-800"
-                    >
-                        <span class="material-symbols-outlined text-sm">photo_camera</span>
-                    </button>
-                </div>
-
-                <!-- Info -->
-                <div class="flex-1 pt-4 sm:pt-12">
-                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{{ nutricionista?.nome }}</h2>
-                    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 items-center -mt-4">
-                        <span class="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                            <span class="material-symbols-outlined text-base">mail</span>
-                            {{ nutricionista?.email }}
-                        </span>
-                        <span v-if="nutricionista?.crn" class="text-xs text-slate-500 dark:text-slate-500 font-medium"> CRN {{ nutricionista.crn }} </span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- CARD 2: Personal Data -->
-        <section class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100/10 dark:border-slate-700/10">
-            <!-- Header -->
-            <div class="px-8 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
-                <span class="material-symbols-outlined text-emerald-600" style="font-variation-settings: 'FILL' 1">person</span>
-                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Dados Pessoais</h3>
-            </div>
-
-            <!-- Form -->
-            <form @submit.prevent="salvarDados" class="p-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Nome (Full Width) -->
-                    <div class="md:col-span-2 space-y-1.5">
-                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Nome Completo </label>
-                        <input
-                            v-model="formDados.nome"
-                            type="text"
-                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                        />
-                        <p v-if="errosDados.nome" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosDados.nome }}</p>
-                    </div>
-
-                    <!-- Email -->
-                    <div class="space-y-1.5">
-                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Email </label>
-                        <input
-                            v-model="formDados.email"
-                            type="email"
-                            disabled
-                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none opacity-60 cursor-not-allowed"
-                        />
-                        <p v-if="errosDados.email" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosDados.email }}</p>
-                    </div>
-
-                    <!-- CRN -->
-                    <div class="space-y-1.5">
-                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> CRN </label>
-                        <input
-                            v-model="formDados.crn"
-                            type="text"
-                            placeholder="Ex: 12345/SP"
-                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                        />
-                    </div>
-
-                    <!-- Telefone -->
-                    <div class="space-y-1.5">
-                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> WhatsApp </label>
-                        <input
-                            v-model="formDados.telefone"
-                            type="text"
-                            placeholder="(11) 99999-9999"
-                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                        />
-                    </div>
-
-                    <!-- Especialidade -->
-                    <div class="md:col-span-2 space-y-1.5">
-                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Especialidade </label>
-                        <input
-                            v-model="formDados.especialidade"
-                            type="text"
-                            placeholder="Ex: Nutrição Esportiva, Clínica"
-                            class="w-full h-11 px-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                        />
-                    </div>
-
-                    <!-- Button -->
-                    <div class="md:col-span-2 pt-2 flex justify-end">
-                        <Button severity="success" type="submit" :loading="carregandoDados" :disabled="!dadosAlterados || carregandoDados" label="Salvar alterações" icon="pi pi-save" class="px-6" />
-                    </div>
-                </div>
-            </form>
-        </section>
-
-        <!-- CARD 3: Security -->
-        <section class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100/10 dark:border-slate-700/10 mb-12">
-            <!-- Header -->
-            <div class="px-8 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3">
-                <span class="material-symbols-outlined text-emerald-600" style="font-variation-settings: 'FILL' 1">lock</span>
-                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Segurança</h3>
-            </div>
-
-            <!-- Form -->
-            <form @submit.prevent="alterarSenha" class="p-8">
-                <div class="space-y-6">
-                    <!-- Senha Atual -->
-                    <div class="space-y-1.5">
-                        <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Senha Atual </label>
-                        <div class="relative">
-                            <input
-                                v-model="formSenha.senhaAtual"
-                                :type="mostrarSenha.atual ? 'text' : 'password'"
-                                placeholder="••••••••"
-                                class="w-full h-11 px-4 pr-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                            />
-                            <span @click="mostrarSenha.atual = !mostrarSenha.atual" class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 cursor-pointer text-xl hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-                                {{ mostrarSenha.atual ? 'visibility_off' : 'visibility' }}
-                            </span>
-                        </div>
-                        <p v-if="errosSenha.senhaAtual" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosSenha.senhaAtual }}</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Nova Senha -->
-                        <div class="space-y-1.5">
-                            <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Nova Senha </label>
-                            <div class="relative">
-                                <input
-                                    v-model="formSenha.novaSenha"
-                                    :type="mostrarSenha.nova ? 'text' : 'password'"
-                                    placeholder="Mínimo 8 caracteres"
-                                    class="w-full h-11 px-4 pr-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                                />
-                                <span @click="mostrarSenha.nova = !mostrarSenha.nova" class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 cursor-pointer text-xl hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-                                    {{ mostrarSenha.nova ? 'visibility_off' : 'visibility' }}
-                                </span>
-                            </div>
-
-                            <!-- Strength Indicator -->
-                            <div v-if="formSenha.novaSenha" class="mt-2 space-y-1">
-                                <div class="flex gap-1 h-1.5">
-                                    <div v-for="(ativa, i) in barraSenha" :key="i" :class="[ativa ? corBarraSenha : 'bg-slate-200 dark:bg-slate-700', 'flex-1 rounded-full transition-colors']"></div>
-                                </div>
-                                <p
-                                    :class="[
-                                        'text-xs font-semibold uppercase tracking-wider',
-                                        forcaSenha.cor === 'success' ? 'text-green-600 dark:text-green-400' : forcaSenha.cor === 'warning' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
-                                    ]"
-                                >
-                                    {{ forcaSenha.label }}
-                                </p>
-                            </div>
-
-                            <p v-if="errosSenha.novaSenha" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosSenha.novaSenha }}</p>
-                        </div>
-
-                        <!-- Confirmar Senha -->
-                        <div class="space-y-1.5">
-                            <label class="label-caps text-slate-600 dark:text-slate-400 font-medium text-xs block uppercase tracking-wider"> Confirmar Nova Senha </label>
-                            <div class="relative">
-                                <input
-                                    v-model="formSenha.confirmarSenha"
-                                    :type="mostrarSenha.confirmar ? 'text' : 'password'"
-                                    placeholder="Repita a nova senha"
-                                    class="w-full h-11 px-4 pr-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/10 dark:text-white transition-all text-sm outline-none"
-                                />
-                                <span
-                                    @click="mostrarSenha.confirmar = !mostrarSenha.confirmar"
-                                    class="material-symbols-outlined absolute right-3 top-2.5 text-slate-400 cursor-pointer text-xl hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                >
-                                    {{ mostrarSenha.confirmar ? 'visibility_off' : 'visibility' }}
-                                </span>
-                            </div>
-                            <p v-if="errosSenha.confirmarSenha" class="text-xs text-red-600 dark:text-red-400 mt-1">{{ errosSenha.confirmarSenha }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Button -->
-                    <div class="pt-2 flex justify-end">
-                        <Button type="submit" :loading="carregandoSenha" :disabled="!podeAlterarSenha || carregandoSenha" label="Alterar senha" icon="pi pi-lock" class="px-6" />
-                    </div>
-                </div>
-            </form>
-        </section>
-    </main>
-</template>
 
 <style scoped>
 .label-caps {

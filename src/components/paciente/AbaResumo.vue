@@ -1,9 +1,3 @@
-<script setup>
-import Button from 'primevue/button';
-
-defineEmits(['ir-para-anamnese', 'ir-para-medidas', 'ir-para-planos']);
-</script>
-
 <template>
     <div class="mx-auto max-w-7xl px-4 space-y-6">
         <div class="bg-white rounded-2xl shadow-sm border border-emerald-50 p-8">
@@ -19,3 +13,9 @@ defineEmits(['ir-para-anamnese', 'ir-para-medidas', 'ir-para-planos']);
         </div>
     </div>
 </template>
+
+<script setup>
+import Button from 'primevue/button';
+
+defineEmits(['ir-para-anamnese', 'ir-para-medidas', 'ir-para-planos']);
+</script>

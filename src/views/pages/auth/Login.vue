@@ -1,62 +1,3 @@
-<script setup>
-import AuthService from '@/service/AuthService.js';
-import { computed, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
-const router = useRouter();
-const route = useRoute();
-
-const email = ref('');
-const password = ref('');
-const lembrarMe = ref(false);
-const loading = ref(false);
-const mensagemErro = ref('');
-const contaCriadaMensagem = ref(route.query.contaCriada ? true : false);
-const emailCriado = ref(route.query.email || '');
-
-const formularioValido = computed(() => {
-    return email.value.trim() !== '' && password.value.trim() !== '';
-});
-
-const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formularioValido.value) return;
-
-    loading.value = true;
-    mensagemErro.value = '';
-
-    try {
-        const response = await AuthService.login({
-            email: email.value,
-            password: password.value
-        });
-
-        // Sucesso no login
-        if (response.data.success && response.data.data.token) {
-            AuthService.setToken(response.data.data.token);
-
-            // Limpa a mensagem de conta criada
-            contaCriadaMensagem.value = false;
-
-            // Redireciona para o dashboard
-            router.push({ name: 'pacientes' });
-        }
-    } catch (error) {
-        // Erro no login
-        if (error.response && error.response.data && error.response.data.message) {
-            mensagemErro.value = error.response.data.message;
-        } else if (error.response && error.response.status === 401) {
-            mensagemErro.value = 'Email ou senha inválidos';
-        } else {
-            mensagemErro.value = 'Erro de conexão. Verifique sua internet e tente novamente.';
-        }
-    } finally {
-        loading.value = false;
-    }
-};
-</script>
-
 <template>
     <div class="min-h-screen flex bg-gradient-to-br from-green-50 to-green-100">
         <!-- Lado Esquerdo -->
@@ -190,5 +131,64 @@ const handleSubmit = async (e) => {
         </div>
     </div>
 </template>
+
+<script setup>
+import AuthService from '@/service/AuthService.js';
+import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+const router = useRouter();
+const route = useRoute();
+
+const email = ref('');
+const password = ref('');
+const lembrarMe = ref(false);
+const loading = ref(false);
+const mensagemErro = ref('');
+const contaCriadaMensagem = ref(route.query.contaCriada ? true : false);
+const emailCriado = ref(route.query.email || '');
+
+const formularioValido = computed(() => {
+    return email.value.trim() !== '' && password.value.trim() !== '';
+});
+
+const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formularioValido.value) return;
+
+    loading.value = true;
+    mensagemErro.value = '';
+
+    try {
+        const response = await AuthService.login({
+            email: email.value,
+            password: password.value
+        });
+
+        // Sucesso no login
+        if (response.data.success && response.data.data.token) {
+            AuthService.setToken(response.data.data.token);
+
+            // Limpa a mensagem de conta criada
+            contaCriadaMensagem.value = false;
+
+            // Redireciona para o dashboard
+            router.push({ name: 'pacientes' });
+        }
+    } catch (error) {
+        // Erro no login
+        if (error.response && error.response.data && error.response.data.message) {
+            mensagemErro.value = error.response.data.message;
+        } else if (error.response && error.response.status === 401) {
+            mensagemErro.value = 'Email ou senha inválidos';
+        } else {
+            mensagemErro.value = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        }
+    } finally {
+        loading.value = false;
+    }
+};
+</script>
 
 <style scoped></style>

@@ -1,72 +1,3 @@
-<script setup>
-import { LeadsService } from '@/service/LeadsService';
-import Button from 'primevue/button';
-import Card from 'primevue/card';
-import Column from 'primevue/column';
-import DataTable from 'primevue/datatable';
-import InputText from 'primevue/inputtext';
-import ProgressSpinner from 'primevue/progressspinner';
-import Tag from 'primevue/tag';
-import Toolbar from 'primevue/toolbar';
-import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, ref } from 'vue';
-
-const toast = useToast();
-const leads = ref([]);
-const isLoading = ref(false);
-const searchQuery = ref('');
-
-const filteredLeads = computed(() => {
-    if (!searchQuery.value.trim()) return leads.value;
-
-    const query = searchQuery.value.toLowerCase();
-    return leads.value.filter((lead) => lead.name.toLowerCase().includes(query) || lead.email.toLowerCase().includes(query));
-});
-
-const loadLeads = async () => {
-    isLoading.value = true;
-    try {
-        const response = await LeadsService.getLeads();
-
-        if (response.success && Array.isArray(response.data)) {
-            leads.value = response.data;
-            toast.add({
-                severity: 'success',
-                summary: 'Sucesso',
-                detail: `${response.data.length} lead(s) carregado(s)`,
-                life: 3000
-            });
-        } else {
-            throw new Error('Resposta inválida da API');
-        }
-    } catch (error) {
-        console.error('Erro ao carregar leads:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Erro',
-            detail: 'Erro ao carregar leads. Por favor, tente novamente.',
-            life: 3000
-        });
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-};
-
-const getTodayLeads = () => {
-    const today = new Date().toDateString();
-    return leads.value.filter((lead) => new Date(lead.created_at).toDateString() === today).length;
-};
-
-onMounted(() => {
-    loadLeads();
-});
-</script>
-
 <template>
     <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
         <!-- Header Section -->
@@ -204,6 +135,75 @@ onMounted(() => {
         </Card>
     </div>
 </template>
+
+<script setup>
+import { LeadsService } from '@/service/LeadsService';
+import Button from 'primevue/button';
+import Card from 'primevue/card';
+import Column from 'primevue/column';
+import DataTable from 'primevue/datatable';
+import InputText from 'primevue/inputtext';
+import ProgressSpinner from 'primevue/progressspinner';
+import Tag from 'primevue/tag';
+import Toolbar from 'primevue/toolbar';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref } from 'vue';
+
+const toast = useToast();
+const leads = ref([]);
+const isLoading = ref(false);
+const searchQuery = ref('');
+
+const filteredLeads = computed(() => {
+    if (!searchQuery.value.trim()) return leads.value;
+
+    const query = searchQuery.value.toLowerCase();
+    return leads.value.filter((lead) => lead.name.toLowerCase().includes(query) || lead.email.toLowerCase().includes(query));
+});
+
+const loadLeads = async () => {
+    isLoading.value = true;
+    try {
+        const response = await LeadsService.getLeads();
+
+        if (response.success && Array.isArray(response.data)) {
+            leads.value = response.data;
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: `${response.data.length} lead(s) carregado(s)`,
+                life: 3000
+            });
+        } else {
+            throw new Error('Resposta inválida da API');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar leads:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Erro ao carregar leads. Por favor, tente novamente.',
+            life: 3000
+        });
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+};
+
+const getTodayLeads = () => {
+    const today = new Date().toDateString();
+    return leads.value.filter((lead) => new Date(lead.created_at).toDateString() === today).length;
+};
+
+onMounted(() => {
+    loadLeads();
+});
+</script>
 
 <style scoped>
 :deep(.p-card) {

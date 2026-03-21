@@ -1,310 +1,3 @@
-<script setup>
-import AnamneseService from '@/service/AnamneseService';
-import { useToast } from 'primevue/usetoast';
-import { computed, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
-
-const route = useRoute();
-const toast = useToast();
-
-const etapaAtual = ref(1);
-const carregando = ref(false);
-const carregandoInicial = ref(true);
-const formularioPreenchido = ref(false);
-const formularioEnviado = ref(false);
-const erroValidacao = ref(null);
-const pacienteInfo = ref(null);
-
-const form = ref({
-    // Bloco 1: Identificação
-    nome_completo: '',
-    como_prefere_ser_chamado: '',
-    data_nascimento: '',
-    sexo: '',
-    telefone: '',
-    whatsapp: '',
-
-    // Bloco 2: Corpo Atual
-    peso_atual: null,
-    altura: null,
-    tempo_nesse_peso: '',
-    fez_acompanhamento_antes: false,
-    qual_acompanhamento: '',
-
-    // Bloco 3: Objetivo
-    objetivo: '',
-    objetivo_descricao: '',
-    maior_dificuldade_alimentacao: '',
-
-    // Bloco 4: Rotina
-    horario_acorda: '',
-    horario_dorme: '',
-    horario_cafe_manha: '',
-    horario_almoco: '',
-    horario_jantar: '',
-    trabalha_casa_ou_fora: '',
-    tempo_parar_cozinhar: '',
-    faz_exercicios: false,
-    qual_exercicio: '',
-    frequencia_exercicio_semana: null,
-
-    // Bloco 5: Alimentação
-    alimentos_que_ama: '',
-    alimentos_que_odeia: '',
-    restricao_alimentar: 'nenhuma',
-    restricao_descricao: '',
-    alergias_alimentares: '',
-    copos_agua_por_dia: null,
-    consumo_alcool: '',
-
-    // Bloco 6: Saúde
-    doencas_diagnosticadas: '',
-    medicamentos: '',
-    historico_familiar: '',
-    qualidade_sono: '',
-    nivel_estresse: 3,
-    observacoes_livres: ''
-});
-
-const erros = ref({});
-
-// Opções de select
-const opcoesGenero = [
-    { value: 'M', label: 'Masculino' },
-    { value: 'F', label: 'Feminino' },
-    { value: 'Outro', label: 'Outro' }
-];
-
-const opcoesTempo = [
-    { value: 'menos_6_meses', label: 'Menos de 6 meses' },
-    { value: '6_meses_1_ano', label: '6 meses a 1 ano' },
-    { value: 'mais_1_ano', label: 'Mais de 1 ano' }
-];
-
-const opcoesObjetivo = [
-    { value: 'emagrecer', label: 'Emagrecer', icon: '📉' },
-    { value: 'ganhar_massa', label: 'Ganhar Massa', icon: '💪' },
-    { value: 'melhorar_saude', label: 'Saúde', icon: '🌱' },
-    { value: 'controlar_doenca', label: 'Controlar Doença', icon: '⚕️' },
-    { value: 'melhorar_performance', label: 'Performance', icon: '⚡' },
-    { value: 'outro', label: 'Outro', icon: '🎯' }
-];
-
-const opcoesTrabalhoCasaOuFora = [
-    { value: 'casa', label: 'Casa' },
-    { value: 'fora', label: 'Fora' },
-    { value: 'hibrido', label: 'Híbrido' }
-];
-
-const opcoesTempoCozinhar = [
-    { value: 'sempre', label: 'Sempre' },
-    { value: 'as_vezes', label: 'Às vezes' },
-    { value: 'raramente', label: 'Raramente' }
-];
-
-const opcoesRestricao = [
-    { value: 'nenhuma', label: 'Nenhuma' },
-    { value: 'lactose', label: 'Lactose' },
-    { value: 'gluten', label: 'Glúten' },
-    { value: 'vegetariano', label: 'Vegetariano' },
-    { value: 'vegano', label: 'Vegano' },
-    { value: 'religiao', label: 'Religiosa' },
-    { value: 'outra', label: 'Outra' }
-];
-
-const opcoesQualidadeSono = [
-    { value: 'otimo', label: 'Ótimo' },
-    { value: 'bom', label: 'Bom' },
-    { value: 'ruim', label: 'Ruim' },
-    { value: 'pessimo', label: 'Péssimo' }
-];
-
-// Computed properties
-const tituloEtapa = computed(() => {
-    const titulos = ['', 'Identificação', 'Corpo Atual', 'Seu Objetivo', 'Sua Rotina', 'Alimentação', 'Saúde'];
-    return titulos[etapaAtual.value];
-});
-
-const percentualConcluido = computed(() => {
-    return Math.round((etapaAtual.value / 6) * 100);
-});
-
-// Validação inicial do formulário pelo token
-const inicializarFormulario = async () => {
-    carregandoInicial.value = true;
-    erroValidacao.value = null;
-
-    try {
-        const token = route.params.id;
-
-        if (!token) {
-            erroValidacao.value = 'Token inválido ou não fornecido';
-            carregandoInicial.value = false;
-            return;
-        }
-
-        const resultado = await AnamneseService.validarFormulario(token);
-
-        if (resultado.data.success) {
-            const { data } = resultado.data;
-
-            pacienteInfo.value = data;
-            formularioPreenchido.value = data.formulario_preenchido;
-
-            // Se o formulário ainda não foi preenchido, preencher etapa 1
-            if (!data.formulario_preenchido) {
-                form.value.nome_completo = data.nome_paciente || '';
-                form.value.como_prefere_ser_chamado = data.como_prefere_ser_chamado || '';
-                form.value.data_nascimento = data.data_nascimento || '';
-                form.value.sexo = data.sexo || '';
-                form.value.telefone = data.telefone || '';
-                form.value.whatsapp = data.whatsapp || '';
-            } else {
-                console.log('✅ Formulário já foi preenchido anteriormente');
-            }
-        } else {
-            console.warn('❌ Erro na resposta:', resultado.data.message);
-            erroValidacao.value = resultado.data.message || 'Formulário não encontrado';
-        }
-    } catch (erro) {
-        console.error('❌ Erro ao validar formulário:', erro);
-        console.error('Detalhes do erro:', {
-            message: erro.message,
-            status: erro.response?.status,
-            data: erro.response?.data
-        });
-        erroValidacao.value = erro.response?.data?.message || 'Erro ao validar formulário. Tente novamente.';
-    } finally {
-        carregandoInicial.value = false;
-    }
-};
-
-onMounted(() => {
-    console.log('🚀 Componente montado, inicializando formulário...');
-    inicializarFormulario();
-});
-
-// Methods
-const limparErro = (campo) => {
-    if (erros.value[campo]) {
-        delete erros.value[campo];
-    }
-};
-
-const validarEtapa = () => {
-    erros.value = {};
-    const campos = {
-        1: ['nome_completo', 'como_prefere_ser_chamado', 'data_nascimento', 'sexo'],
-        2: ['peso_atual', 'altura', 'tempo_nesse_peso'],
-        3: ['objetivo'],
-        4: ['horario_acorda', 'horario_dorme', 'trabalha_casa_ou_fora', 'tempo_parar_cozinhar'],
-        5: ['restricao_alimentar', 'copos_agua_por_dia', 'consumo_alcool'],
-        6: ['qualidade_sono', 'nivel_estresse']
-    };
-
-    const validados = campos[etapaAtual.value] || [];
-
-    validados.forEach((campo) => {
-        const valor = form.value[campo];
-        if (valor === '' || valor === null || valor === undefined) {
-            erros.value[campo] = 'Este campo é obrigatório';
-        }
-    });
-
-    // Validações extras
-    if (etapaAtual.value === 4 && form.value.faz_exercicios && form.value.frequencia_exercicio_semana == null) {
-        erros.value.frequencia_exercicio_semana = 'Campo obrigatório quando pratica exercícios';
-    }
-
-    return Object.keys(erros.value).length === 0;
-};
-
-const proximaEtapa = () => {
-    if (validarEtapa()) {
-        etapaAtual.value++;
-        window.scrollTo(0, 0);
-    } else {
-        toast.add({
-            severity: 'warn',
-            summary: 'Campos obrigatórios',
-            detail: 'Preencha todos os campos obrigatórios desta etapa',
-            life: 3000
-        });
-    }
-};
-
-const etapaAnterior = () => {
-    etapaAtual.value--;
-    window.scrollTo(0, 0);
-};
-
-const enviarFormulario = async () => {
-    if (!validarEtapa()) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Campos incompletos',
-            detail: 'Verifique os campos obrigatórios',
-            life: 3000
-        });
-        return;
-    }
-
-    carregando.value = true;
-
-    try {
-        // Pegar token da rota
-        const token = route.params.id;
-
-        const dados = {
-            ...form.value,
-            criado_em: new Date(),
-            atualizado_em: new Date()
-        };
-
-        const resposta = await AnamneseService.salvarAnamnesePublica(token, dados);
-
-        // Validar resposta da API
-        if (resposta.data && resposta.data.success === true) {
-            // Mostrar mensagem de sucesso e manter na mesma tela
-            formularioEnviado.value = true;
-
-            toast.add({
-                severity: 'success',
-                summary: 'Sucesso!',
-                detail: 'Formulário enviado com sucesso. A nutricionista analisará seus dados em breve.',
-                life: 5000
-            });
-        } else {
-            // Resposta sem success = true
-            console.error('❌ Resposta inesperada da API:', resposta.data);
-            toast.add({
-                severity: 'error',
-                summary: 'Erro ao enviar',
-                detail: resposta.data?.message || 'Erro desconhecido ao enviar o formulário',
-                life: 5000
-            });
-        }
-    } catch (erro) {
-        console.error('❌ Erro ao enviar formulário:', erro);
-        console.error('Detalhes:', {
-            message: erro.message,
-            status: erro.response?.status,
-            data: erro.response?.data
-        });
-        toast.add({
-            severity: 'error',
-            summary: 'Erro ao enviar',
-            detail: erro.response?.data?.message || 'Tente novamente mais tarde',
-            life: 5000
-        });
-    } finally {
-        carregando.value = false;
-    }
-};
-
-// inicializarFormulario();
-</script>
-
 <template>
     <div class="min-h-screen bg-gradient-to-br from-emerald-50 to-sky-50">
         <!-- Loading State -->
@@ -932,6 +625,313 @@ const enviarFormulario = async () => {
         </div>
     </div>
 </template>
+
+<script setup>
+import AnamneseService from '@/service/AnamneseService';
+import { useToast } from 'primevue/usetoast';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+const toast = useToast();
+
+const etapaAtual = ref(1);
+const carregando = ref(false);
+const carregandoInicial = ref(true);
+const formularioPreenchido = ref(false);
+const formularioEnviado = ref(false);
+const erroValidacao = ref(null);
+const pacienteInfo = ref(null);
+
+const form = ref({
+    // Bloco 1: Identificação
+    nome_completo: '',
+    como_prefere_ser_chamado: '',
+    data_nascimento: '',
+    sexo: '',
+    telefone: '',
+    whatsapp: '',
+
+    // Bloco 2: Corpo Atual
+    peso_atual: null,
+    altura: null,
+    tempo_nesse_peso: '',
+    fez_acompanhamento_antes: false,
+    qual_acompanhamento: '',
+
+    // Bloco 3: Objetivo
+    objetivo: '',
+    objetivo_descricao: '',
+    maior_dificuldade_alimentacao: '',
+
+    // Bloco 4: Rotina
+    horario_acorda: '',
+    horario_dorme: '',
+    horario_cafe_manha: '',
+    horario_almoco: '',
+    horario_jantar: '',
+    trabalha_casa_ou_fora: '',
+    tempo_parar_cozinhar: '',
+    faz_exercicios: false,
+    qual_exercicio: '',
+    frequencia_exercicio_semana: null,
+
+    // Bloco 5: Alimentação
+    alimentos_que_ama: '',
+    alimentos_que_odeia: '',
+    restricao_alimentar: 'nenhuma',
+    restricao_descricao: '',
+    alergias_alimentares: '',
+    copos_agua_por_dia: null,
+    consumo_alcool: '',
+
+    // Bloco 6: Saúde
+    doencas_diagnosticadas: '',
+    medicamentos: '',
+    historico_familiar: '',
+    qualidade_sono: '',
+    nivel_estresse: 3,
+    observacoes_livres: ''
+});
+
+const erros = ref({});
+
+// Opções de select
+const opcoesGenero = [
+    { value: 'M', label: 'Masculino' },
+    { value: 'F', label: 'Feminino' },
+    { value: 'Outro', label: 'Outro' }
+];
+
+const opcoesTempo = [
+    { value: 'menos_6_meses', label: 'Menos de 6 meses' },
+    { value: '6_meses_1_ano', label: '6 meses a 1 ano' },
+    { value: 'mais_1_ano', label: 'Mais de 1 ano' }
+];
+
+const opcoesObjetivo = [
+    { value: 'emagrecer', label: 'Emagrecer', icon: '📉' },
+    { value: 'ganhar_massa', label: 'Ganhar Massa', icon: '💪' },
+    { value: 'melhorar_saude', label: 'Saúde', icon: '🌱' },
+    { value: 'controlar_doenca', label: 'Controlar Doença', icon: '⚕️' },
+    { value: 'melhorar_performance', label: 'Performance', icon: '⚡' },
+    { value: 'outro', label: 'Outro', icon: '🎯' }
+];
+
+const opcoesTrabalhoCasaOuFora = [
+    { value: 'casa', label: 'Casa' },
+    { value: 'fora', label: 'Fora' },
+    { value: 'hibrido', label: 'Híbrido' }
+];
+
+const opcoesTempoCozinhar = [
+    { value: 'sempre', label: 'Sempre' },
+    { value: 'as_vezes', label: 'Às vezes' },
+    { value: 'raramente', label: 'Raramente' }
+];
+
+const opcoesRestricao = [
+    { value: 'nenhuma', label: 'Nenhuma' },
+    { value: 'lactose', label: 'Lactose' },
+    { value: 'gluten', label: 'Glúten' },
+    { value: 'vegetariano', label: 'Vegetariano' },
+    { value: 'vegano', label: 'Vegano' },
+    { value: 'religiao', label: 'Religiosa' },
+    { value: 'outra', label: 'Outra' }
+];
+
+const opcoesQualidadeSono = [
+    { value: 'otimo', label: 'Ótimo' },
+    { value: 'bom', label: 'Bom' },
+    { value: 'ruim', label: 'Ruim' },
+    { value: 'pessimo', label: 'Péssimo' }
+];
+
+// Computed properties
+const tituloEtapa = computed(() => {
+    const titulos = ['', 'Identificação', 'Corpo Atual', 'Seu Objetivo', 'Sua Rotina', 'Alimentação', 'Saúde'];
+    return titulos[etapaAtual.value];
+});
+
+const percentualConcluido = computed(() => {
+    return Math.round((etapaAtual.value / 6) * 100);
+});
+
+// Validação inicial do formulário pelo token
+const inicializarFormulario = async () => {
+    carregandoInicial.value = true;
+    erroValidacao.value = null;
+
+    try {
+        const token = route.params.id;
+
+        if (!token) {
+            erroValidacao.value = 'Token inválido ou não fornecido';
+            carregandoInicial.value = false;
+            return;
+        }
+
+        const resultado = await AnamneseService.validarFormulario(token);
+
+        if (resultado.data.success) {
+            const { data } = resultado.data;
+
+            pacienteInfo.value = data;
+            formularioPreenchido.value = data.formulario_preenchido;
+
+            // Se o formulário ainda não foi preenchido, preencher etapa 1
+            if (!data.formulario_preenchido) {
+                form.value.nome_completo = data.nome_paciente || '';
+                form.value.como_prefere_ser_chamado = data.como_prefere_ser_chamado || '';
+                form.value.data_nascimento = data.data_nascimento || '';
+                form.value.sexo = data.sexo || '';
+                form.value.telefone = data.telefone || '';
+                form.value.whatsapp = data.whatsapp || '';
+            } else {
+                console.log('✅ Formulário já foi preenchido anteriormente');
+            }
+        } else {
+            console.warn('❌ Erro na resposta:', resultado.data.message);
+            erroValidacao.value = resultado.data.message || 'Formulário não encontrado';
+        }
+    } catch (erro) {
+        console.error('❌ Erro ao validar formulário:', erro);
+        console.error('Detalhes do erro:', {
+            message: erro.message,
+            status: erro.response?.status,
+            data: erro.response?.data
+        });
+        erroValidacao.value = erro.response?.data?.message || 'Erro ao validar formulário. Tente novamente.';
+    } finally {
+        carregandoInicial.value = false;
+    }
+};
+
+onMounted(() => {
+    console.log('🚀 Componente montado, inicializando formulário...');
+    inicializarFormulario();
+});
+
+// Methods
+const limparErro = (campo) => {
+    if (erros.value[campo]) {
+        delete erros.value[campo];
+    }
+};
+
+const validarEtapa = () => {
+    erros.value = {};
+    const campos = {
+        1: ['nome_completo', 'como_prefere_ser_chamado', 'data_nascimento', 'sexo'],
+        2: ['peso_atual', 'altura', 'tempo_nesse_peso'],
+        3: ['objetivo'],
+        4: ['horario_acorda', 'horario_dorme', 'trabalha_casa_ou_fora', 'tempo_parar_cozinhar'],
+        5: ['restricao_alimentar', 'copos_agua_por_dia', 'consumo_alcool'],
+        6: ['qualidade_sono', 'nivel_estresse']
+    };
+
+    const validados = campos[etapaAtual.value] || [];
+
+    validados.forEach((campo) => {
+        const valor = form.value[campo];
+        if (valor === '' || valor === null || valor === undefined) {
+            erros.value[campo] = 'Este campo é obrigatório';
+        }
+    });
+
+    // Validações extras
+    if (etapaAtual.value === 4 && form.value.faz_exercicios && form.value.frequencia_exercicio_semana == null) {
+        erros.value.frequencia_exercicio_semana = 'Campo obrigatório quando pratica exercícios';
+    }
+
+    return Object.keys(erros.value).length === 0;
+};
+
+const proximaEtapa = () => {
+    if (validarEtapa()) {
+        etapaAtual.value++;
+        window.scrollTo(0, 0);
+    } else {
+        toast.add({
+            severity: 'warn',
+            summary: 'Campos obrigatórios',
+            detail: 'Preencha todos os campos obrigatórios desta etapa',
+            life: 3000
+        });
+    }
+};
+
+const etapaAnterior = () => {
+    etapaAtual.value--;
+    window.scrollTo(0, 0);
+};
+
+const enviarFormulario = async () => {
+    if (!validarEtapa()) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Campos incompletos',
+            detail: 'Verifique os campos obrigatórios',
+            life: 3000
+        });
+        return;
+    }
+
+    carregando.value = true;
+
+    try {
+        // Pegar token da rota
+        const token = route.params.id;
+
+        const dados = {
+            ...form.value,
+            criado_em: new Date(),
+            atualizado_em: new Date()
+        };
+
+        const resposta = await AnamneseService.salvarAnamnesePublica(token, dados);
+
+        // Validar resposta da API
+        if (resposta.data && resposta.data.success === true) {
+            // Mostrar mensagem de sucesso e manter na mesma tela
+            formularioEnviado.value = true;
+
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso!',
+                detail: 'Formulário enviado com sucesso. A nutricionista analisará seus dados em breve.',
+                life: 5000
+            });
+        } else {
+            // Resposta sem success = true
+            console.error('❌ Resposta inesperada da API:', resposta.data);
+            toast.add({
+                severity: 'error',
+                summary: 'Erro ao enviar',
+                detail: resposta.data?.message || 'Erro desconhecido ao enviar o formulário',
+                life: 5000
+            });
+        }
+    } catch (erro) {
+        console.error('❌ Erro ao enviar formulário:', erro);
+        console.error('Detalhes:', {
+            message: erro.message,
+            status: erro.response?.status,
+            data: erro.response?.data
+        });
+        toast.add({
+            severity: 'error',
+            summary: 'Erro ao enviar',
+            detail: erro.response?.data?.message || 'Tente novamente mais tarde',
+            life: 5000
+        });
+    } finally {
+        carregando.value = false;
+    }
+};
+
+// inicializarFormulario();
+</script>
 
 <style scoped>
 @keyframes fade-in {

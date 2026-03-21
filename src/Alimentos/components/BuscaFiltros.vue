@@ -1,53 +1,3 @@
-<script setup>
-const props = defineProps({
-    filtros: {
-        type: Object,
-        required: true
-    },
-    totalAtivos: {
-        type: String,
-        required: true
-    }
-});
-
-const emit = defineEmits(['update:filtros']);
-
-const grupos = [
-    'Cereais e derivados',
-    'Frutas e derivados',
-    'Hortaliças e derivados',
-    'Leguminosas e derivados',
-    'Carnes e derivados',
-    'Pescados e frutos do mar',
-    'Laticínios e derivados',
-    'Ovos e derivados',
-    'Óleos e gorduras',
-    'Açúcares e doces',
-    'Bebidas',
-    'Suplementos',
-    'Outros'
-];
-
-const fontes = [
-    { label: 'Todos', value: '' },
-    { label: 'TACO', value: 'taco' },
-    { label: 'TBCA', value: 'tbca' },
-    { label: 'Meus alimentos', value: 'personalizado' }
-];
-
-const atualizarBusca = (valor) => {
-    emit('update:filtros', { busca: valor });
-};
-
-const atualizarFonte = (valor) => {
-    emit('update:filtros', { fonte: valor });
-};
-
-const atualizarGrupo = (valor) => {
-    emit('update:filtros', { grupo: valor });
-};
-</script>
-
 <template>
     <div class="bg-white rounded-lg shadow-sm p-6 space-y-6">
         <!-- Busca -->
@@ -99,3 +49,53 @@ const atualizarGrupo = (valor) => {
         </div>
     </div>
 </template>
+
+<script setup>
+const props = defineProps({
+    filtros: {
+        type: Object,
+        required: true
+    },
+    totalAtivos: {
+        type: String,
+        required: true
+    }
+});
+
+const emit = defineEmits(['update:filtros']);
+
+const grupos = [
+    'Cereais e derivados',
+    'Frutas e derivados',
+    'Hortaliças e derivados',
+    'Leguminosas e derivados',
+    'Carnes e derivados',
+    'Pescados e frutos do mar',
+    'Laticínios e derivados',
+    'Ovos e derivados',
+    'Óleos e gorduras',
+    'Açúcares e doces',
+    'Bebidas',
+    'Suplementos',
+    'Outros'
+];
+
+const fontes = [
+    { label: 'Todos', value: '' },
+    { label: 'TACO', value: 'taco' },
+    { label: 'TBCA', value: 'tbca' },
+    { label: 'Meus alimentos', value: 'personalizado' }
+];
+
+const atualizarBusca = (valor) => {
+    emit('update:filtros', { busca: valor });
+};
+
+const atualizarFonte = (valor) => {
+    emit('update:filtros', { fonte: valor });
+};
+
+const atualizarGrupo = (valor) => {
+    emit('update:filtros', { grupo: valor });
+};
+</script>

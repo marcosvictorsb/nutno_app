@@ -1,25 +1,3 @@
-<script setup>
-import Button from 'primevue/button';
-import Tag from 'primevue/tag';
-
-defineProps({
-    loadingPlanos: {
-        type: Boolean,
-        default: false
-    },
-    planos: {
-        type: Array,
-        default: () => []
-    },
-    formatarDataBrasileira: {
-        type: Function,
-        required: true
-    }
-});
-
-defineEmits(['criar-plano', 'editar-plano', 'deletar-plano', 'enviar-plano', 'arquivar-plano']);
-</script>
-
 <template>
     <div class="mx-auto">
         <div v-if="loadingPlanos" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
@@ -125,3 +103,25 @@ defineEmits(['criar-plano', 'editar-plano', 'deletar-plano', 'enviar-plano', 'ar
         </div>
     </div>
 </template>
+
+<script setup>
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+
+defineProps({
+    loadingPlanos: {
+        type: Boolean,
+        default: false
+    },
+    planos: {
+        type: Array,
+        default: () => []
+    },
+    formatarDataBrasileira: {
+        type: Function,
+        required: true
+    }
+});
+
+defineEmits(['criar-plano', 'editar-plano', 'deletar-plano', 'enviar-plano', 'arquivar-plano']);
+</script>

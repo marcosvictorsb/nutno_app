@@ -1,43 +1,3 @@
-<script setup>
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
-
-const props = defineProps({
-    visible: Boolean,
-    anamneseEditando: Object,
-    modoEdicao: Boolean,
-    loading: {
-        type: Boolean,
-        default: false
-    },
-    opcoesTempo: Array,
-    opcoesObjetivo: Array,
-    opcoesTrabalhoCasaOuFora: Array,
-    opcoesTempoCozinhar: Array,
-    opcoesRestricao: Array,
-    opcoesConsumoAlcool: Array,
-    opcoesQualidadeSono: Array
-});
-
-const emit = defineEmits(['update:visible', 'update:anamneseEditando', 'fechar', 'salvar']);
-
-const handleClose = () => {
-    emit('update:visible', false);
-    emit('fechar');
-};
-
-const handleSave = () => {
-    emit('salvar');
-};
-
-const updateAnamnese = (field, value) => {
-    const updated = { ...props.anamneseEditando };
-    updated[field] = value;
-    emit('update:anamneseEditando', updated);
-};
-</script>
-
 <template>
     <Dialog
         :visible="visible"
@@ -495,3 +455,43 @@ const updateAnamnese = (field, value) => {
         </template>
     </Dialog>
 </template>
+
+<script setup>
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import InputText from 'primevue/inputtext';
+
+const props = defineProps({
+    visible: Boolean,
+    anamneseEditando: Object,
+    modoEdicao: Boolean,
+    loading: {
+        type: Boolean,
+        default: false
+    },
+    opcoesTempo: Array,
+    opcoesObjetivo: Array,
+    opcoesTrabalhoCasaOuFora: Array,
+    opcoesTempoCozinhar: Array,
+    opcoesRestricao: Array,
+    opcoesConsumoAlcool: Array,
+    opcoesQualidadeSono: Array
+});
+
+const emit = defineEmits(['update:visible', 'update:anamneseEditando', 'fechar', 'salvar']);
+
+const handleClose = () => {
+    emit('update:visible', false);
+    emit('fechar');
+};
+
+const handleSave = () => {
+    emit('salvar');
+};
+
+const updateAnamnese = (field, value) => {
+    const updated = { ...props.anamneseEditando };
+    updated[field] = value;
+    emit('update:anamneseEditando', updated);
+};
+</script>

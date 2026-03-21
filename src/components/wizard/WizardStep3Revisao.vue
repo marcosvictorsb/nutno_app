@@ -1,74 +1,3 @@
-<script setup>
-import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
-import Button from 'primevue/button';
-import ProgressBar from 'primevue/progressbar';
-import Tag from 'primevue/tag';
-import { computed } from 'vue';
-
-// Props
-const props = defineProps({
-    formularioPlano: {
-        type: Object,
-        required: true
-    },
-    paciente: {
-        type: Object,
-        required: true
-    },
-    loadingSalvar: {
-        type: Boolean,
-        default: false
-    }
-});
-
-// Emits
-defineEmits(['salvar', 'voltar']);
-
-// Composable
-const { calcularTotaisPlano, calcularDiferencaCalorica, obterStatusComparativo } = usePlanosAlimentares();
-
-// Nomes das refeições
-const refeicoes_nomes = ['Café da Manhã', 'Lanche Manhã', 'Almoço', 'Lanche Tarde', 'Jantar', 'Ceia'];
-
-// ===== COMPUTED PROPERTIES =====
-
-/**
- * Total do plano calculado
- */
-const totaisPlano = computed(() => {
-    return calcularTotaisPlano(props.formularioPlano);
-});
-
-/**
- * Diferença calórica (meta vs consumo)
- */
-const diferencaCalorica = computed(() => {
-    return calcularDiferencaCalorica(props.formularioPlano);
-});
-
-/**
- * Status comparativo (meta vs totais)
- */
-const statusComparativo = computed(() => {
-    return obterStatusComparativo(props.formularioPlano);
-});
-
-/**
- * Verificar se há itens adicionados
- */
-const temItens = computed(() => {
-    return props.formularioPlano.refeicoes?.some((r) => r.itens && r.itens.length > 0);
-});
-
-/**
- * Percentual de progresso calórico
- */
-const percentualProgresso = computed(() => {
-    if (!temItens.value) return 0;
-    return Math.min(((totaisPlano.value.total_calorias / props.formularioPlano.calorias_meta) * 100).toFixed(0), 100);
-});
-</script>
-
 <template>
     <div class="space-y-6">
         <!-- Header -->
@@ -257,6 +186,77 @@ const percentualProgresso = computed(() => {
         </div>
     </div>
 </template>
+
+<script setup>
+import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
+import Button from 'primevue/button';
+import ProgressBar from 'primevue/progressbar';
+import Tag from 'primevue/tag';
+import { computed } from 'vue';
+
+// Props
+const props = defineProps({
+    formularioPlano: {
+        type: Object,
+        required: true
+    },
+    paciente: {
+        type: Object,
+        required: true
+    },
+    loadingSalvar: {
+        type: Boolean,
+        default: false
+    }
+});
+
+// Emits
+defineEmits(['salvar', 'voltar']);
+
+// Composable
+const { calcularTotaisPlano, calcularDiferencaCalorica, obterStatusComparativo } = usePlanosAlimentares();
+
+// Nomes das refeições
+const refeicoes_nomes = ['Café da Manhã', 'Lanche Manhã', 'Almoço', 'Lanche Tarde', 'Jantar', 'Ceia'];
+
+// ===== COMPUTED PROPERTIES =====
+
+/**
+ * Total do plano calculado
+ */
+const totaisPlano = computed(() => {
+    return calcularTotaisPlano(props.formularioPlano);
+});
+
+/**
+ * Diferença calórica (meta vs consumo)
+ */
+const diferencaCalorica = computed(() => {
+    return calcularDiferencaCalorica(props.formularioPlano);
+});
+
+/**
+ * Status comparativo (meta vs totais)
+ */
+const statusComparativo = computed(() => {
+    return obterStatusComparativo(props.formularioPlano);
+});
+
+/**
+ * Verificar se há itens adicionados
+ */
+const temItens = computed(() => {
+    return props.formularioPlano.refeicoes?.some((r) => r.itens && r.itens.length > 0);
+});
+
+/**
+ * Percentual de progresso calórico
+ */
+const percentualProgresso = computed(() => {
+    if (!temItens.value) return 0;
+    return Math.min(((totaisPlano.value.total_calorias / props.formularioPlano.calorias_meta) * 100).toFixed(0), 100);
+});
+</script>
 
 <style scoped>
 /* Smooth transitions */

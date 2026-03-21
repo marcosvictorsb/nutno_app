@@ -1,50 +1,3 @@
-<script setup>
-import {
-    calcularDeficitSuperavitCalorico,
-    calcularSugestaoCaloriaPorObjetivo,
-    calcularVariacaoPesoPeriodos,
-    formatarCaloria,
-    formatarIMC,
-    formatarPeso,
-    obterClassificacaoIMCPlano,
-    traduzirNivelAtividadePlano,
-    verificarAvisosSeguranca
-} from '@/utils/nutricionais';
-import InputNumber from 'primevue/inputnumber';
-import InputText from 'primevue/inputtext';
-import Slider from 'primevue/slider';
-import Tag from 'primevue/tag';
-import { defineExpose, ref } from 'vue';
-
-// Props
-const props = defineProps({
-    formularioPlano: { type: Object, required: true },
-    medidaMaisRecente: { type: Object, default: null },
-    anamnese: { type: Object, default: null },
-    paciente: { type: Object, default: null },
-    errosPlano: { type: Object, default: () => ({}) }
-});
-
-// Emits
-const emit = defineEmits(['update:formularioPlano', 'update:errosPlano']);
-
-// Local refs for sliders
-const proteinaPerc = ref(props.formularioPlano.proteina_perc);
-const carboidratoPerc = ref(props.formularioPlano.carboidrato_perc);
-const gorduraPerc = ref(props.formularioPlano.gordura_perc);
-
-const validar = () => {
-    const erros = {};
-    if (!props.formularioPlano.nome?.trim()) erros.nome = 'Nome obrigatório';
-    if (!props.formularioPlano.calorias_meta || props.formularioPlano.calorias_meta <= 0) erros.calorias_meta = 'Calorias obrigatórias';
-
-    emit('update:errosPlano', erros);
-    return Object.keys(erros).length === 0;
-};
-
-defineExpose({ validar });
-</script>
-
 <template>
     <div class="space-y-4 overflow-y-auto pr-4">
         <!-- Seção 1: Configurações Básicas -->
@@ -464,3 +417,50 @@ defineExpose({ validar });
         </section>
     </div>
 </template>
+
+<script setup>
+import {
+    calcularDeficitSuperavitCalorico,
+    calcularSugestaoCaloriaPorObjetivo,
+    calcularVariacaoPesoPeriodos,
+    formatarCaloria,
+    formatarIMC,
+    formatarPeso,
+    obterClassificacaoIMCPlano,
+    traduzirNivelAtividadePlano,
+    verificarAvisosSeguranca
+} from '@/utils/nutricionais';
+import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
+import Slider from 'primevue/slider';
+import Tag from 'primevue/tag';
+import { defineExpose, ref } from 'vue';
+
+// Props
+const props = defineProps({
+    formularioPlano: { type: Object, required: true },
+    medidaMaisRecente: { type: Object, default: null },
+    anamnese: { type: Object, default: null },
+    paciente: { type: Object, default: null },
+    errosPlano: { type: Object, default: () => ({}) }
+});
+
+// Emits
+const emit = defineEmits(['update:formularioPlano', 'update:errosPlano']);
+
+// Local refs for sliders
+const proteinaPerc = ref(props.formularioPlano.proteina_perc);
+const carboidratoPerc = ref(props.formularioPlano.carboidrato_perc);
+const gorduraPerc = ref(props.formularioPlano.gordura_perc);
+
+const validar = () => {
+    const erros = {};
+    if (!props.formularioPlano.nome?.trim()) erros.nome = 'Nome obrigatório';
+    if (!props.formularioPlano.calorias_meta || props.formularioPlano.calorias_meta <= 0) erros.calorias_meta = 'Calorias obrigatórias';
+
+    emit('update:errosPlano', erros);
+    return Object.keys(erros).length === 0;
+};
+
+defineExpose({ validar });
+</script>

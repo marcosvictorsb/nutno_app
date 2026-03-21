@@ -1,84 +1,3 @@
-<script setup>
-import Button from 'primevue/button';
-import DatePicker from 'primevue/datepicker';
-import Dialog from 'primevue/dialog';
-import InputMask from 'primevue/inputmask';
-import InputNumber from 'primevue/inputnumber';
-import Tag from 'primevue/tag';
-
-import MedidaService from '@/service/MedidaService';
-
-const props = defineProps({
-    visible: {
-        type: Boolean,
-        required: true
-    },
-    formularioMedida: {
-        type: Object,
-        required: true
-    },
-    imcComClassificacao: {
-        type: Object,
-        default: () => ({ valor: '—', classificacao: '', cor: 'secondary' })
-    },
-    massaMagraCalculada: {
-        type: [String, Number],
-        default: '—'
-    },
-    rcqComClassificacao: {
-        type: Object,
-        default: () => ({ valor: '—', classificacao: '', cor: 'secondary' })
-    },
-    getCalculado: {
-        type: String,
-        default: '0 kcal/dia'
-    },
-    pressaoArterialCombinada: {
-        type: String,
-        default: ''
-    },
-    loading: {
-        type: Boolean,
-        default: false
-    },
-    calcularTMBParam: {
-        type: Function,
-        required: true
-    }
-});
-
-const emit = defineEmits(['update:visible', 'update:formularioMedida', 'update:pressaoArterialCombinada', 'fechar', 'salvar-medida']);
-
-// Update handlers for v-model
-const handleVisibilityUpdate = (value) => {
-    emit('update:visible', value);
-};
-
-const handleFormularioUpdate = (path, value) => {
-    // Clone o objeto da prop
-    const updated = JSON.parse(JSON.stringify(props.formularioMedida));
-    const keys = path.split('.');
-    let obj = updated;
-    for (let i = 0; i < keys.length - 1; i++) {
-        obj = obj[keys[i]];
-    }
-    obj[keys[keys.length - 1]] = value;
-    emit('update:formularioMedida', updated);
-};
-
-const handlePressaoUpdate = (value) => {
-    emit('update:pressaoArterialCombinada', value);
-};
-
-const handleClose = () => {
-    emit('fechar');
-};
-
-const handleSave = () => {
-    emit('salvar-medida');
-};
-</script>
-
 <template>
     <Dialog :visible="visible" header="Adicionar Medida" :modal="true" :style="{ width: '90vw', maxHeight: '90vh' }" :breakpoints="{ '1199px': '95vw', '575px': '100vw' }" @hide="handleClose" @update:visible="handleVisibilityUpdate">
         <div class="space-y-4 max-h-[calc(90vh-250px)] overflow-y-auto pr-4">
@@ -337,3 +256,84 @@ const handleSave = () => {
         </template>
     </Dialog>
 </template>
+
+<script setup>
+import Button from 'primevue/button';
+import DatePicker from 'primevue/datepicker';
+import Dialog from 'primevue/dialog';
+import InputMask from 'primevue/inputmask';
+import InputNumber from 'primevue/inputnumber';
+import Tag from 'primevue/tag';
+
+import MedidaService from '@/service/MedidaService';
+
+const props = defineProps({
+    visible: {
+        type: Boolean,
+        required: true
+    },
+    formularioMedida: {
+        type: Object,
+        required: true
+    },
+    imcComClassificacao: {
+        type: Object,
+        default: () => ({ valor: '—', classificacao: '', cor: 'secondary' })
+    },
+    massaMagraCalculada: {
+        type: [String, Number],
+        default: '—'
+    },
+    rcqComClassificacao: {
+        type: Object,
+        default: () => ({ valor: '—', classificacao: '', cor: 'secondary' })
+    },
+    getCalculado: {
+        type: String,
+        default: '0 kcal/dia'
+    },
+    pressaoArterialCombinada: {
+        type: String,
+        default: ''
+    },
+    loading: {
+        type: Boolean,
+        default: false
+    },
+    calcularTMBParam: {
+        type: Function,
+        required: true
+    }
+});
+
+const emit = defineEmits(['update:visible', 'update:formularioMedida', 'update:pressaoArterialCombinada', 'fechar', 'salvar-medida']);
+
+// Update handlers for v-model
+const handleVisibilityUpdate = (value) => {
+    emit('update:visible', value);
+};
+
+const handleFormularioUpdate = (path, value) => {
+    // Clone o objeto da prop
+    const updated = JSON.parse(JSON.stringify(props.formularioMedida));
+    const keys = path.split('.');
+    let obj = updated;
+    for (let i = 0; i < keys.length - 1; i++) {
+        obj = obj[keys[i]];
+    }
+    obj[keys[keys.length - 1]] = value;
+    emit('update:formularioMedida', updated);
+};
+
+const handlePressaoUpdate = (value) => {
+    emit('update:pressaoArterialCombinada', value);
+};
+
+const handleClose = () => {
+    emit('fechar');
+};
+
+const handleSave = () => {
+    emit('salvar-medida');
+};
+</script>

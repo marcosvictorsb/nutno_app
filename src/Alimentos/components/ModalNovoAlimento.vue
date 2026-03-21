@@ -1,158 +1,3 @@
-<script setup>
-import Dialog from 'primevue/dialog';
-import { ref, watch } from 'vue';
-
-const props = defineProps({
-    aberto: {
-        type: Boolean,
-        default: false
-    },
-    salvando: {
-        type: Boolean,
-        default: false
-    },
-    erros: {
-        type: Object,
-        default: () => ({})
-    }
-});
-
-const emit = defineEmits(['fechar', 'salvar']);
-
-const grupos = [
-    'Cereais e derivados',
-    'Frutas e derivados',
-    'Hortaliças e derivados',
-    'Leguminosas e derivados',
-    'Carnes e derivados',
-    'Pescados e frutos do mar',
-    'Laticínios e derivados',
-    'Ovos e derivados',
-    'Óleos e gorduras',
-    'Açúcares e doces',
-    'Bebidas',
-    'Suplementos',
-    'Outros'
-];
-
-const formulario = ref({
-    nome: '',
-    nomeCientifico: '',
-    grupo: '',
-    energiaKcal: null,
-    energiaKj: null,
-    proteina: null,
-    lipidios: null,
-    carboidrato: null,
-    fibra: null,
-    sodio: null,
-    umidade: null,
-    calcio: null,
-    ferro: null,
-    potassio: null,
-    magnesio: null,
-    fosforo: null,
-    zinco: null,
-    vitaminaC: null,
-    vitaminaA_re: null,
-    colesterol: null,
-    gorduraSaturada: null,
-    gordurasTrans: null
-});
-
-const errosLocais = ref({});
-
-const resetarFormulario = () => {
-    formulario.value = {
-        nome: '',
-        nomeCientifico: '',
-        grupo: '',
-        energiaKcal: null,
-        energiaKj: null,
-        proteina: null,
-        lipidios: null,
-        carboidrato: null,
-        fibra: null,
-        sodio: null,
-        umidade: null,
-        calcio: null,
-        ferro: null,
-        potassio: null,
-        magnesio: null,
-        fosforo: null,
-        zinco: null,
-        vitaminaC: null,
-        vitaminaA_re: null,
-        colesterol: null,
-        gorduraSaturada: null,
-        gordurasTrans: null
-    };
-    errosLocais.value = {};
-};
-
-const fechar = () => {
-    emit('fechar');
-    resetarFormulario();
-};
-
-const validarFormulario = () => {
-    const erros = {};
-
-    if (!formulario.value.nome || formulario.value.nome.trim() === '') {
-        erros.nome = 'Nome é obrigatório';
-    } else if (formulario.value.nome.length < 3) {
-        erros.nome = 'Mínimo 3 caracteres';
-    }
-
-    if (!formulario.value.grupo) {
-        erros.grupo = 'Grupo é obrigatório';
-    }
-
-    if (formulario.value.energiaKcal === null || formulario.value.energiaKcal === '' || formulario.value.energiaKcal < 0) {
-        erros.energiaKcal = 'Obrigatório';
-    }
-
-    if (formulario.value.proteina === null || formulario.value.proteina === '' || formulario.value.proteina < 0) {
-        erros.proteina = 'Obrigatório';
-    }
-
-    if (formulario.value.lipidios === null || formulario.value.lipidios === '' || formulario.value.lipidios < 0) {
-        erros.lipidios = 'Obrigatório';
-    }
-
-    if (formulario.value.carboidrato === null || formulario.value.carboidrato === '' || formulario.value.carboidrato < 0) {
-        erros.carboidrato = 'Obrigatório';
-    }
-
-    errosLocais.value = erros;
-    return Object.keys(erros).length === 0;
-};
-
-const salvar = () => {
-    if (!validarFormulario()) {
-        return;
-    }
-
-    emit('salvar', formulario.value);
-};
-
-watch(
-    () => props.aberto,
-    (novoValor) => {
-        if (novoValor) {
-            resetarFormulario();
-        }
-    }
-);
-
-watch(
-    () => props.erros,
-    (novoErros) => {
-        errosLocais.value = { ...errosLocais.value, ...novoErros };
-    }
-);
-</script>
-
 <template>
     <template>
         <Dialog :visible="aberto" header="Novo alimento personalizado" :modal="true" :style="{ width: '100%', maxWidth: '900px' }" :breakpoints="{ '1199px': '85vw', '575px': '100vw' }" @update:visible="(val) => !val && fechar()">
@@ -360,3 +205,158 @@ watch(
         </Dialog>
     </template>
 </template>
+
+<script setup>
+import Dialog from 'primevue/dialog';
+import { ref, watch } from 'vue';
+
+const props = defineProps({
+    aberto: {
+        type: Boolean,
+        default: false
+    },
+    salvando: {
+        type: Boolean,
+        default: false
+    },
+    erros: {
+        type: Object,
+        default: () => ({})
+    }
+});
+
+const emit = defineEmits(['fechar', 'salvar']);
+
+const grupos = [
+    'Cereais e derivados',
+    'Frutas e derivados',
+    'Hortaliças e derivados',
+    'Leguminosas e derivados',
+    'Carnes e derivados',
+    'Pescados e frutos do mar',
+    'Laticínios e derivados',
+    'Ovos e derivados',
+    'Óleos e gorduras',
+    'Açúcares e doces',
+    'Bebidas',
+    'Suplementos',
+    'Outros'
+];
+
+const formulario = ref({
+    nome: '',
+    nomeCientifico: '',
+    grupo: '',
+    energiaKcal: null,
+    energiaKj: null,
+    proteina: null,
+    lipidios: null,
+    carboidrato: null,
+    fibra: null,
+    sodio: null,
+    umidade: null,
+    calcio: null,
+    ferro: null,
+    potassio: null,
+    magnesio: null,
+    fosforo: null,
+    zinco: null,
+    vitaminaC: null,
+    vitaminaA_re: null,
+    colesterol: null,
+    gorduraSaturada: null,
+    gordurasTrans: null
+});
+
+const errosLocais = ref({});
+
+const resetarFormulario = () => {
+    formulario.value = {
+        nome: '',
+        nomeCientifico: '',
+        grupo: '',
+        energiaKcal: null,
+        energiaKj: null,
+        proteina: null,
+        lipidios: null,
+        carboidrato: null,
+        fibra: null,
+        sodio: null,
+        umidade: null,
+        calcio: null,
+        ferro: null,
+        potassio: null,
+        magnesio: null,
+        fosforo: null,
+        zinco: null,
+        vitaminaC: null,
+        vitaminaA_re: null,
+        colesterol: null,
+        gorduraSaturada: null,
+        gordurasTrans: null
+    };
+    errosLocais.value = {};
+};
+
+const fechar = () => {
+    emit('fechar');
+    resetarFormulario();
+};
+
+const validarFormulario = () => {
+    const erros = {};
+
+    if (!formulario.value.nome || formulario.value.nome.trim() === '') {
+        erros.nome = 'Nome é obrigatório';
+    } else if (formulario.value.nome.length < 3) {
+        erros.nome = 'Mínimo 3 caracteres';
+    }
+
+    if (!formulario.value.grupo) {
+        erros.grupo = 'Grupo é obrigatório';
+    }
+
+    if (formulario.value.energiaKcal === null || formulario.value.energiaKcal === '' || formulario.value.energiaKcal < 0) {
+        erros.energiaKcal = 'Obrigatório';
+    }
+
+    if (formulario.value.proteina === null || formulario.value.proteina === '' || formulario.value.proteina < 0) {
+        erros.proteina = 'Obrigatório';
+    }
+
+    if (formulario.value.lipidios === null || formulario.value.lipidios === '' || formulario.value.lipidios < 0) {
+        erros.lipidios = 'Obrigatório';
+    }
+
+    if (formulario.value.carboidrato === null || formulario.value.carboidrato === '' || formulario.value.carboidrato < 0) {
+        erros.carboidrato = 'Obrigatório';
+    }
+
+    errosLocais.value = erros;
+    return Object.keys(erros).length === 0;
+};
+
+const salvar = () => {
+    if (!validarFormulario()) {
+        return;
+    }
+
+    emit('salvar', formulario.value);
+};
+
+watch(
+    () => props.aberto,
+    (novoValor) => {
+        if (novoValor) {
+            resetarFormulario();
+        }
+    }
+);
+
+watch(
+    () => props.erros,
+    (novoErros) => {
+        errosLocais.value = { ...errosLocais.value, ...novoErros };
+    }
+);
+</script>

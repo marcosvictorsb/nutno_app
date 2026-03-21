@@ -1,63 +1,3 @@
-<script setup>
-import AuthService from '@/service/AuthService.js';
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
-
-const email = ref('');
-const loading = ref(false);
-const mensagemErro = ref('');
-const mensagemSucesso = ref('');
-
-const emailValido = computed(() => {
-    return email.value.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
-});
-
-const handleSubmit = async () => {
-    if (!emailValido.value) return;
-
-    loading.value = true;
-    mensagemErro.value = '';
-    mensagemSucesso.value = '';
-
-    try {
-        const response = await AuthService.recuperarSenha({
-            email: email.value
-        });
-
-        if (response.data && response.data.success) {
-            mensagemSucesso.value = response.data.message || 'Um link de recuperação foi enviado para seu email. Verifique sua caixa de entrada.';
-            email.value = '';
-
-            setTimeout(() => {
-                router.push({ name: 'login' });
-            }, 3000);
-        } else {
-            mensagemErro.value = response.data?.message || 'Erro ao processar solicitação. Tente novamente.';
-        }
-    } catch (error) {
-        if (error.response && error.response.data) {
-            if (error.response.data.success === false) {
-                mensagemErro.value = error.response.data.message || 'Erro ao processar solicitação.';
-            } else if (error.response.data.message) {
-                mensagemErro.value = error.response.data.message;
-            } else {
-                mensagemErro.value = 'Erro ao processar solicitação. Tente novamente mais tarde.';
-            }
-        } else {
-            mensagemErro.value = 'Erro de conexão. Verifique sua internet e tente novamente.';
-        }
-    } finally {
-        loading.value = false;
-    }
-};
-
-const voltarParaLogin = () => {
-    router.push({ name: 'login' });
-};
-</script>
-
 <template>
     <div class="min-h-screen flex bg-gradient-to-br from-green-50 to-green-100">
         <!-- Lado Esquerdo -->
@@ -149,5 +89,65 @@ const voltarParaLogin = () => {
         </div>
     </div>
 </template>
+
+<script setup>
+import AuthService from '@/service/AuthService.js';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
+const email = ref('');
+const loading = ref(false);
+const mensagemErro = ref('');
+const mensagemSucesso = ref('');
+
+const emailValido = computed(() => {
+    return email.value.trim() !== '' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
+});
+
+const handleSubmit = async () => {
+    if (!emailValido.value) return;
+
+    loading.value = true;
+    mensagemErro.value = '';
+    mensagemSucesso.value = '';
+
+    try {
+        const response = await AuthService.recuperarSenha({
+            email: email.value
+        });
+
+        if (response.data && response.data.success) {
+            mensagemSucesso.value = response.data.message || 'Um link de recuperação foi enviado para seu email. Verifique sua caixa de entrada.';
+            email.value = '';
+
+            setTimeout(() => {
+                router.push({ name: 'login' });
+            }, 3000);
+        } else {
+            mensagemErro.value = response.data?.message || 'Erro ao processar solicitação. Tente novamente.';
+        }
+    } catch (error) {
+        if (error.response && error.response.data) {
+            if (error.response.data.success === false) {
+                mensagemErro.value = error.response.data.message || 'Erro ao processar solicitação.';
+            } else if (error.response.data.message) {
+                mensagemErro.value = error.response.data.message;
+            } else {
+                mensagemErro.value = 'Erro ao processar solicitação. Tente novamente mais tarde.';
+            }
+        } else {
+            mensagemErro.value = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        }
+    } finally {
+        loading.value = false;
+    }
+};
+
+const voltarParaLogin = () => {
+    router.push({ name: 'login' });
+};
+</script>
 
 <style scoped></style>

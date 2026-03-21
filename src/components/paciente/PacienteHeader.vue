@@ -1,43 +1,3 @@
-<script setup>
-import Avatar from 'primevue/avatar';
-import Tag from 'primevue/tag';
-import { ref } from 'vue';
-
-defineProps({
-    paciente: {
-        type: Object,
-        required: true
-    },
-    fotoPacienteUrl: {
-        type: String,
-        default: ''
-    },
-    loadingUploadFoto: {
-        type: Boolean,
-        default: false
-    },
-    activeTab: {
-        type: String,
-        default: 'anamnese'
-    }
-});
-
-const emit = defineEmits(['update:activeTab', 'foto-change']);
-const inputFotoRef = ref(null);
-
-const selecionarFoto = () => {
-    inputFotoRef.value?.click();
-};
-
-const tabs = [
-    { key: 'resumo', label: 'Resumo' },
-    { key: 'anamnese', label: 'Anamnese' },
-    { key: 'medidas', label: 'Medidas' },
-    { key: 'planos', label: 'Planos Alimentares' },
-    { key: 'adesao', label: 'Adesao' }
-];
-</script>
-
 <template>
     <header class="bg-white border-b border-emerald-100 p-8">
         <div class="mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -106,3 +66,43 @@ const tabs = [
         </nav>
     </header>
 </template>
+
+<script setup>
+import Avatar from 'primevue/avatar';
+import Tag from 'primevue/tag';
+import { ref } from 'vue';
+
+defineProps({
+    paciente: {
+        type: Object,
+        required: true
+    },
+    fotoPacienteUrl: {
+        type: String,
+        default: ''
+    },
+    loadingUploadFoto: {
+        type: Boolean,
+        default: false
+    },
+    activeTab: {
+        type: String,
+        default: 'anamnese'
+    }
+});
+
+const emit = defineEmits(['update:activeTab', 'foto-change']);
+const inputFotoRef = ref(null);
+
+const selecionarFoto = () => {
+    inputFotoRef.value?.click();
+};
+
+const tabs = [
+    { key: 'resumo', label: 'Resumo' },
+    { key: 'anamnese', label: 'Anamnese' },
+    { key: 'medidas', label: 'Medidas' },
+    { key: 'planos', label: 'Planos Alimentares' },
+    { key: 'adesao', label: 'Adesao' }
+];
+</script>

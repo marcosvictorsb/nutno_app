@@ -1,3 +1,46 @@
+<template>
+    <ModalCriacaoPlano
+        :visible="modalVisible"
+        :step="stepAtualPlano"
+        :paciente="paciente"
+        :editandoPlanoId="editandoPlanoId"
+        :loading="loadingCriacaoPlano"
+        @update:visible="modalVisible = $event"
+        @update:step="stepAtualPlano = $event"
+        @fechar="handleFechar"
+        @avancar-step="avancarStep"
+        @voltar-step="() => stepAtualPlano--"
+        @salvar-plano="salvarPlano"
+    >
+        <!-- STEP 1: Configuração do Plano -->
+        <template #step-1>
+            <WizardStep1Configurar :formularioPlano="formularioPlano" :medidaMaisRecente="medidaMaisRecente" :anamnese="anamnese" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
+        </template>
+
+        <!-- STEP 2: Refeições -->
+        <template #step-2>
+            <WizardStep2Refeicoes :formularioPlano="formularioPlano" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
+        </template>
+
+        <!-- STEP 3: Revisão -->
+        <template #step-3>
+            <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" :loadingSalvar="loadingCriacaoPlano" @salvar="salvarPlano" @voltar="stepAtualPlano--" />
+        </template>
+
+        <!-- STEP 4: Enviar -->
+        <template #step-4>
+            <WizardStep4Enviar :formularioPlano="formularioPlano" :paciente="paciente" :linkPlano="linkPlano" @enviar-depois="fecharCriacaoPlano" @fechar="fecharCriacaoPlano" />
+        </template>
+
+        <!-- Footer Buttons -->
+        <template #footer-buttons>
+            <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+            <Button v-else-if="stepAtualPlano === 2" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+            <!-- Step 3 e 4 têm seus próprios botões dentro dos componentes -->
+        </template>
+    </ModalCriacaoPlano>
+</template>
+
 <script setup>
 import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import WizardStep1Configurar from '@/components/wizard/WizardStep1Configurar.vue';
@@ -297,46 +340,3 @@ const handleFechar = () => {
     fecharCriacaoPlano();
 };
 </script>
-
-<template>
-    <ModalCriacaoPlano
-        :visible="modalVisible"
-        :step="stepAtualPlano"
-        :paciente="paciente"
-        :editandoPlanoId="editandoPlanoId"
-        :loading="loadingCriacaoPlano"
-        @update:visible="modalVisible = $event"
-        @update:step="stepAtualPlano = $event"
-        @fechar="handleFechar"
-        @avancar-step="avancarStep"
-        @voltar-step="() => stepAtualPlano--"
-        @salvar-plano="salvarPlano"
-    >
-        <!-- STEP 1: Configuração do Plano -->
-        <template #step-1>
-            <WizardStep1Configurar :formularioPlano="formularioPlano" :medidaMaisRecente="medidaMaisRecente" :anamnese="anamnese" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
-        </template>
-
-        <!-- STEP 2: Refeições -->
-        <template #step-2>
-            <WizardStep2Refeicoes :formularioPlano="formularioPlano" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
-        </template>
-
-        <!-- STEP 3: Revisão -->
-        <template #step-3>
-            <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" :loadingSalvar="loadingCriacaoPlano" @salvar="salvarPlano" @voltar="stepAtualPlano--" />
-        </template>
-
-        <!-- STEP 4: Enviar -->
-        <template #step-4>
-            <WizardStep4Enviar :formularioPlano="formularioPlano" :paciente="paciente" :linkPlano="linkPlano" @enviar-depois="fecharCriacaoPlano" @fechar="fecharCriacaoPlano" />
-        </template>
-
-        <!-- Footer Buttons -->
-        <template #footer-buttons>
-            <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
-            <Button v-else-if="stepAtualPlano === 2" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
-            <!-- Step 3 e 4 têm seus próprios botões dentro dos componentes -->
-        </template>
-    </ModalCriacaoPlano>
-</template>

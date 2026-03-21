@@ -1,42 +1,3 @@
-<script setup>
-import Button from 'primevue/button';
-import Dialog from 'primevue/dialog';
-import { ref } from 'vue';
-
-// Props: Wizard state and parent functions
-defineProps({
-    visible: Boolean,
-    step: Number,
-    paciente: Object,
-    editandoPlanoId: [String, Number],
-    loading: Boolean
-});
-
-// Emits: Wizard navigation and actions
-const emit = defineEmits(['update:visible', 'update:step', 'fechar', 'avancar-step', 'voltar-step', 'salvar-plano']);
-
-// Refs para componentes do wizard
-const step2Ref = ref(null);
-
-const handleFechar = () => {
-    emit('update:visible', false);
-    emit('fechar');
-};
-
-const voltarStep = () => {
-    emit('voltar-step');
-};
-
-// Expor método para validar Step 2
-const validarStep2 = () => {
-    return step2Ref.value?.validar() || false;
-};
-
-defineExpose({
-    validarStep2
-});
-</script>
-
 <template>
     <Dialog
         :visible="visible"
@@ -109,3 +70,42 @@ defineExpose({
         </template>
     </Dialog>
 </template>
+
+<script setup>
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import { ref } from 'vue';
+
+// Props: Wizard state and parent functions
+defineProps({
+    visible: Boolean,
+    step: Number,
+    paciente: Object,
+    editandoPlanoId: [String, Number],
+    loading: Boolean
+});
+
+// Emits: Wizard navigation and actions
+const emit = defineEmits(['update:visible', 'update:step', 'fechar', 'avancar-step', 'voltar-step', 'salvar-plano']);
+
+// Refs para componentes do wizard
+const step2Ref = ref(null);
+
+const handleFechar = () => {
+    emit('update:visible', false);
+    emit('fechar');
+};
+
+const voltarStep = () => {
+    emit('voltar-step');
+};
+
+// Expor método para validar Step 2
+const validarStep2 = () => {
+    return step2Ref.value?.validar() || false;
+};
+
+defineExpose({
+    validarStep2
+});
+</script>

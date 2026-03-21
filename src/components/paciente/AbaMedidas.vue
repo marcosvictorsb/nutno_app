@@ -1,25 +1,3 @@
-<script setup>
-import MedidaService from '@/service/MedidaService';
-import Button from 'primevue/button';
-
-defineProps({
-    loadingMedidas: {
-        type: Boolean,
-        default: false
-    },
-    medidas: {
-        type: Array,
-        default: () => []
-    },
-    medidaSelecionada: {
-        type: Object,
-        default: null
-    }
-});
-
-defineEmits(['criar-medida', 'visualizar-medida', 'deletar-medida']);
-</script>
-
 <template>
     <div class="mx-auto">
         <div v-if="loadingMedidas" class="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-emerald-50">
@@ -129,3 +107,25 @@ defineEmits(['criar-medida', 'visualizar-medida', 'deletar-medida']);
         </div>
     </div>
 </template>
+
+<script setup>
+import MedidaService from '@/service/MedidaService';
+import Button from 'primevue/button';
+
+defineProps({
+    loadingMedidas: {
+        type: Boolean,
+        default: false
+    },
+    medidas: {
+        type: Array,
+        default: () => []
+    },
+    medidaSelecionada: {
+        type: Object,
+        default: null
+    }
+});
+
+defineEmits(['criar-medida', 'visualizar-medida', 'deletar-medida']);
+</script>

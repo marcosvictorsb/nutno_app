@@ -1,9 +1,3 @@
-<script setup>
-import { useLayout } from '@/layout/composables/layout';
-
-const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
-</script>
-
 <template>
     <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
@@ -76,3 +70,9 @@ const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
         </div>
     </div>
 </template>
+
+<script setup>
+import { useLayout } from '@/layout/composables/layout';
+
+const { toggleMenu, toggleDarkMode, isDarkTheme } = useLayout();
+</script>

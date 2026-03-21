@@ -1,159 +1,3 @@
-<script setup>
-import AuthService from '@/service/AuthService.js';
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
-const router = useRouter();
-const route = useRoute();
-
-const token = ref('');
-const loading = ref(true);
-const loadingReset = ref(false);
-const tokenValido = ref(false);
-const mensagemErro = ref('');
-const mensagemSucesso = ref('');
-
-const formSenha = ref({
-    novaSenha: '',
-    confirmarSenha: ''
-});
-const mostrarSenha = ref({
-    nova: false,
-    confirmar: false
-});
-
-const errosSenha = ref({});
-
-// Calcular força da senha
-const calcularForcaSenha = (senha) => {
-    if (!senha) return { forca: 0, label: '', cor: '', percentual: 0 };
-
-    let forca = 0;
-    if (senha.length >= 8) forca++;
-    if (/[A-Z]/.test(senha)) forca++;
-    if (/[0-9]/.test(senha)) forca++;
-    if (/[!@#$%^&*]/.test(senha)) forca++;
-
-    const labels = ['', 'Fraca', 'Média', 'Forte', 'Muito Forte'];
-    const cores = ['danger', 'danger', 'warning', 'success', 'success'];
-
-    return {
-        forca: forca,
-        label: labels[forca] || 'Muito Forte',
-        cor: cores[forca] || 'success',
-        percentual: (forca / 4) * 100
-    };
-};
-
-const forcaSenha = computed(() => calcularForcaSenha(formSenha.value.novaSenha));
-
-const barraSenha = computed(() => {
-    const forca = forcaSenha.value.forca;
-    return [forca >= 1, forca >= 2, forca >= 3, forca >= 4];
-});
-
-const corBarraSenha = computed(() => {
-    const cor = forcaSenha.value.cor;
-    if (cor === 'success') return 'bg-green-600';
-    if (cor === 'warning') return 'bg-yellow-600';
-    return 'bg-red-600';
-});
-
-// Botão resetar habilitado?
-const podeResetar = computed(() => {
-    return formSenha.value.novaSenha.trim() !== '' && formSenha.value.confirmarSenha.trim() !== '' && formSenha.value.novaSenha === formSenha.value.confirmarSenha && forcaSenha.value.forca >= 3;
-});
-
-// Validar token
-const validarToken = async () => {
-    try {
-        loading.value = true;
-        console.log('Validando token de reset de senha:', token.value);
-        const response = await AuthService.checkToken(token.value);
-
-        if (response.data && response.data.success && response.data.data.valido) {
-            tokenValido.value = true;
-        } else {
-            mensagemErro.value = response.data?.message || 'Token inválido ou expirado';
-        }
-    } catch (error) {
-        console.error('Erro ao validar token:', error);
-        if (error.response && error.response.data && error.response.data.message) {
-            mensagemErro.value = error.response.data.message;
-        } else {
-            mensagemErro.value = 'O link de recuperação expirou. Solicite um novo link para recuperar sua senha.';
-        }
-    } finally {
-        loading.value = false;
-    }
-};
-
-// Resetar senha
-const handleReset = async () => {
-    if (!podeResetar.value) {
-        console.log('❌ handleReset retornando porque podeResetar é false');
-        return;
-    }
-
-    try {
-        console.log('6️⃣ Definindo loadingReset = true');
-        loadingReset.value = true;
-        mensagemErro.value = '';
-        mensagemSucesso.value = '';
-
-        const dadosEnvio = {
-            token: token.value,
-            senha: formSenha.value.novaSenha
-        };
-        const response = await AuthService.resetarSenha(dadosEnvio);
-
-        if (response.data && response.data.success) {
-            console.log('✅ Sucesso! Mensagem:', response.data.message);
-            mensagemSucesso.value = response.data.message || 'Senha redefinida com sucesso! Redirecionando...';
-
-            // Redireciona para login após 3 segundos
-            setTimeout(() => {
-                console.log('⏱️ Redirecionando para login');
-                router.push({ name: 'login' });
-            }, 3000);
-        } else {
-            console.log('❌ response.data.success é false ou undefined');
-            mensagemErro.value = response.data?.message || 'Erro ao redefinir senha. Tente novamente.';
-        }
-    } catch (error) {
-        console.error('💥 Erro no try-catch:', error);
-        console.error('Response error:', error.response?.data);
-        if (error.response && error.response.data && error.response.data.message) {
-            mensagemErro.value = error.response.data.message;
-        } else {
-            mensagemErro.value = 'Erro ao redefinir senha. Tente novamente mais tarde.';
-        }
-    } finally {
-        console.log('🏁 finally block - Definindo loadingReset = false');
-        loadingReset.value = false;
-    }
-};
-
-const voltarParaLogin = () => {
-    router.push({ name: 'login' });
-};
-
-// Lifecycle
-onMounted(() => {
-    console.log('Route params:', route.params);
-    token.value = route.params.token || '';
-
-    if (!token.value) {
-        tokenValido.value = false;
-        loading.value = false;
-        mensagemErro.value = 'Token de reset não fornecido na URL.';
-    } else {
-        console.log('Token capturado:', token.value);
-        validarToken();
-    }
-});
-</script>
-
 <template>
     <div class="min-h-screen flex bg-gradient-to-br from-green-50 to-green-100">
         <!-- Lado Esquerdo -->
@@ -316,5 +160,161 @@ onMounted(() => {
         </div>
     </div>
 </template>
+
+<script setup>
+import AuthService from '@/service/AuthService.js';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+const router = useRouter();
+const route = useRoute();
+
+const token = ref('');
+const loading = ref(true);
+const loadingReset = ref(false);
+const tokenValido = ref(false);
+const mensagemErro = ref('');
+const mensagemSucesso = ref('');
+
+const formSenha = ref({
+    novaSenha: '',
+    confirmarSenha: ''
+});
+const mostrarSenha = ref({
+    nova: false,
+    confirmar: false
+});
+
+const errosSenha = ref({});
+
+// Calcular força da senha
+const calcularForcaSenha = (senha) => {
+    if (!senha) return { forca: 0, label: '', cor: '', percentual: 0 };
+
+    let forca = 0;
+    if (senha.length >= 8) forca++;
+    if (/[A-Z]/.test(senha)) forca++;
+    if (/[0-9]/.test(senha)) forca++;
+    if (/[!@#$%^&*]/.test(senha)) forca++;
+
+    const labels = ['', 'Fraca', 'Média', 'Forte', 'Muito Forte'];
+    const cores = ['danger', 'danger', 'warning', 'success', 'success'];
+
+    return {
+        forca: forca,
+        label: labels[forca] || 'Muito Forte',
+        cor: cores[forca] || 'success',
+        percentual: (forca / 4) * 100
+    };
+};
+
+const forcaSenha = computed(() => calcularForcaSenha(formSenha.value.novaSenha));
+
+const barraSenha = computed(() => {
+    const forca = forcaSenha.value.forca;
+    return [forca >= 1, forca >= 2, forca >= 3, forca >= 4];
+});
+
+const corBarraSenha = computed(() => {
+    const cor = forcaSenha.value.cor;
+    if (cor === 'success') return 'bg-green-600';
+    if (cor === 'warning') return 'bg-yellow-600';
+    return 'bg-red-600';
+});
+
+// Botão resetar habilitado?
+const podeResetar = computed(() => {
+    return formSenha.value.novaSenha.trim() !== '' && formSenha.value.confirmarSenha.trim() !== '' && formSenha.value.novaSenha === formSenha.value.confirmarSenha && forcaSenha.value.forca >= 3;
+});
+
+// Validar token
+const validarToken = async () => {
+    try {
+        loading.value = true;
+        console.log('Validando token de reset de senha:', token.value);
+        const response = await AuthService.checkToken(token.value);
+
+        if (response.data && response.data.success && response.data.data.valido) {
+            tokenValido.value = true;
+        } else {
+            mensagemErro.value = response.data?.message || 'Token inválido ou expirado';
+        }
+    } catch (error) {
+        console.error('Erro ao validar token:', error);
+        if (error.response && error.response.data && error.response.data.message) {
+            mensagemErro.value = error.response.data.message;
+        } else {
+            mensagemErro.value = 'O link de recuperação expirou. Solicite um novo link para recuperar sua senha.';
+        }
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Resetar senha
+const handleReset = async () => {
+    if (!podeResetar.value) {
+        console.log('❌ handleReset retornando porque podeResetar é false');
+        return;
+    }
+
+    try {
+        console.log('6️⃣ Definindo loadingReset = true');
+        loadingReset.value = true;
+        mensagemErro.value = '';
+        mensagemSucesso.value = '';
+
+        const dadosEnvio = {
+            token: token.value,
+            senha: formSenha.value.novaSenha
+        };
+        const response = await AuthService.resetarSenha(dadosEnvio);
+
+        if (response.data && response.data.success) {
+            console.log('✅ Sucesso! Mensagem:', response.data.message);
+            mensagemSucesso.value = response.data.message || 'Senha redefinida com sucesso! Redirecionando...';
+
+            // Redireciona para login após 3 segundos
+            setTimeout(() => {
+                console.log('⏱️ Redirecionando para login');
+                router.push({ name: 'login' });
+            }, 3000);
+        } else {
+            console.log('❌ response.data.success é false ou undefined');
+            mensagemErro.value = response.data?.message || 'Erro ao redefinir senha. Tente novamente.';
+        }
+    } catch (error) {
+        console.error('💥 Erro no try-catch:', error);
+        console.error('Response error:', error.response?.data);
+        if (error.response && error.response.data && error.response.data.message) {
+            mensagemErro.value = error.response.data.message;
+        } else {
+            mensagemErro.value = 'Erro ao redefinir senha. Tente novamente mais tarde.';
+        }
+    } finally {
+        console.log('🏁 finally block - Definindo loadingReset = false');
+        loadingReset.value = false;
+    }
+};
+
+const voltarParaLogin = () => {
+    router.push({ name: 'login' });
+};
+
+// Lifecycle
+onMounted(() => {
+    console.log('Route params:', route.params);
+    token.value = route.params.token || '';
+
+    if (!token.value) {
+        tokenValido.value = false;
+        loading.value = false;
+        mensagemErro.value = 'Token de reset não fornecido na URL.';
+    } else {
+        console.log('Token capturado:', token.value);
+        validarToken();
+    }
+});
+</script>
 
 <style scoped></style>

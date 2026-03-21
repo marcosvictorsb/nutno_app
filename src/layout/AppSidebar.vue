@@ -1,3 +1,9 @@
+<template>
+    <div ref="sidebarRef" class="layout-sidebar">
+        <AppMenu />
+    </div>
+</template>
+
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
 import { onBeforeUnmount, ref, watch } from 'vue';
@@ -58,9 +64,3 @@ onBeforeUnmount(() => {
     unbindOutsideClickListener();
 });
 </script>
-
-<template>
-    <div ref="sidebarRef" class="layout-sidebar">
-        <AppMenu />
-    </div>
-</template>
