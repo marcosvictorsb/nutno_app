@@ -1,55 +1,59 @@
 <template>
-    <div class="space-y-6">
+    <div class="space-y-3">
         <!-- Success Message -->
-        <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-start gap-4">
                 <i class="pi pi-check-circle text-green-600 text-3xl mt-1"></i>
                 <div>
-                    <h3 class="text-lg font-bold text-green-900 mb-1">Plano criado com sucesso!</h3>
-                    <p class="text-green-800">Compartilhe o plano alimentar com {{ paciente.nome }} através dos canais abaixo.</p>
+                    <h3 class="text-lg font-bold text-green-900 mb-0.5">Plano criado com sucesso!</h3>
+                    <p class="text-green-800 text-sm">Compartilhe o plano alimentar com {{ paciente.nome }} através dos canais abaixo.</p>
                 </div>
             </div>
         </div>
 
         <!-- Plan Summary -->
-        <div class="bg-white border border-slate-200 rounded-lg p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Resumo do Plano</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="text-center p-3 bg-slate-50 rounded-lg">
-                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Plano</p>
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Resumo do Plano</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div class="text-center p-2 bg-slate-50 rounded-lg">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-0.5">Plano</p>
                     <p class="text-sm font-bold text-slate-800">{{ formularioPlano.nome }}</p>
                 </div>
-                <div class="text-center p-3 bg-slate-50 rounded-lg">
-                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Objetivo</p>
+                <div class="text-center p-2 bg-slate-50 rounded-lg">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-0.5">Objetivo</p>
                     <p class="text-sm font-bold text-slate-800">{{ formularioPlano.objetivo }}</p>
                 </div>
-                <div class="text-center p-3 bg-emerald-50 rounded-lg">
-                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Meta Calórica</p>
+                <div class="text-center p-2 bg-emerald-50 rounded-lg">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-0.5">Meta Calórica</p>
                     <p class="text-lg font-bold text-emerald-600">{{ formularioPlano.calorias_meta }}</p>
                     <p class="text-xs text-slate-600">kcal/dia</p>
                 </div>
-                <div class="text-center p-3 bg-slate-50 rounded-lg">
-                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Refeições</p>
+                <div class="text-center p-2 bg-slate-50 rounded-lg">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-0.5">Refeições</p>
                     <p class="text-sm font-bold text-slate-800">{{ formularioPlano.refeicoes ? formularioPlano.refeicoes.length : 0 }}</p>
                 </div>
             </div>
         </div>
 
         <!-- Link Section -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 class="text-lg font-bold text-blue-900 mb-4">Link do Plano</h3>
-            <div class="flex items-center gap-2 bg-white border border-blue-200 rounded-lg p-3 mb-3">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-blue-900 mb-2">Link do Plano</h3>
+            <div class="flex items-center gap-2 bg-white border border-blue-200 rounded-lg p-2 mb-2">
                 <i class="pi pi-link text-blue-600"></i>
                 <span class="text-sm font-mono text-slate-700 flex-1 truncate">{{ linkPlano }}</span>
                 <Button :label="copiadoRecentemente ? 'Copiado!' : 'Copiar'" :icon="copiadoRecentemente ? 'pi pi-check' : 'pi pi-copy'" size="small" :severity="copiadoRecentemente ? 'success' : 'secondary'" text @click="copiarLink" />
             </div>
-            <p class="text-xs text-blue-700">Este link permite que o paciente acesse o plano de qualquer dispositivo</p>
+            <div class="bg-blue-100 border border-blue-300 rounded p-3 mb-2">
+                <p class="text-xs font-semibold text-blue-900 mb-1">Acesso por Email</p>
+                <p class="text-xs text-blue-800">O link será enviado por email para o paciente com uma <strong>senha segura</strong> para visualizar e acompanhar o plano alimentar.</p>
+            </div>
+            <p class="text-xs text-blue-700">Compartilhe também manualmente se preferir. O paciente poderá acessar de qualquer dispositivo com o link e a senha.</p>
         </div>
 
         <!-- Message Section -->
-        <div class="bg-white border border-slate-200 rounded-lg p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Mensagem Personalizada (Opcional)</h3>
-            <p class="text-sm text-slate-600 mb-3">Adicione uma mensagem personalizada para o seu paciente:</p>
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Mensagem Personalizada (Opcional)</h3>
+            <p class="text-sm text-slate-600 mb-2">Adicione uma mensagem personalizada para o seu paciente:</p>
             <textarea
                 v-model="mensagemPersonalizada"
                 placeholder="Escreva uma mensagem personalizada ou deixe em branco para usar a mensagem padrão..."
@@ -60,9 +64,9 @@
         </div>
 
         <!-- Sharing Options -->
-        <div class="bg-white border border-slate-200 rounded-lg p-6">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">Enviar Plano</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="bg-white border border-slate-200 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Enviar Plano</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <Button label="Enviar via WhatsApp" icon="pi pi-send" severity="success" @click="enviarPorWhatsApp" class="justify-center" :disabled="!paciente.whatsapp" />
                 <Button label="Enviar via Email" icon="pi pi-envelope" severity="info" @click="enviarPorEmail" class="justify-center" :disabled="!paciente.email" />
             </div>
@@ -77,7 +81,7 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex gap-3 pt-4 border-t border-slate-200">
+        <div class="flex gap-3 pt-2 border-t border-slate-200">
             <Button label="Enviar Depois" severity="secondary" outlined @click="enviarDepois" class="flex-1" />
             <Button label="Concluir" severity="success" @click="fechar" class="flex-1" />
         </div>

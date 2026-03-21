@@ -24,19 +24,19 @@
 
         <!-- STEP 3: Revisão -->
         <template #step-3>
-            <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" :loadingSalvar="loadingCriacaoPlano" @salvar="salvarPlano" @voltar="stepAtualPlano--" />
+            <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" />
         </template>
 
         <!-- STEP 4: Enviar -->
         <template #step-4>
-            <WizardStep4Enviar :formularioPlano="formularioPlano" :paciente="paciente" :linkPlano="linkPlano" @enviar-depois="fecharCriacaoPlano" @fechar="fecharCriacaoPlano" />
+            <WizardStep4Enviar :formularioPlano="formularioPlano" :paciente="paciente" :linkPlano="linkPlanoGerado" @enviar-depois="fecharCriacaoPlano" @fechar="fecharCriacaoPlano" />
         </template>
 
         <!-- Footer Buttons -->
         <template #footer-buttons>
             <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
             <Button v-else-if="stepAtualPlano === 2" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
-            <!-- Step 3 e 4 têm seus próprios botões dentro dos componentes -->
+            <Button v-else-if="stepAtualPlano === 3" label="Salvar Plano" severity="success" @click="salvarPlano" :loading="loadingCriacaoPlano" icon="pi pi-check" />
         </template>
     </ModalCriacaoPlano>
 </template>
@@ -78,6 +78,7 @@ const emit = defineEmits(['update:visible', 'fechar', 'concluido']);
 const stepAtualPlano = ref(1);
 const loadingCriacaoPlano = ref(false);
 const errosPlano = ref({});
+const linkPlanoGerado = ref('');
 
 // Macro tracking flags
 const macrosForamEditadosManualmente = ref(false);
@@ -382,10 +383,10 @@ const salvarPlano = async () => {
                 ordem: refeicao.ordem,
                 observacoes: refeicao.notas || '',
                 itens: refeicao.itens.map((item) => ({
-                    id_alimento: item.alimento_id,
+                    id_alimento: item.id,
                     quantidade: item.quantidade,
                     unidade: item.unidade,
-                    observacoes: ''
+                    observacoes: item.observacoes || ''
                 }))
             }))
         };
@@ -410,6 +411,14 @@ const salvarPlano = async () => {
                 detail: 'Plano alimentar criado com sucesso!',
                 life: 3000
             });
+        }
+
+        // Extrair token_visualizacao e gerar link do plano
+        const planoData = Array.isArray(response.dados) ? response.dados[0] : response.dados;
+        if (planoData && planoData.token_visualizacao) {
+            const token = planoData.token_visualizacao;
+            const baseUrl = import.meta.env.VITE_API_BASE_URL?.includes('localhost') || import.meta.env.DEV ? 'localhost:5173' : 'www.nutno.com.br';
+            linkPlanoGerado.value = `${import.meta.env.DEV ? 'http://' : 'https://'}${baseUrl}/plano/${token}`;
         }
 
         // Avançar para Step 4 (Enviar)
