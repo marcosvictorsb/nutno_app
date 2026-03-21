@@ -1,11 +1,11 @@
 <template>
     <ModalCriacaoPlano
-        :visible="modalVisible"
+        :visible="props.visible"
         :step="stepAtualPlano"
         :paciente="paciente"
         :editandoPlanoId="editandoPlanoId"
         :loading="loadingCriacaoPlano"
-        @update:visible="modalVisible = $event"
+        @update:visible="emit('update:visible', $event)"
         @update:step="stepAtualPlano = $event"
         @fechar="handleFechar"
         @avancar-step="avancarStep"
@@ -48,12 +48,15 @@ import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
 import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
 import WizardStep4Enviar from '@/components/wizard/WizardStep4Enviar.vue';
 import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
+import MedidaService from '@/service/MedidaService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
-import { computed, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 const toast = useToast();
+const route = useRoute();
 const { inicializarRefeicoes } = usePlanosAlimentares();
 
 // ========== PROPS & EMITS ==========
@@ -105,12 +108,133 @@ const formularioPlano = ref({
 });
 
 // ========== COMPUTED ==========
-const modalVisible = computed({
-    get: () => props.visible ?? false,
-    set: (value) => emit('update:visible', value)
-});
+// Removed modalVisible - now using props.visible directly
 
 // ========== WATCH & LIFECYCLE ==========
+// Load plan data or measures when wizard opens
+watch(
+    () => props.visible,
+    async (isVisible) => {
+        if (isVisible) {
+            try {
+                const idPaciente = route.params.id;
+
+                if (props.editandoPlanoId) {
+                    // Modo edição - carregar dados do plano
+                    const responsePlano = await PlanoAlimentarService.buscar(idPaciente, props.editandoPlanoId);
+                    const planoData = responsePlano.dados;
+
+                    if (!planoData) {
+                        throw new Error(`Plano com ID ${props.editandoPlanoId} não encontrado`);
+                    }
+
+                    formularioPlano.value = {
+                        nome: planoData.nome || '',
+                        objetivo: planoData.objetivo || '',
+                        calorias_meta: parseFloat(planoData.calorias_objetivo) || 2000,
+                        refeicoes_dia: (planoData.refeicoes && planoData.refeicoes.length) || 5,
+                        proteina_g: 150,
+                        proteina_perc: parseFloat(planoData.proteinas_objetivo_pct) || 30,
+                        carboidrato_g: 250,
+                        carboidrato_perc: parseFloat(planoData.carboidratos_objetivo_pct) || 45,
+                        gordura_g: 66,
+                        gordura_perc: parseFloat(planoData.gorduras_objetivo_pct) || 25,
+                        refeicoes: [],
+                        notas: planoData.observacoes || ''
+                    };
+
+                    // Recalcular gramas
+                    formularioPlano.value.proteina_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.proteina_perc) / 100 / 4);
+                    formularioPlano.value.carboidrato_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.carboidrato_perc) / 100 / 4);
+                    formularioPlano.value.gordura_g = Math.round((formularioPlano.value.calorias_meta * formularioPlano.value.gordura_perc) / 100 / 9);
+
+                    // Mapear refeições se existirem
+                    if (planoData.refeicoes && Array.isArray(planoData.refeicoes) && planoData.refeicoes.length > 0) {
+                        formularioPlano.value.refeicoes = planoData.refeicoes.map((refeicaoApi) => {
+                            const distribuicoes = {
+                                'Café da manhã': 0.25,
+                                'Lanche manhã': 0.1,
+                                Almoço: 0.35,
+                                'Lanche tarde': 0.1,
+                                Jantar: 0.2
+                            };
+                            const percDistribuicao = distribuicoes[refeicaoApi.nome] || 0.2;
+
+                            const itensMap = (refeicaoApi.itens || []).map((item) => ({
+                                id: item.id,
+                                alimento_id: item.alimento_id,
+                                nome_alimento: item.alimento ? item.alimento.nome : '',
+                                grupo_alimento: item.alimento ? item.alimento.grupo : '',
+                                quantidade: parseFloat(item.quantidade),
+                                unidade: item.unidade,
+                                calorias_calculadas: parseFloat(item.calorias_calculadas),
+                                proteinas_calculadas: parseFloat(item.proteinas_calculadas),
+                                carboidratos_calculados: parseFloat(item.carboidratos_calculados),
+                                gorduras_calculadas: parseFloat(item.gorduras_calculadas)
+                            }));
+
+                            let total_calorias = 0;
+                            let total_proteinas_g = 0;
+                            let total_carboidrato_g = 0;
+                            let total_gordura_g = 0;
+                            itensMap.forEach((item) => {
+                                total_calorias += item.calorias_calculadas;
+                                total_proteinas_g += item.proteinas_calculadas;
+                                total_carboidrato_g += item.carboidratos_calculados;
+                                total_gordura_g += item.gorduras_calculadas;
+                            });
+
+                            return {
+                                id: refeicaoApi.id,
+                                nome: refeicaoApi.nome || '',
+                                horario: refeicaoApi.horario_sugerido ? refeicaoApi.horario_sugerido.substring(0, 5) : '',
+                                ordem: refeicaoApi.ordem || 0,
+                                notas: refeicaoApi.observacoes || '',
+                                itens: itensMap,
+                                meta_calorias: Math.round(formularioPlano.value.calorias_meta * percDistribuicao),
+                                meta_proteinas_g: Math.round(formularioPlano.value.proteina_g * percDistribuicao),
+                                meta_carboidrato_g: Math.round(formularioPlano.value.carboidrato_g * percDistribuicao),
+                                meta_gordura_g: Math.round(formularioPlano.value.gordura_g * percDistribuicao),
+                                total_calorias: Math.round(total_calorias * 10) / 10,
+                                total_proteinas_g: Math.round(total_proteinas_g * 10) / 10,
+                                total_carboidrato_g: Math.round(total_carboidrato_g * 10) / 10,
+                                total_gordura_g: Math.round(total_gordura_g * 10) / 10
+                            };
+                        });
+                    }
+
+                    formularioPlanoCalorias_metaOriginal.value = formularioPlano.value.calorias_meta;
+                    objetivoPreSelecionadoCom.value = null;
+                    macrosSugeridosPor.value = null;
+                } else {
+                    // Modo criação - carregar medidas
+                    const response = await MedidaService.listarMedidasPaciente(idPaciente);
+                    if (response.data.success && response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+                        // Dados das medidas estarão disponíveis via props passadas do pai
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados do wizard:', error);
+                toast.add({
+                    severity: 'error',
+                    summary: 'Erro',
+                    detail: error.message || 'Erro ao carregar dados',
+                    life: 3000
+                });
+            }
+        } else {
+            // Reset state when closing
+            stepAtualPlano.value = 1;
+            errosPlano.value = {};
+            calorias_metaEditada.value = false;
+            calorias_metaSugeridaPor.value = null;
+            macrosForamEditadosManualmente.value = false;
+            macrosSugeridosPor.value = null;
+            atualizandoMacrosProgramaticamente.value = false;
+        }
+    }
+);
+
 // **REGRA 6**: Detectar edição manual de calorias_meta
 watch(
     () => formularioPlano.value.calorias_meta,
@@ -312,7 +436,7 @@ const salvarPlano = async () => {
 
 // ========== CLOSE WIZARD ==========
 const fecharCriacaoPlano = () => {
-    modalVisible.value = false;
+    emit('update:visible', false);
     stepAtualPlano.value = 1;
     formularioPlano.value = {
         nome: '',
