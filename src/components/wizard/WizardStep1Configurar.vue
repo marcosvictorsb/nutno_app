@@ -350,7 +350,7 @@
                         <div class="w-2 h-2 rounded-full bg-emerald-600"></div>
                         <p class="text-xs font-bold text-emerald-700 uppercase">Proteína</p>
                     </div>
-                    <p class="text-lg font-bold text-emerald-700">{{ formularioPlano.proteina_g }}<span class="text-xs text-emerald-600">g</span></p>
+                    <p class="text-lg font-bold text-emerald-700 -mb-1">{{ formularioPlano.proteina_g }}<span class="text-xs text-emerald-600">g</span></p>
                     <p class="text-xs text-emerald-600 mt-0.5">{{ Math.round(formularioPlano.proteina_g * 4) }} kcal</p>
                 </div>
 
@@ -359,7 +359,7 @@
                         <div class="w-2 h-2 rounded-full bg-blue-600"></div>
                         <p class="text-xs font-bold text-blue-700 uppercase">Carboidrato</p>
                     </div>
-                    <p class="text-lg font-bold text-blue-700">{{ formularioPlano.carboidrato_g }}<span class="text-xs text-blue-600">g</span></p>
+                    <p class="text-lg font-bold text-blue-700 -mb-1">{{ formularioPlano.carboidrato_g }}<span class="text-xs text-blue-600">g</span></p>
                     <p class="text-xs text-blue-600 mt-0.5">{{ Math.round(formularioPlano.carboidrato_g * 4) }} kcal</p>
                 </div>
 
@@ -368,44 +368,44 @@
                         <div class="w-2 h-2 rounded-full bg-red-600"></div>
                         <p class="text-xs font-bold text-red-700 uppercase">Gordura</p>
                     </div>
-                    <p class="text-lg font-bold text-red-700">{{ formularioPlano.gordura_g }}<span class="text-xs text-red-600">g</span></p>
+                    <p class="text-lg font-bold text-red-700 -mb-1">{{ formularioPlano.gordura_g }}<span class="text-xs text-red-600">g</span></p>
                     <p class="text-xs text-red-600 mt-0.5">{{ Math.round(formularioPlano.gordura_g * 9) }} kcal</p>
                 </div>
             </div>
 
             <!-- Sliders com Labels -->
-            <div class="space-y-2 mt-3">
-                <div class="space-y-1">
+            <div class="space-y-4 mt-4">
+                <div class="space-y-2">
                     <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-1">
-                            <div class="w-2 h-2 rounded-full bg-emerald-600"></div>
-                            <span class="text-xs font-semibold text-slate-700">Proteínas</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-emerald-600"></div>
+                            <span class="text-sm font-bold text-slate-800">Proteínas</span>
                         </div>
-                        <span class="text-xs font-bold text-emerald-600">{{ proteinaPerc }}%</span>
+                        <span class="text-lg font-bold text-emerald-600">{{ proteinaPerc }}%</span>
                     </div>
-                    <Slider v-model="proteinaPerc" :min="5" :max="70" class="w-full" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, proteina_perc: $event })" />
+                    <Slider v-model="proteinaPerc" :min="5" :max="70" class="w-full" :style="{ height: '8px' }" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, proteina_perc: $event })" />
                 </div>
 
-                <div class="space-y-1">
+                <div class="space-y-2">
                     <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-1">
-                            <div class="w-2 h-2 rounded-full bg-blue-600"></div>
-                            <span class="text-xs font-semibold text-slate-700">Carboidratos</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-blue-600"></div>
+                            <span class="text-sm font-bold text-slate-800">Carboidratos</span>
                         </div>
-                        <span class="text-xs font-bold text-blue-600">{{ carboidratoPerc }}%</span>
+                        <span class="text-lg font-bold text-blue-600">{{ carboidratoPerc }}%</span>
                     </div>
-                    <Slider v-model="carboidratoPerc" :min="5" :max="70" class="w-full" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, carboidrato_perc: $event })" />
+                    <Slider v-model="carboidratoPerc" :min="5" :max="70" class="w-full" :style="{ height: '8px' }" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, carboidrato_perc: $event })" />
                 </div>
 
-                <div class="space-y-1">
+                <div class="space-y-2">
                     <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-1">
-                            <div class="w-2 h-2 rounded-full bg-red-600"></div>
-                            <span class="text-xs font-semibold text-slate-700">Gorduras</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-600"></div>
+                            <span class="text-sm font-bold text-slate-800">Gorduras</span>
                         </div>
-                        <span class="text-xs font-bold text-red-600">{{ gorduraPerc }}%</span>
+                        <span class="text-lg font-bold text-red-600">{{ gorduraPerc }}%</span>
                     </div>
-                    <Slider v-model="gorduraPerc" :min="5" :max="70" class="w-full" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, gordura_perc: $event })" />
+                    <Slider v-model="gorduraPerc" :min="5" :max="70" class="w-full" :style="{ height: '8px' }" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, gordura_perc: $event })" />
                 </div>
             </div>
 
