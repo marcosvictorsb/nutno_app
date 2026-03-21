@@ -5,7 +5,7 @@
 
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import AnamneseService from '@/service/AnamneseService';
@@ -190,22 +190,24 @@ export function useMedidas(pacienteId, paciente, activeTab) {
             observacoes: ''
         };
         pressaoArterialCombinada.value = '';
-        showDialogCriacaoMedida.value = true;
 
-        // Buscar dados da última anamnese para preencher campos
+        // Buscar dados da última anamnese para preencher campos automaticamente
         try {
             const response = await AnamneseService.obterAnamnesePaciente(paciente.value.id);
             if (response.data.success && response.data.data) {
                 const anamneseData = response.data.data;
+                let preencheuDados = false;
 
                 // Preencher peso
                 if (anamneseData.peso_atual) {
                     formularioMedida.value.peso = parseFloat(anamneseData.peso_atual);
+                    preencheuDados = true;
                 }
 
                 // Preencher altura
                 if (anamneseData.altura) {
                     formularioMedida.value.altura = parseFloat(anamneseData.altura);
+                    preencheuDados = true;
                 }
 
                 // Definir nível de atividade baseado nos dados da anamnese
@@ -226,17 +228,29 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
                 // Calcular TMB automaticamente se temos todos os dados necessários
                 if (paciente.value?.data_nascimento && formularioMedida.value.peso && formularioMedida.value.altura) {
-                    await nextTick();
                     const idade = calcularIdade(paciente.value.data_nascimento);
                     const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
                     if (tmb) {
                         formularioMedida.value.tmb = tmb;
                     }
                 }
+
+                // Mostrar feedback ao usuário
+                if (preencheuDados) {
+                    toast.add({
+                        severity: 'info',
+                        summary: 'Dados carregados',
+                        detail: 'Peso, altura e nível de atividade foram preenchidos automaticamente da anamnese',
+                        life: 3000
+                    });
+                }
             }
         } catch (error) {
             // Continuar mesmo se não conseguir buscar a anamnese
         }
+
+        // Abrir modal APÓS carregar dados
+        showDialogCriacaoMedida.value = true;
     };
 
     /**
