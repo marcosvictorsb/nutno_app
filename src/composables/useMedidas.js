@@ -128,8 +128,9 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
                     // A primeira medida é sempre a mais recente - preencher a seleção
                     medidaSelecionada.value = medidas.value[0];
+                    console.log('📊 Medida selecionada definida para a mais recente:', medidaSelecionada.value);
                     console.log('📍 Medida selecionada:', medidaSelecionada.value.id, '- Peso:', medidaSelecionada.value.peso, 'kg');
-                    medidaSelecionada.value.imc = medidaSelecionada.value.gasto_energetico_total;
+                    medidaSelecionada.value.imc = medidaSelecionada.value.imc ? parseFloat(medidaSelecionada.value.imc) : null;
 
                     erroMedidas.value = null;
                 } else {

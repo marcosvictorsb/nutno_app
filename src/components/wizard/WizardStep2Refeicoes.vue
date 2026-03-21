@@ -3,382 +3,346 @@ import AlimentoService from '@/service/AlimentoService';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
-import { debounce } from 'primevue/utils';
-import { computed, defineExpose, ref, watch } from 'vue';
+import { computed, defineExpose, ref } from 'vue';
 
 // Props
 const props = defineProps({
     formularioPlano: { type: Object, required: true },
+    medidaMaisRecente: { type: Object, default: null },
+    anamnese: { type: Object, default: null },
     paciente: { type: Object, default: null }
 });
 
 // Emits
-const emit = defineEmits(['update:formularioPlano', 'voltar', 'avancar']);
+const emit = defineEmits(['update:formularioPlano', 'salvar', 'voltar']);
 
-// State
-const refeicaoExpandida = ref(0);
-const buscaAlimento = ref('');
-const alimentosEncontrados = ref([]);
-const loadingBusca = ref(false);
-const alimentoSelecionado = ref(null);
-const quantidadeSelecionada = ref(1);
-const unidadeSelecionada = ref('g');
+// Local state
+const buscarAlimentoText = ref('');
+const resultadosBusca = ref([]);
+const refeicaoExpandida = ref(null);
+const formQuantidade = ref({ quantidade: 1, unidade: 'g', kcal: 0 });
+const searchTimeout = ref(null);
 
-// Configuração de refeições padrão
-const refeicoesPadrao = [
-    { id: 1, nome: 'Café da manhã', emoji: '🥐', horario: '07:00' },
-    { id: 2, nome: 'Almoço', emoji: '🍽️', horario: '13:00' },
-    { id: 3, nome: 'Lanche', emoji: '🥤', horario: '16:00' },
-    { id: 4, nome: 'Jantar', emoji: '🍲', horario: '20:00' },
-    { id: 5, nome: 'Ceia', emoji: '🥛', horario: '22:00' },
-    { id: 6, nome: 'Extra', emoji: '⭐', horario: '—' }
-];
+// Computed
+const calcularTotaisDia = computed(() => {
+    const totais = {
+        carboidrato: 0,
+        proteina: 0,
+        gordura: 0,
+        kcal: 0
+    };
 
-// ===== COMPUTED =====
-
-const refeicoes = computed(() => {
-    const refeicoes = [];
-    for (let i = 1; i <= props.formularioPlano.refeicoes_dia; i++) {
-        const ref = refeicoesPadrao[i - 1] || { id: i, nome: `Refeição ${i}`, emoji: '🍽️', horario: '—' };
-        refeicoes.push({
-            ...ref,
-            items: props.formularioPlano.refeicoes?.[i - 1] || [],
-            get totalKcal() {
-                return this.items.reduce((sum, item) => sum + (item.kcal || 0), 0);
-            }
+    if (props.formularioPlano.refeicoes) {
+        props.formularioPlano.refeicoes.forEach((refeicao) => {
+            refeicao.alimentos?.forEach((alimento) => {
+                totais.carboidrato += alimento.carboidrato || 0;
+                totais.proteina += alimento.proteina || 0;
+                totais.gordura += alimento.gordura || 0;
+                totais.kcal += alimento.kcal || 0;
+            });
         });
     }
-    return refeicoes;
+
+    return totais;
 });
 
-const totaisPlano = computed(() => {
-    if (!props.formularioPlano.refeicoes) return null;
-
-    const items = props.formularioPlano.refeicoes.flat();
-    if (items.length === 0) return null;
-
-    const totalKcal = items.reduce((sum, item) => sum + (item.kcal || 0), 0);
-    const proteina_g = items.reduce((sum, item) => sum + (item.proteina_g || 0), 0);
-    const carboidrato_g = items.reduce((sum, item) => sum + (item.carboidrato_g || 0), 0);
-    const gordura_g = items.reduce((sum, item) => sum + (item.gordura_g || 0), 0);
-
+const calcularTotaisRefeicao = (alimentos) => {
     return {
-        totalKcal,
-        proteina_g,
-        carboidrato_g,
-        gordura_g
+        carboidrato: alimentos.reduce((acc, a) => acc + (a.carboidrato || 0), 0),
+        proteina: alimentos.reduce((acc, a) => acc + (a.proteina || 0), 0),
+        gordura: alimentos.reduce((acc, a) => acc + (a.gordura || 0), 0),
+        kcal: alimentos.reduce((acc, a) => acc + (a.kcal || 0), 0)
     };
-});
+};
 
-const percentualCalorias = computed(() => {
-    if (!totaisPlano.value) return 0;
-    return Math.round((totaisPlano.value.totalKcal / props.formularioPlano.calorias_meta) * 100);
-});
-
-// ===== WATCHERS & FUNCTIONS =====
-
-const buscarAlimentos = debounce(async (query) => {
-    if (!query || query.length < 2) {
-        alimentosEncontrados.value = [];
+// Methods
+const buscarAlimentos = (texto) => {
+    if (texto.length < 2) {
+        resultadosBusca.value = [];
         return;
     }
 
-    loadingBusca.value = true;
-    try {
-        const response = await AlimentoService.buscar(query, 10);
-        alimentosEncontrados.value = response?.data || [];
-    } catch (error) {
-        console.error('Erro ao buscar alimentos:', error);
-        alimentosEncontrados.value = [];
-    } finally {
-        loadingBusca.value = false;
+    // Clear previous timeout
+    if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value);
     }
-}, 300);
 
-watch(
-    () => buscaAlimento.value,
-    (novoValor) => {
-        if (novoValor) {
-            buscarAlimentos(novoValor);
-        } else {
-            alimentosEncontrados.value = [];
+    // Debounce search - 300ms delay
+    searchTimeout.value = setTimeout(async () => {
+        try {
+            const response = await AlimentoService.buscarAlimentos({
+                busca: texto,
+                limite: 10
+            });
+            resultadosBusca.value = Array.isArray(response.data) ? response.data : response.data?.alimentos || [];
+        } catch (error) {
+            console.error('Erro ao buscar alimentos:', error);
+            resultadosBusca.value = [];
         }
-    }
-);
+    }, 300);
+};
 
-// Adicionar alimento à refeição
-const adicionarAlimento = (refeicaoIndex) => {
-    if (!alimentoSelecionado.value) return;
-
-    const novasRefeicoes = JSON.parse(JSON.stringify(props.formularioPlano.refeicoes || []));
-
-    if (!novasRefeicoes[refeicaoIndex]) {
-        novasRefeicoes[refeicaoIndex] = [];
+const adicionarItem = (refeicaoIndex, alimento) => {
+    const novas_refeicoes = [...props.formularioPlano.refeicoes];
+    if (!novas_refeicoes[refeicaoIndex].alimentos) {
+        novas_refeicoes[refeicaoIndex].alimentos = [];
     }
 
-    const alimento = alimentoSelecionado.value;
-    const kcal = Math.round(alimento.kcal_100g * (quantidadeSelecionada.value / 100));
-    const proteina_g = Math.round((alimento.proteina_g * quantidadeSelecionada.value) / 100);
-    const carboidrato_g = Math.round((alimento.carboidrato_g * quantidadeSelecionada.value) / 100);
-    const gordura_g = Math.round((alimento.gordura_g * quantidadeSelecionada.value) / 100);
+    // Calcula KCal se não foi preenchido
+    let kcal = formQuantidade.value.kcal || alimento.kcal_padrao || 0;
+    if (!formQuantidade.value.kcal && alimento.kcal_padrao) {
+        kcal = (alimento.kcal_padrao / 100) * formQuantidade.value.quantidade;
+    }
 
-    novasRefeicoes[refeicaoIndex].push({
-        id: `${Date.now()}-${Math.random()}`,
+    novas_refeicoes[refeicaoIndex].alimentos.push({
+        id: alimento.id,
         nome: alimento.nome,
-        descricao: alimento.descricao,
-        quantidade: quantidadeSelecionada.value,
-        unidade: unidadeSelecionada.value,
+        quantidade: formQuantidade.value.quantidade,
+        unidade: formQuantidade.value.unidade,
         kcal,
-        proteina_g,
-        carboidrato_g,
-        gordura_g
+        carboidrato: (alimento.carboidratos || 0) * (formQuantidade.value.quantidade / 100),
+        proteina: (alimento.proteinas || 0) * (formQuantidade.value.quantidade / 100),
+        gordura: (alimento.lipidios || 0) * (formQuantidade.value.quantidade / 100)
     });
 
-    emit('update:formularioPlano', {
-        ...props.formularioPlano,
-        refeicoes: novasRefeicoes
-    });
-
-    alimentoSelecionado.value = null;
-    quantidadeSelecionada.value = 1;
-    unidadeSelecionada.value = 'g';
-    buscaAlimento.value = '';
+    emit('update:formularioPlano', { ...props.formularioPlano, refeicoes: novas_refeicoes });
+    buscarAlimentoText.value = '';
+    resultadosBusca.value = [];
+    formQuantidade.value = { quantidade: 1, unidade: 'g', kcal: 0 };
 };
 
-// Remover alimento
-const removerAlimento = (refeicaoIndex, itemIndex) => {
-    const novasRefeicoes = JSON.parse(JSON.stringify(props.formularioPlano.refeicoes || []));
-
-    if (novasRefeicoes[refeicaoIndex]) {
-        novasRefeicoes[refeicaoIndex].splice(itemIndex, 1);
-    }
-
-    emit('update:formularioPlano', {
-        ...props.formularioPlano,
-        refeicoes: novasRefeicoes
-    });
+const deletarItem = (refeicaoIndex, alimentoIndex) => {
+    const novas_refeicoes = [...props.formularioPlano.refeicoes];
+    novas_refeicoes[refeicaoIndex].alimentos.splice(alimentoIndex, 1);
+    emit('update:formularioPlano', { ...props.formularioPlano, refeicoes: novas_refeicoes });
 };
 
-// Adicionar refeição extra
 const adicionarRefeicaoExtra = () => {
-    if (props.formularioPlano.refeicoes_dia >= 6) return;
+    const novas_refeicoes = [...props.formularioPlano.refeicoes];
 
-    emit('update:formularioPlano', {
-        ...props.formularioPlano,
-        refeicoes_dia: props.formularioPlano.refeicoes_dia + 1
+    novas_refeicoes.push({
+        nome: `Refeição Extra ${novas_refeicoes.length + 1}`,
+        emoji: '🍽️',
+        horario: '20:00',
+        alimentos: []
     });
+
+    emit('update:formularioPlano', { ...props.formularioPlano, refeicoes: novas_refeicoes });
 };
 
-// Validação
 const validar = () => {
-    const totalItems = props.formularioPlano.refeicoes?.flat()?.length || 0;
-
-    if (totalItems === 0) {
-        console.error('Adicione pelo menos um alimento ao plano');
+    if (!props.formularioPlano.refeicoes || props.formularioPlano.refeicoes.length === 0) {
         return false;
     }
 
-    return true;
+    return props.formularioPlano.refeicoes.some((ref) => ref.alimentos && ref.alimentos.length > 0);
 };
 
 defineExpose({ validar });
 </script>
 
 <template>
-    <div class="space-y-6 pb-20">
-        <!-- Macro Dashboard (Sticky) -->
-        <div class="sticky top-0 z-30 bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 shadow-md mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
-                <!-- Total Calorias -->
-                <div class="border-r border-outline-variant/20 pr-6">
-                    <div class="flex items-baseline gap-1">
-                        <span class="text-3xl font-bold tracking-tighter">{{ totaisPlano?.totalKcal || 0 }}</span>
-                        <span class="text-on-surface-variant text-sm">/ {{ formularioPlano.calorias_meta }} kcal</span>
+    <div class="space-y-3 overflow-y-auto pr-4">
+        <!-- Barra Sticky de Progresso -->
+        <div class="sticky top-0 z-30 bg-white rounded-lg border border-slate-200 p-3 shadow-md">
+            <div class="grid grid-cols-5 gap-2">
+                <div class="text-center">
+                    <div class="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-emerald-100">
+                        <i class="pi pi-fire text-emerald-600 text-xs"></i>
                     </div>
-                    <div class="w-full bg-surface-container-highest h-2 rounded-full mt-2 overflow-hidden">
-                        <div class="bg-primary h-full rounded-full transition-all" :style="{ width: Math.min(percentualCalorias, 100) + '%' }"></div>
-                    </div>
+                    <p class="text-xs font-bold text-slate-800">{{ Math.round(calcularTotaisDia.kcal) }}</p>
+                    <p class="text-xs text-slate-600">kcal</p>
                 </div>
 
-                <!-- Macros Mini Bars -->
-                <div class="col-span-3 grid grid-cols-3 gap-8">
-                    <!-- Carboidratos -->
-                    <div>
-                        <div class="flex justify-between text-xs font-medium text-on-surface-variant mb-1">
-                            <span>Carboidratos</span>
-                            <span class="text-on-surface">{{ totaisPlano?.carboidrato_g || 0 }}g / {{ formularioPlano.carboidrato_g }}g</span>
-                        </div>
-                        <div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden">
-                            <div
-                                class="bg-blue-500 h-full rounded-full transition-all"
-                                :style="{
-                                    width: Math.min(((totaisPlano?.carboidrato_g || 0) / (formularioPlano.carboidrato_g || 1)) * 100, 100) + '%'
-                                }"
-                            ></div>
-                        </div>
+                <div class="text-center">
+                    <div class="w-full h-1 rounded-full bg-slate-200 mb-1">
+                        <div class="h-full bg-emerald-600 rounded-full transition-all" :style="{ width: (calcularTotaisDia.proteina / (formularioPlano.proteina_g || 1)) * 100 + '%' }"></div>
                     </div>
+                    <p class="text-xs font-bold text-emerald-700">{{ Math.round(calcularTotaisDia.proteina) }}g</p>
+                    <p class="text-xs text-slate-600">Proteína</p>
+                </div>
 
-                    <!-- Proteínas -->
-                    <div>
-                        <div class="flex justify-between text-xs font-medium text-on-surface-variant mb-1">
-                            <span>Proteínas</span>
-                            <span class="text-on-surface">{{ totaisPlano?.proteina_g || 0 }}g / {{ formularioPlano.proteina_g }}g</span>
-                        </div>
-                        <div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden">
-                            <div
-                                class="bg-red-400 h-full rounded-full transition-all"
-                                :style="{
-                                    width: Math.min(((totaisPlano?.proteina_g || 0) / (formularioPlano.proteina_g || 1)) * 100, 100) + '%'
-                                }"
-                            ></div>
-                        </div>
+                <div class="text-center">
+                    <div class="w-full h-1 rounded-full bg-slate-200 mb-1">
+                        <div class="h-full bg-blue-600 rounded-full transition-all" :style="{ width: (calcularTotaisDia.carboidrato / (formularioPlano.carboidrato_g || 1)) * 100 + '%' }"></div>
                     </div>
+                    <p class="text-xs font-bold text-blue-700">{{ Math.round(calcularTotaisDia.carboidrato) }}g</p>
+                    <p class="text-xs text-slate-600">Carbo</p>
+                </div>
 
-                    <!-- Gorduras -->
-                    <div>
-                        <div class="flex justify-between text-xs font-medium text-on-surface-variant mb-1">
-                            <span>Gorduras</span>
-                            <span class="text-on-surface">{{ totaisPlano?.gordura_g || 0 }}g / {{ formularioPlano.gordura_g }}g</span>
-                        </div>
-                        <div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden">
-                            <div
-                                class="bg-yellow-500 h-full rounded-full transition-all"
-                                :style="{
-                                    width: Math.min(((totaisPlano?.gordura_g || 0) / (formularioPlano.gordura_g || 1)) * 100, 100) + '%'
-                                }"
-                            ></div>
-                        </div>
+                <div class="text-center">
+                    <div class="w-full h-1 rounded-full bg-slate-200 mb-1">
+                        <div class="h-full bg-red-600 rounded-full transition-all" :style="{ width: (calcularTotaisDia.gordura / (formularioPlano.gordura_g || 1)) * 100 + '%' }"></div>
                     </div>
+                    <p class="text-xs font-bold text-red-700">{{ Math.round(calcularTotaisDia.gordura) }}g</p>
+                    <p class="text-xs text-slate-600">Gordura</p>
+                </div>
+
+                <div class="text-center">
+                    <div class="w-8 h-8 mx-auto rounded-full flex items-center justify-center mb-1" :class="calcularTotaisDia.kcal <= formularioPlano.calorias_meta ? 'bg-emerald-100' : 'bg-red-100'">
+                        <i
+                            :class="[
+                                calcularTotaisDia.kcal <= formularioPlano.calorias_meta ? 'text-emerald-600' : 'text-red-600',
+                                'pi',
+                                calcularTotaisDia.kcal <= formularioPlano.calorias_meta ? 'pi-check-circle' : 'pi-exclamation-circle',
+                                'text-xs'
+                            ]"
+                        ></i>
+                    </div>
+                    <p class="text-xs font-bold text-slate-700">{{ Math.round(formularioPlano.calorias_meta - calcularTotaisDia.kcal) }}</p>
+                    <p class="text-xs text-slate-600">Restante</p>
                 </div>
             </div>
         </div>
 
-        <!-- Meal Cards -->
-        <div class="space-y-4">
-            <div v-for="(refeicao, refIndex) in refeicoes" :key="refeicao.id" class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-sm overflow-hidden">
-                <!-- Header (Expandable) -->
-                <div class="p-6 flex items-center justify-between cursor-pointer border-b border-surface-container-low hover:bg-surface-container-low transition-colors" @click="refeicaoExpandida = refeicaoExpandida === refIndex ? -1 : refIndex">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold text-lg">
-                            {{ refeicao.emoji }}
-                        </div>
+        <!-- Refeições Cards -->
+        <div class="space-y-2">
+            <div v-for="(refeicao, refeicaoIndex) in formularioPlano.refeicoes" :key="refeicaoIndex" class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <!-- Header da Refeição -->
+                <button class="w-full p-3 flex items-center justify-between hover:bg-slate-50 transition-colors" @click="refeicaoExpandida = refeicaoExpandida === refeicaoIndex ? null : refeicaoIndex">
+                    <div class="flex items-center gap-3 flex-1 text-left">
+                        <span class="text-xl">{{ refeicao.emoji || '🍽️' }}</span>
                         <div>
-                            <h3 class="text-lg font-semibold tracking-tight">{{ refeicao.nome }}</h3>
-                            <span class="text-sm text-on-surface-variant">{{ refeicao.horario }} • {{ refeicao.items.length }} alimento{{ refeicao.items.length !== 1 ? 's' : '' }}</span>
+                            <p class="font-bold text-sm text-slate-800">{{ refeicao.nome }}</p>
+                            <p class="text-xs text-slate-600">{{ refeicao.horario || '—' }}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <span class="text-lg font-bold">
-                            {{ refeicao.totalKcal }}
-                            <span class="text-xs font-medium text-on-surface-variant">kcal</span>
-                        </span>
-                        <i :class="['pi transition-transform', refeicaoExpandida === refIndex ? 'pi-chevron-up' : 'pi-chevron-down']"></i>
+
+                    <div class="flex items-center gap-2">
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-slate-700">{{ refeicao.alimentos?.length || 0 }} items</p>
+                            <p class="text-xs text-slate-600">{{ Math.round(calcularTotaisRefeicao(refeicao.alimentos || []).kcal) }} kcal</p>
+                        </div>
+                        <i :class="['pi', 'transition-transform', refeicaoExpandida === refeicaoIndex ? 'pi-chevron-up' : 'pi-chevron-down']"></i>
+                    </div>
+                </button>
+
+                <!-- Mini Progress Bar -->
+                <div v-if="refeicao.alimentos && refeicao.alimentos.length > 0" class="px-3 h-1 bg-slate-100">
+                    <div class="h-full flex rounded-full overflow-hidden">
+                        <div class="bg-emerald-500 transition-all" :style="{ width: (calcularTotaisRefeicao(refeicao.alimentos).proteina / (formularioPlano.proteina_g / formularioPlano.refeicoes_dia || 1)) * 100 + '%' }"></div>
+                        <div class="bg-blue-500 transition-all" :style="{ width: (calcularTotaisRefeicao(refeicao.alimentos).carboidrato / (formularioPlano.carboidrato_g / formularioPlano.refeicoes_dia || 1)) * 100 + '%' }"></div>
+                        <div class="bg-red-500 transition-all" :style="{ width: (calcularTotaisRefeicao(refeicao.alimentos).gordura / (formularioPlano.gordura_g / formularioPlano.refeicoes_dia || 1)) * 100 + '%' }"></div>
                     </div>
                 </div>
 
-                <!-- Body (Expandable) -->
-                <div v-show="refeicaoExpandida === refIndex" class="p-6 bg-surface-container-lowest space-y-6">
-                    <!-- Food Table -->
-                    <div v-if="refeicao.items.length > 0">
-                        <table class="w-full text-left">
+                <!-- Corpo da Refeição (Expandido) -->
+                <div v-if="refeicaoExpandida === refeicaoIndex" class="border-t border-slate-200">
+                    <!-- Tabela de Alimentos -->
+                    <div v-if="refeicao.alimentos && refeicao.alimentos.length > 0" class="p-3 bg-slate-50">
+                        <table class="w-full text-xs">
                             <thead>
-                                <tr class="text-xs font-bold uppercase text-on-surface-variant tracking-wider border-b border-surface-container-high">
-                                    <th class="pb-3 font-semibold">Alimento</th>
-                                    <th class="pb-3 font-semibold">Qtd.</th>
-                                    <th class="pb-3 font-semibold text-right">Kcal</th>
-                                    <th class="pb-3 w-10"></th>
+                                <tr class="text-slate-700 font-bold border-b border-slate-200">
+                                    <th class="text-left py-1.5 px-1">Nome</th>
+                                    <th class="text-center py-1.5 px-1">Qtd</th>
+                                    <th class="text-right py-1.5 px-1">Kcal</th>
+                                    <th class="text-center py-1.5 px-1">—</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-surface-container-low">
-                                <tr v-for="(item, itemIndex) in refeicao.items" :key="item.id">
-                                    <td class="py-4">
-                                        <div class="font-medium">{{ item.nome }}</div>
-                                        <div class="text-xs text-on-surface-variant">{{ item.descricao }}</div>
-                                    </td>
-                                    <td class="py-4 text-sm">{{ item.quantidade }}{{ item.unidade }}</td>
-                                    <td class="py-4 text-sm font-medium text-right">{{ item.kcal }} kcal</td>
-                                    <td class="py-4 text-right">
-                                        <button @click="removerAlimento(refIndex, itemIndex)" class="text-on-surface-variant hover:text-error transition-colors">
-                                            <i class="pi pi-trash text-lg"></i>
+                            <tbody>
+                                <tr v-for="(alimento, idx) in refeicao.alimentos" :key="idx" class="border-b border-slate-200 hover:bg-white transition-colors">
+                                    <td class="py-1.5 px-1 font-medium text-slate-800">{{ alimento.nome }}</td>
+                                    <td class="py-1.5 px-1 text-center text-slate-700">{{ alimento.quantidade }} {{ alimento.unidade }}</td>
+                                    <td class="py-1.5 px-1 text-right font-bold text-slate-800">{{ Math.round(alimento.kcal) }}</td>
+                                    <td class="py-1.5 px-1 text-center">
+                                        <button @click="deletarItem(refeicaoIndex, idx)" class="text-red-600 hover:text-red-700 transition-colors">
+                                            <i class="pi pi-trash text-xs"></i>
                                         </button>
                                     </td>
                                 </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td class="pt-4 text-sm font-bold">Subtotal</td>
+                                <tr class="bg-white font-bold text-slate-800 border-t-2 border-slate-400">
+                                    <td class="py-2 px-1">Subtotal</td>
                                     <td></td>
-                                    <td class="pt-4 text-sm font-bold text-right text-primary">{{ refeicao.totalKcal }} kcal</td>
+                                    <td class="text-right py-2 px-1">{{ Math.round(calcularTotaisRefeicao(refeicao.alimentos).kcal) }} kcal</td>
                                     <td></td>
                                 </tr>
-                            </tfoot>
+                            </tbody>
                         </table>
                     </div>
-                    <div v-else class="text-center py-6 text-on-surface-variant">
-                        <p class="text-sm">Nenhum alimento adicionado</p>
-                    </div>
 
-                    <!-- Search and Add Section -->
-                    <div class="space-y-4 pt-6 border-t border-surface-container-low">
-                        <label class="block text-xs font-bold text-secondary uppercase">Adicionar alimento</label>
-                        <div class="flex gap-3">
-                            <!-- Search -->
-                            <div class="relative flex-1">
-                                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"></i>
-                                <InputText v-model="buscaAlimento" placeholder="Busque por alimento..." class="w-full pl-10 pr-4 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20" />
+                    <!-- Busca de Alimentos -->
+                    <div class="p-3 space-y-2">
+                        <InputText
+                            v-model="buscarAlimentoText"
+                            @update:model-value="buscarAlimentos"
+                            placeholder="Buscar alimento..."
+                            class="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        />
 
-                                <!-- Dropdown de alimentos -->
-                                <div v-if="alimentosEncontrados.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-surface-container-lowest shadow-md border border-outline-variant/10 rounded-lg z-10 overflow-hidden max-h-64 overflow-y-auto">
-                                    <div
-                                        v-for="alimento in alimentosEncontrados"
-                                        :key="alimento.id"
-                                        @click="alimentoSelecionado = alimento"
-                                        :class="['px-4 py-3 hover:bg-surface-container-low cursor-pointer flex justify-between items-center group', alimentoSelecionado?.id === alimento.id ? 'bg-primary-fixed/10' : '']"
-                                    >
-                                        <div>
-                                            <div class="text-sm font-medium group-hover:text-primary transition-colors">{{ alimento.nome }}</div>
-                                            <div class="text-xs text-on-surface-variant">100g = {{ alimento.kcal_100g }} kcal</div>
-                                        </div>
-                                        <i :class="['pi transition-opacity', alimentoSelecionado?.id === alimento.id ? 'pi-check text-primary' : 'pi-plus opacity-0 group-hover:opacity-100']"></i>
-                                    </div>
+                        <!-- Dropdown de Resultados -->
+                        <div v-if="resultadosBusca.length > 0" class="border border-slate-200 rounded-lg bg-white max-h-40 overflow-y-auto">
+                            <button
+                                v-for="alimento in resultadosBusca"
+                                :key="alimento.id"
+                                @click="
+                                    () => {
+                                        buscarAlimentoText = alimento.nome;
+                                        resultadosBusca = [];
+                                    }
+                                "
+                                class="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors border-b border-slate-100 text-xs"
+                            >
+                                <p class="font-medium text-slate-800">{{ alimento.nome }}</p>
+                                <p class="text-slate-600">{{ alimento.kcal_padrao }} kcal / 100g</p>
+                            </button>
+                        </div>
+
+                        <!-- Formulário de Quantidade -->
+                        <div v-if="buscarAlimentoText" class="space-y-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-xs font-semibold text-slate-700 block mb-1">Quantidade</label>
+                                    <InputNumber v-model="formQuantidade.quantidade" :use-grouping="false" class="w-full px-2 py-1 text-sm" placeholder="100" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold text-slate-700 block mb-1">Unidade</label>
+                                    <select v-model="formQuantidade.unidade" class="w-full px-2 py-1 text-sm border border-slate-200 rounded-lg bg-white">
+                                        <option>g</option>
+                                        <option>ml</option>
+                                        <option>un</option>
+                                    </select>
                                 </div>
                             </div>
+                            <div>
+                                <label class="text-xs font-semibold text-slate-700 block mb-1">KCal (opcional)</label>
+                                <InputNumber v-model="formQuantidade.kcal" :use-grouping="false" class="w-full px-2 py-1 text-sm" placeholder="Auto-calcular" />
+                            </div>
 
-                            <!-- Quantidade -->
-                            <InputNumber v-model="quantidadeSelecionada" :use-grouping="false" placeholder="Qtd" class="w-24" input-class="px-3 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 text-center" />
-
-                            <!-- Unidade -->
-                            <select v-model="unidadeSelecionada" class="w-32 px-3 py-3 bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 text-sm appearance-none cursor-pointer">
-                                <option value="g">gramas (g)</option>
-                                <option value="unidade">unidade</option>
-                                <option value="colher">colher</option>
-                                <option value="xícara">xícara</option>
-                            </select>
-
-                            <!-- Add Button -->
-                            <Button @click="adicionarAlimento(refIndex)" :disabled="!alimentoSelecionado" class="bg-primary text-on-primary px-6 rounded-lg font-semibold text-sm" icon="pi pi-plus" />
+                            <div class="flex gap-2 pt-2">
+                                <Button
+                                    @click="
+                                        () => {
+                                            const alimento = resultadosBusca.find((a) => a.nome === buscarAlimentoText);
+                                            if (alimento) adicionarItem(refeicaoIndex, alimento);
+                                        }
+                                    "
+                                    label="Adicionar"
+                                    class="flex-1 py-1 text-xs"
+                                    icon="pi pi-plus"
+                                />
+                                <Button
+                                    @click="
+                                        () => {
+                                            buscarAlimentoText = '';
+                                            resultadosBusca = [];
+                                            formQuantidade = { quantidade: 1, unidade: 'g', kcal: 0 };
+                                        }
+                                    "
+                                    label="Cancelar"
+                                    severity="secondary"
+                                    class="flex-1 py-1 text-xs"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Add Extra Meal Button -->
-            <button
-                v-if="formularioPlano.refeicoes_dia < 6"
-                @click="adicionarRefeicaoExtra"
-                class="w-full py-6 border-2 border-dashed border-outline-variant/30 rounded-xl flex items-center justify-center gap-2 text-secondary font-semibold hover:bg-surface-container-low hover:border-primary/30 transition-all"
-            >
-                <i class="pi pi-plus-circle"></i>
-                Adicionar refeição extra
-            </button>
         </div>
 
-        <!-- Footer Navigation -->
-        <div class="fixed bottom-0 left-0 right-0 bg-surface-container-lowest border-t border-outline-variant/20 py-4 px-6 z-40">
-            <div class="max-w-4xl mx-auto flex items-center justify-between">
-                <Button @click="$emit('voltar')" text class="text-secondary font-semibold" icon="pi pi-arrow-left"> Voltar </Button>
-                <Button @click="() => validar() && $emit('avancar')" class="bg-primary text-on-primary font-bold rounded-lg" icon="pi pi-arrow-right" icon-pos="right"> Próximo </Button>
-            </div>
-        </div>
+        <!-- Adicionar Refeição Extra -->
+        <button @click="adicionarRefeicaoExtra" class="w-full py-3 rounded-lg border-2 border-dashed border-slate-300 text-center text-sm font-bold text-slate-600 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all">
+            <i class="pi pi-plus mr-2"></i>
+            Adicionar refeição extra
+        </button>
     </div>
 </template>

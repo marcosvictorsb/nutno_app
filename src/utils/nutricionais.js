@@ -7,11 +7,14 @@
  * Calcular IMC e retornar { valor, classificacao, cor }
  */
 export const calcularIMCComClassificacao = (peso, altura) => {
-    if (!peso || peso <= 0 || !altura || altura <= 0) {
+    const pesoNorm = peso ? parseFloat(String(peso).replace(',', '.')) : 0;
+    const alturaNorm = altura ? parseFloat(String(altura).replace(',', '.')) : 0;
+
+    if (!pesoNorm || pesoNorm <= 0 || !alturaNorm || alturaNorm <= 0) {
         return { valor: '—', classificacao: null, cor: null };
     }
-    const alturaMetros = altura / 100;
-    const imc = peso / (alturaMetros * alturaMetros);
+    const alturaMetros = alturaNorm / 100;
+    const imc = pesoNorm / (alturaMetros * alturaMetros);
 
     let classificacao = '';
     let cor = '';
@@ -47,11 +50,14 @@ export const calcularIMCComClassificacao = (peso, altura) => {
  * Calcular RCQ (Razão Cintura/Quadril) e retornar { valor, classificacao, cor }
  */
 export const calcularRCQComClassificacao = (cintura, quadril, sexo) => {
-    if (!cintura || cintura <= 0 || !quadril || quadril <= 0) {
+    const cinturaNorm = cintura ? parseFloat(String(cintura).replace(',', '.')) : 0;
+    const quadrilNorm = quadril ? parseFloat(String(quadril).replace(',', '.')) : 0;
+
+    if (!cinturaNorm || cinturaNorm <= 0 || !quadrilNorm || quadrilNorm <= 0) {
         return { valor: '—', classificacao: null, cor: null };
     }
 
-    const rcq = cintura / quadril;
+    const rcq = cinturaNorm / quadrilNorm;
     let classificacao = '';
     let cor = '';
 
@@ -95,7 +101,11 @@ export const calcularRCQComClassificacao = (cintura, quadril, sexo) => {
  * Calcular TMB (Taxa Metabólica Basal) usando Harris-Benedict revisado
  */
 export const calcularTMB = (peso, altura, idade, sexo) => {
-    if (!peso || peso <= 0 || !altura || altura <= 0 || !idade || idade <= 0) {
+    const pesoNorm = peso ? parseFloat(String(peso).replace(',', '.')) : 0;
+    const alturaNorm = altura ? parseFloat(String(altura).replace(',', '.')) : 0;
+    const idadeNorm = idade ? parseFloat(String(idade).replace(',', '.')) : 0;
+
+    if (!pesoNorm || pesoNorm <= 0 || !alturaNorm || alturaNorm <= 0 || !idadeNorm || idadeNorm <= 0) {
         return null;
     }
 
@@ -104,10 +114,10 @@ export const calcularTMB = (peso, altura, idade, sexo) => {
 
     if (usarMasculino) {
         // Harris-Benedict para homens
-        tmb = 88.36 + 13.4 * peso + 4.8 * altura - 5.7 * idade;
+        tmb = 88.36 + 13.4 * pesoNorm + 4.8 * alturaNorm - 5.7 * idadeNorm;
     } else {
         // Harris-Benedict para mulheres
-        tmb = 447.6 + 9.2 * peso + 3.1 * altura - 4.3 * idade;
+        tmb = 447.6 + 9.2 * pesoNorm + 3.1 * alturaNorm - 4.3 * idadeNorm;
     }
 
     return Math.round(tmb);
@@ -142,7 +152,8 @@ export const calcularGET = (tmb, nivelAtividade) => {
  */
 export const formatarCaloria = (valor) => {
     if (!valor) return '—';
-    const numero = Math.round(parseFloat(valor));
+    const normalizado = String(valor).replace(',', '.');
+    const numero = Math.round(parseFloat(normalizado));
     return numero.toLocaleString('pt-BR');
 };
 
@@ -151,7 +162,8 @@ export const formatarCaloria = (valor) => {
  */
 export const formatarIMC = (valor) => {
     if (!valor) return '—';
-    return parseFloat(valor).toFixed(2).replace('.', ',');
+    const normalizado = String(valor).replace(',', '.');
+    return parseFloat(normalizado).toFixed(2).replace('.', ',');
 };
 
 /**
@@ -159,7 +171,8 @@ export const formatarIMC = (valor) => {
  */
 export const formatarPeso = (valor) => {
     if (!valor) return '—';
-    return parseFloat(valor).toFixed(1).replace('.', ',');
+    const normalizado = String(valor).replace(',', '.');
+    return parseFloat(normalizado).toFixed(1).replace('.', ',');
 };
 
 /**
@@ -216,7 +229,8 @@ export const obterClassificacaoIMCPlano = (imc) => {
  */
 export const calcularSugestaoCaloriaPorObjetivo = (objetivo, get) => {
     if (!get || !objetivo) return null;
-    const getNum = Math.round(parseFloat(get));
+    const normalizado = String(get).replace(',', '.');
+    const getNum = Math.round(parseFloat(normalizado));
 
     const sugestoes = {
         emagrecer: getNum - 500,
@@ -235,7 +249,8 @@ export const calcularSugestaoCaloriaPorObjetivo = (objetivo, get) => {
  */
 export const obterFormulaCaloria = (objetivo, get) => {
     if (!get || !objetivo) return '';
-    const getNum = Math.round(parseFloat(get));
+    const normalizado = String(get).replace(',', '.');
+    const getNum = Math.round(parseFloat(normalizado));
 
     const formulas = {
         emagrecer: `GET (${formatarCaloria(getNum)}) − 500 = ${formatarCaloria(getNum - 500)} kcal`,
@@ -301,7 +316,8 @@ export const obterDistribuicaoMacrosPorObjetivo = (objetivo) => {
  */
 export const calcularDeficitSuperavitCalorico = (calorias_meta, get) => {
     if (!calorias_meta || !get) return 0;
-    return calorias_meta - parseFloat(get);
+    const normalizado = String(get).replace(',', '.');
+    return calorias_meta - parseFloat(normalizado);
 };
 
 /**

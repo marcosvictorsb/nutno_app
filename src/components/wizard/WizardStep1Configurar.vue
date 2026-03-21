@@ -1,424 +1,466 @@
 <script setup>
-import { calcularSugestaoCaloriaPorObjetivo, obterDistribuicaoMacrosPorObjetivo } from '@/utils/nutricionais';
+import {
+    calcularDeficitSuperavitCalorico,
+    calcularSugestaoCaloriaPorObjetivo,
+    calcularVariacaoPesoPeriodos,
+    formatarCaloria,
+    formatarIMC,
+    formatarPeso,
+    obterClassificacaoIMCPlano,
+    traduzirNivelAtividadePlano,
+    verificarAvisosSeguranca
+} from '@/utils/nutricionais';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
-import { computed, defineExpose, nextTick, ref, watch } from 'vue';
+import Slider from 'primevue/slider';
+import Tag from 'primevue/tag';
+import { defineExpose, ref } from 'vue';
 
 // Props
 const props = defineProps({
     formularioPlano: { type: Object, required: true },
     medidaMaisRecente: { type: Object, default: null },
     anamnese: { type: Object, default: null },
-    paciente: { type: Object, default: null }
+    paciente: { type: Object, default: null },
+    errosPlano: { type: Object, default: () => ({}) }
 });
 
 // Emits
-const emit = defineEmits(['update:formularioPlano', 'avancar']);
+const emit = defineEmits(['update:formularioPlano', 'update:errosPlano']);
 
-// State flags
-const calorias_metaEditada = ref(false);
-const macrosForamEditadosManualmente = ref(false);
-const calorias_metaSugeridaPor = ref(null);
-const macrosSugeridosPor = ref(null);
-const atualizandoMacrosProgramaticamente = ref(false);
-
-// Opções
-const opcoesObjetivo = [
-    { label: 'Emagrecimento', value: 'peso_perder', icon: 'trending_down' },
-    { label: 'Ganho de massa', value: 'peso_ganhar', icon: 'trending_up' },
-    { label: 'Manutenção', value: 'peso_manter', icon: 'trending_flat' },
-    { label: 'Performance', value: 'performance', icon: 'bolt' }
-];
-
-// Cores para os macros
-const macroColors = {
-    proteina: '#006b2c', // primary
-    carboidrato: '#585f6c', // secondary
-    gordura: '#ba1a1a' // error
-};
-
-// ===== WATCHERS =====
-
-watch(
-    () => props.formularioPlano.objetivo,
-    (novoObjetivo) => {
-        macrosForamEditadosManualmente.value = false;
-
-        if (!calorias_metaEditada.value && props.medidaMaisRecente?.gasto_energetico_total) {
-            const get = Math.round(parseFloat(props.medidaMaisRecente.gasto_energetico_total));
-            const sugestao = calcularSugestaoCaloriaPorObjetivo(novoObjetivo, get);
-
-            if (sugestao && sugestao > 0) {
-                emit('update:formularioPlano', { ...props.formularioPlano, calorias_meta: sugestao });
-                calorias_metaSugeridaPor.value = novoObjetivo;
-            }
-        }
-
-        if (!macrosForamEditadosManualmente.value && novoObjetivo) {
-            const distrib = obterDistribuicaoMacrosPorObjetivo(novoObjetivo);
-
-            atualizandoMacrosProgramaticamente.value = true;
-
-            const proteina_g = Math.round((props.formularioPlano.calorias_meta * distrib.proteina_perc) / 100 / 4);
-            const carboidrato_g = Math.round((props.formularioPlano.calorias_meta * distrib.carboidrato_perc) / 100 / 4);
-            const gordura_g = Math.round((props.formularioPlano.calorias_meta * distrib.gordura_perc) / 100 / 9);
-
-            const planoAtualizado = {
-                ...props.formularioPlano,
-                proteina_perc: distrib.proteina_perc,
-                carboidrato_perc: distrib.carboidrato_perc,
-                gordura_perc: distrib.gordura_perc,
-                proteina_g,
-                carboidrato_g,
-                gordura_g
-            };
-
-            emit('update:formularioPlano', planoAtualizado);
-            macrosSugeridosPor.value = novoObjetivo;
-
-            nextTick(() => {
-                atualizandoMacrosProgramaticamente.value = false;
-            });
-        }
-    }
-);
-
-watch(
-    () => props.formularioPlano.calorias_meta,
-    (novoValor) => {
-        if (novoValor && novoValor > 0) {
-            calorias_metaEditada.value = true;
-        }
-    }
-);
-
-watch(
-    () => [props.formularioPlano.proteina_perc, props.formularioPlano.carboidrato_perc, props.formularioPlano.gordura_perc, props.formularioPlano.calorias_meta],
-    () => {
-        if (atualizandoMacrosProgramaticamente.value) return;
-
-        const calorias = props.formularioPlano.calorias_meta;
-        if (calorias && calorias > 0) {
-            const proteina_g = Math.round((calorias * props.formularioPlano.proteina_perc) / 100 / 4);
-            const carboidrato_g = Math.round((calorias * props.formularioPlano.carboidrato_perc) / 100 / 4);
-            const gordura_g = Math.round((calorias * props.formularioPlano.gordura_perc) / 100 / 9);
-
-            if (proteina_g !== props.formularioPlano.proteina_g || carboidrato_g !== props.formularioPlano.carboidrato_g || gordura_g !== props.formularioPlano.gordura_g) {
-                emit('update:formularioPlano', {
-                    ...props.formularioPlano,
-                    proteina_g,
-                    carboidrato_g,
-                    gordura_g
-                });
-            }
-        }
-    },
-    { deep: true }
-);
-
-// Detectar edição manual de macros
-['proteina_perc', 'carboidrato_perc', 'gordura_perc'].forEach((macro) => {
-    watch(
-        () => props.formularioPlano[macro],
-        (novoValor, valorAnterior) => {
-            if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
-                macrosForamEditadosManualmente.value = true;
-            }
-        }
-    );
-});
-
-// ===== COMPUTED =====
-
-const somaMacros = computed(() => {
-    return (props.formularioPlano.proteina_perc || 0) + (props.formularioPlano.carboidrato_perc || 0) + (props.formularioPlano.gordura_perc || 0);
-});
-
-const somaMacrosValida = computed(() => somaMacros.value === 100);
-
-const estimativaResultado = computed(() => {
-    if (!props.medidaMaisRecente?.peso || !props.formularioPlano.calorias_meta) return null;
-
-    const pesoAtual = parseFloat(props.medidaMaisRecente.peso);
-    const get = parseFloat(props.medidaMaisRecente.gasto_energetico_total || 0);
-    const metaCalorica = props.formularioPlano.calorias_meta;
-    const diferenca = metaCalorica - get;
-
-    const variacaoPorSemana = (diferenca * 7) / 7700;
-
-    return {
-        variacaoPorSemana: variacaoPorSemana.toFixed(2),
-        variacaoPor4Semanas: (variacaoPorSemana * 4).toFixed(2),
-        pesoEstimadoMes: (pesoAtual + variacaoPorSemana * 4).toFixed(1),
-        ehDeficit: diferenca < 0,
-        ehSuperavit: diferenca > 0,
-        ehManutencao: Math.abs(diferenca) <= 50,
-        diferenca: Math.round(Math.abs(diferenca))
-    };
-});
-
-// ===== FUNÇÕES =====
-
-const atualizarCampo = (campo, valor) => {
-    emit('update:formularioPlano', { ...props.formularioPlano, [campo]: valor });
-};
-
-const selecionarObjetivo = (objetivo) => {
-    atualizarCampo('objetivo', objetivo);
-};
+// Local refs for sliders
+const proteinaPerc = ref(props.formularioPlano.proteina_perc);
+const carboidratoPerc = ref(props.formularioPlano.carboidrato_perc);
+const gorduraPerc = ref(props.formularioPlano.gordura_perc);
 
 const validar = () => {
-    if (!props.formularioPlano.nome?.trim()) {
-        console.error('Nome do plano é obrigatório');
-        return false;
-    }
-    if (!props.formularioPlano.objetivo) {
-        console.error('Objetivo é obrigatório');
-        return false;
-    }
-    if (!props.formularioPlano.calorias_meta || props.formularioPlano.calorias_meta <= 0) {
-        console.error('Meta calórica é obrigatória e deve ser maior que 0');
-        return false;
-    }
-    return true;
+    const erros = {};
+    if (!props.formularioPlano.nome?.trim()) erros.nome = 'Nome obrigatório';
+    if (!props.formularioPlano.calorias_meta || props.formularioPlano.calorias_meta <= 0) erros.calorias_meta = 'Calorias obrigatórias';
+
+    emit('update:errosPlano', erros);
+    return Object.keys(erros).length === 0;
 };
 
 defineExpose({ validar });
 </script>
 
 <template>
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 py-8">
-        <!-- LEFT COLUMN: Form -->
-        <div class="lg:col-span-7 space-y-10">
-            <!-- Configurações Básicas -->
-            <section>
-                <h2 class="text-2xl font-semibold text-on-surface mb-6">Configurações Básicas</h2>
-                <div class="space-y-6">
-                    <!-- Nome do Plano -->
-                    <div>
-                        <label class="block text-sm font-medium text-secondary mb-2">Nome do plano</label>
-                        <InputText
-                            :model-value="formularioPlano.nome"
-                            @update:model-value="atualizarCampo('nome', $event)"
-                            placeholder="Ex: Protocolo Cutting 2024"
-                            class="w-full px-4 py-3 border-outline-variant rounded-xl focus:ring-4 focus:ring-primary/10"
-                        />
-                    </div>
+    <div class="space-y-4 overflow-y-auto pr-4">
+        <!-- Seção 1: Configurações Básicas -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-base">⚙️</div>
+                <h3 class="text-lg font-bold text-slate-800">Configurações Básicas</h3>
+            </div>
 
-                    <!-- Objetivo do Plano -->
-                    <div>
-                        <label class="block text-sm font-medium text-secondary mb-3">Objetivo do plano</label>
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                v-for="obj in opcoesObjetivo"
-                                :key="obj.value"
-                                @click="selecionarObjetivo(obj.value)"
-                                :class="[
-                                    'px-5 py-2.5 rounded-full font-medium text-sm transition-all border',
-                                    formularioPlano.objetivo === obj.value ? 'bg-primary-fixed text-on-primary-fixed border-primary/20' : 'bg-surface-container-lowest text-secondary border-outline-variant hover:bg-surface-container-low'
-                                ]"
-                            >
-                                {{ obj.label }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Metas Diárias -->
-            <section>
-                <h2 class="text-2xl font-semibold text-on-surface mb-6">Metas Diárias</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Meta Calórica -->
-                    <div class="p-6 bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-sm">
-                        <div class="flex items-center gap-3 mb-4">
-                            <i class="pi pi-bolt text-primary text-lg"></i>
-                            <span class="text-sm font-medium text-secondary">Meta calórica</span>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <InputNumber
-                                :model-value="formularioPlano.calorias_meta"
-                                @update:model-value="atualizarCampo('calorias_meta', $event)"
-                                :use-grouping="false"
-                                class="text-3xl font-bold"
-                                input-class="text-3xl font-bold bg-transparent border-none p-0 focus:ring-0"
-                            />
-                            <span class="text-lg font-medium text-on-surface-variant">kcal</span>
-                        </div>
-                    </div>
-
-                    <!-- Refeições -->
-                    <div class="p-6 bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-sm">
-                        <div class="flex items-center gap-3 mb-4">
-                            <i class="pi pi-utensils text-tertiary text-lg"></i>
-                            <span class="text-sm font-medium text-secondary">Refeições</span>
-                        </div>
-                        <div class="flex items-baseline gap-2">
-                            <InputNumber
-                                :model-value="formularioPlano.refeicoes_dia"
-                                @update:model-value="atualizarCampo('refeicoes_dia', $event)"
-                                :use-grouping="false"
-                                class="text-3xl font-bold"
-                                input-class="text-3xl font-bold bg-transparent border-none p-0 focus:ring-0"
-                            />
-                            <span class="text-lg font-medium text-on-surface-variant">por dia</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Distribuição de Macros -->
-            <section>
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-on-surface">Distribuição de Macros</h2>
-                    <span :class="['px-3 py-1 rounded-full text-xs font-bold', somaMacrosValida ? 'bg-primary/10 text-primary' : 'bg-error/10 text-error']"> {{ somaMacros }}% {{ somaMacrosValida ? 'DISTRIBUÍDO' : 'INVÁLIDO' }} </span>
-                </div>
-
-                <!-- Visual Bar -->
-                <div class="w-full h-4 rounded-full overflow-hidden flex mb-8 bg-surface-container-highest">
-                    <div class="h-full transition-all" :style="{ width: formularioPlano.proteina_perc + '%', backgroundColor: macroColors.proteina }"></div>
-                    <div class="h-full transition-all" :style="{ width: formularioPlano.carboidrato_perc + '%', backgroundColor: macroColors.carboidrato }"></div>
-                    <div class="h-full transition-all" :style="{ width: formularioPlano.gordura_perc + '%', backgroundColor: macroColors.gordura }"></div>
-                </div>
-
-                <!-- Sliders -->
-                <div class="space-y-8">
-                    <!-- Proteína -->
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: macroColors.proteina }"></div>
-                                <span class="font-medium">Proteínas</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold">{{ formularioPlano.proteina_g }}g</span>
-                                <span class="text-sm text-secondary ml-1">({{ formularioPlano.proteina_perc }}%)</span>
-                            </div>
-                        </div>
-                        <input
-                            :model-value="formularioPlano.proteina_perc"
-                            @input="atualizarCampo('proteina_perc', parseInt($event.target.value))"
-                            type="range"
-                            min="0"
-                            max="100"
-                            class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer"
-                            :style="{
-                                accentColor: macroColors.proteina
-                            }"
-                        />
-                    </div>
-
-                    <!-- Carboidrato -->
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: macroColors.carboidrato }"></div>
-                                <span class="font-medium">Carboidratos</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold">{{ formularioPlano.carboidrato_g }}g</span>
-                                <span class="text-sm text-secondary ml-1">({{ formularioPlano.carboidrato_perc }}%)</span>
-                            </div>
-                        </div>
-                        <input
-                            :model-value="formularioPlano.carboidrato_perc"
-                            @input="atualizarCampo('carboidrato_perc', parseInt($event.target.value))"
-                            type="range"
-                            min="0"
-                            max="100"
-                            class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer"
-                            :style="{
-                                accentColor: macroColors.carboidrato
-                            }"
-                        />
-                    </div>
-
-                    <!-- Gordura -->
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: macroColors.gordura }"></div>
-                                <span class="font-medium">Gorduras</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold">{{ formularioPlano.gordura_g }}g</span>
-                                <span class="text-sm text-secondary ml-1">({{ formularioPlano.gordura_perc }}%)</span>
-                            </div>
-                        </div>
-                        <input
-                            :model-value="formularioPlano.gordura_perc"
-                            @input="atualizarCampo('gordura_perc', parseInt($event.target.value))"
-                            type="range"
-                            min="0"
-                            max="100"
-                            class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer"
-                            :style="{
-                                accentColor: macroColors.gordura
-                            }"
-                        />
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- RIGHT COLUMN: Summary Card (Sticky) -->
-        <div class="lg:col-span-5">
-            <div class="sticky top-32 p-8 bg-surface-container-lowest rounded-2xl shadow-md border border-outline-variant/10">
-                <h3 class="text-lg font-bold mb-6 flex items-center gap-2">
-                    <i class="pi pi-chart-bar text-primary"></i>
-                    Resumo do Perfil
-                </h3>
-
-                <div class="space-y-6">
-                    <!-- Paciente Info -->
-                    <div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl">
-                        <img v-if="paciente?.foto" :src="paciente.foto" :alt="paciente.nome" class="w-12 h-12 rounded-full object-cover" />
-                        <div v-else class="w-12 h-12 rounded-full flex items-center justify-center bg-primary/10 text-primary font-bold">
-                            {{ paciente?.nome?.charAt(0) || 'P' }}
-                        </div>
-                        <div>
-                            <p class="font-bold text-on-surface">{{ paciente?.nome || 'Paciente' }}</p>
-                            <p class="text-xs text-secondary">{{ paciente?.idade || '—' }} anos • {{ medidaMaisRecente?.peso || '—' }}kg • {{ medidaMaisRecente?.altura || '—' }}m</p>
-                        </div>
-                    </div>
-
-                    <!-- TMB e GET -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-1">
-                            <p class="text-xs font-medium text-secondary uppercase tracking-wider">TMB</p>
-                            <p class="text-lg font-semibold">{{ medidaMaisRecente?.tmb ? Math.round(medidaMaisRecente.tmb) + ' kcal' : '—' }}</p>
-                        </div>
-                        <div class="space-y-1">
-                            <p class="text-xs font-medium text-secondary uppercase tracking-wider">GET</p>
-                            <p class="text-lg font-semibold">{{ medidaMaisRecente?.gasto_energetico_total ? Math.round(medidaMaisRecente.gasto_energetico_total) + ' kcal' : '—' }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Déficit Planejado -->
-                    <div v-if="estimativaResultado" class="pt-6 border-t border-outline-variant/20">
-                        <div class="flex justify-between items-center mb-4">
-                            <p class="text-sm font-medium text-secondary">Déficit planejado</p>
-                            <p :class="['text-sm font-bold', estimativaResultado.ehDeficit ? 'text-error' : estimativaResultado.ehSuperavit ? 'text-primary' : 'text-secondary']">
-                                {{ estimativaResultado.ehDeficit ? '-' : estimativaResultado.ehSuperavit ? '+' : '±' }}{{ estimativaResultado.diferenca }}
-                                kcal/dia
-                            </p>
-                        </div>
-                        <div class="p-4 bg-primary/5 rounded-xl border border-primary/10">
-                            <p class="text-xs leading-relaxed text-on-primary-fixed-variant"><span class="font-bold">Nota clínica:</span> Este plano foca em preservar massa magra enquanto reduz gordura corporal de forma gradual e sustentável.</p>
-                        </div>
-                    </div>
-
-                    <!-- Button -->
-                    <button
-                        @click="$emit('avancar')"
-                        class="w-full mt-10 py-4 px-6 rounded-xl bg-linear-to-br from-primary to-primary-container text-white font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                    >
-                        Próximo: Montar refeições
-                        <i class="pi pi-chevron-right"></i>
-                    </button>
-                    <p class="text-center text-xs text-secondary font-medium">Você poderá editar essas metas posteriormente.</p>
+            <div class="space-y-4">
+                <!-- Nome do Plano -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nome do plano <span class="text-red-500">*</span></label>
+                    <InputText
+                        :model-value="formularioPlano.nome"
+                        @update:model-value="emit('update:formularioPlano', { ...formularioPlano, nome: $event })"
+                        placeholder="Protocolo Cutting"
+                        class="w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors"
+                        :class="props.errosPlano?.nome ? 'border-red-500' : 'border-slate-200'"
+                    />
+                    <small v-if="props.errosPlano?.nome" class="block text-red-500 text-xs font-semibold mt-1">{{ props.errosPlano.nome }}</small>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- Seção 2: Metas Diárias -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm">🎯</div>
+                <h3 class="text-base font-bold text-slate-800">Metas Diárias</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Meta Calórica -->
+                <div class="p-3 bg-linear-to-br from-emerald-50 to-emerald-100 rounded-lg border-2" :class="props.errosPlano?.calorias_meta ? 'border-red-500' : 'border-emerald-200'">
+                    <div class="flex items-center gap-1.5 mb-2">
+                        <div class="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs">
+                            <i class="pi pi-fire text-xs"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-emerald-900 uppercase">Meta Calórica <span class="text-red-600">*</span></span>
+                    </div>
+
+                    <div class="flex items-baseline gap-1 mb-2">
+                        <InputNumber
+                            :model-value="formularioPlano.calorias_meta"
+                            @update:model-value="emit('update:formularioPlano', { ...formularioPlano, calorias_meta: $event })"
+                            :use-grouping="false"
+                            class="text-xl! font-bold!"
+                            :class="props.errosPlano?.calorias_meta ? 'text-red-600!' : 'text-emerald-600!'"
+                            input-class="text-xl font-bold"
+                        />
+                        <span class="text-sm font-semibold text-emerald-700">kcal</span>
+                    </div>
+
+                    <!-- Quick selector com sugestões -->
+                    <div v-if="medidaMaisRecente" class="space-y-1.5">
+                        <p class="text-xs font-semibold text-emerald-700 uppercase">Rápidas:</p>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button
+                                @click="
+                                    () => {
+                                        emit('update:formularioPlano', {
+                                            ...formularioPlano,
+                                            objetivo: 'emagrecer',
+                                            calorias_meta: Math.round(parseFloat(medidaMaisRecente.gasto_energetico_total) - 500)
+                                        });
+                                    }
+                                "
+                                :class="[
+                                    'py-2 px-2 rounded border text-xs font-bold text-center transition-all',
+                                    formularioPlano.objetivo === 'emagrecer' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                                ]"
+                            >
+                                🔥 Emagrecer<br /><span class="text-xs font-semibold">{{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('emagrecer', medidaMaisRecente.gasto_energetico_total)) }}</span>
+                            </button>
+                            <button
+                                @click="
+                                    () => {
+                                        emit('update:formularioPlano', {
+                                            ...formularioPlano,
+                                            objetivo: 'melhorar_saude',
+                                            calorias_meta: Math.round(parseFloat(medidaMaisRecente.gasto_energetico_total))
+                                        });
+                                    }
+                                "
+                                :class="[
+                                    'py-2 px-2 rounded border text-xs font-bold text-center transition-all',
+                                    formularioPlano.objetivo === 'melhorar_saude' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                                ]"
+                            >
+                                ⚖️ Manter<br /><span class="text-xs font-semibold">{{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('melhorar_saude', medidaMaisRecente.gasto_energetico_total)) }}</span>
+                            </button>
+                            <button
+                                @click="
+                                    () => {
+                                        emit('update:formularioPlano', {
+                                            ...formularioPlano,
+                                            objetivo: 'ganhar_massa',
+                                            calorias_meta: Math.round(parseFloat(medidaMaisRecente.gasto_energetico_total) + 300)
+                                        });
+                                    }
+                                "
+                                :class="[
+                                    'py-2 px-2 rounded border text-xs font-bold text-center transition-all',
+                                    formularioPlano.objetivo === 'ganhar_massa' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                                ]"
+                            >
+                                💪 Ganhar<br /><span class="text-xs font-semibold">{{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('ganhar_massa', medidaMaisRecente.gasto_energetico_total)) }}</span>
+                            </button>
+                            <button
+                                @click="
+                                    () => {
+                                        emit('update:formularioPlano', {
+                                            ...formularioPlano,
+                                            objetivo: 'controlar_doenca',
+                                            calorias_meta: Math.round(parseFloat(medidaMaisRecente.gasto_energetico_total))
+                                        });
+                                    }
+                                "
+                                :class="[
+                                    'py-2 px-2 rounded border text-xs font-bold text-center transition-all',
+                                    formularioPlano.objetivo === 'controlar_doenca' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                                ]"
+                            >
+                                🏥 Doença
+                            </button>
+                            <button
+                                @click="
+                                    () => {
+                                        emit('update:formularioPlano', {
+                                            ...formularioPlano,
+                                            objetivo: 'melhorar_performance',
+                                            calorias_meta: Math.round(parseFloat(medidaMaisRecente.gasto_energetico_total) + 200)
+                                        });
+                                    }
+                                "
+                                :class="[
+                                    'py-2 px-2 rounded border text-xs font-bold text-center transition-all',
+                                    formularioPlano.objetivo === 'melhorar_performance' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                                ]"
+                            >
+                                ⚡ Performance<br /><span class="text-xs font-semibold">{{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('melhorar_performance', medidaMaisRecente.gasto_energetico_total)) }}</span>
+                            </button>
+                            <button
+                                @click="
+                                    () => {
+                                        emit('update:formularioPlano', {
+                                            ...formularioPlano,
+                                            objetivo: 'outro',
+                                            calorias_meta: Math.round(parseFloat(medidaMaisRecente.gasto_energetico_total))
+                                        });
+                                    }
+                                "
+                                :class="[
+                                    'py-2 px-2 rounded border text-xs font-bold text-center transition-all',
+                                    formularioPlano.objetivo === 'outro' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+                                ]"
+                            >
+                                ✨ Outro
+                            </button>
+                        </div>
+                        <p class="text-xs text-emerald-600 mt-2">
+                            <i class="pi pi-lightning text-xs mr-0.5"></i>
+                            GET base: {{ formatarCaloria(medidaMaisRecente.gasto_energetico_total) }} kcal
+                        </p>
+                    </div>
+
+                    <small v-if="props.errosPlano?.calorias_meta" class="block text-red-500 text-xs font-semibold mt-2">{{ props.errosPlano.calorias_meta }}</small>
+                </div>
+
+                <!-- Card de Referência do Paciente -->
+                <div v-if="medidaMaisRecente" class="p-3 bg-linear-to-br from-blue-50 to-blue-100 rounded-lg border-2 border-blue-200">
+                    <div class="flex items-center gap-1.5 mb-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs">
+                            <i class="pi pi-chart-bar text-xs"></i>
+                        </div>
+                        <span class="text-xs font-semibold text-blue-900 uppercase">Referência</span>
+                    </div>
+
+                    <div class="mb-2 pb-2 border-b border-blue-200">
+                        <p class="text-xs text-blue-700 font-medium">TMB</p>
+                        <p class="text-sm font-bold text-blue-900">{{ formatarCaloria(medidaMaisRecente.tmb) }} kcal</p>
+                    </div>
+
+                    <div class="mb-2 pb-2 border-b border-blue-200">
+                        <p class="text-xs text-blue-700 font-medium">GET</p>
+                        <p class="text-sm font-bold text-blue-900">{{ formatarCaloria(medidaMaisRecente.gasto_energetico_total) }} kcal</p>
+                        <p class="text-xs text-blue-600">{{ traduzirNivelAtividadePlano(medidaMaisRecente.nivel_atividade) }}</p>
+                    </div>
+
+                    <div class="mb-2 pb-2 border-b border-blue-200">
+                        <p class="text-xs text-blue-700 font-medium">IMC</p>
+                        <div class="flex items-center gap-1.5">
+                            <p class="text-sm font-bold text-blue-900">{{ formatarIMC(medidaMaisRecente.imc) }}</p>
+                            <Tag :value="obterClassificacaoIMCPlano(medidaMaisRecente.imc).label" :severity="obterClassificacaoIMCPlano(medidaMaisRecente.imc).severity" class="text-xs" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <p class="text-xs text-blue-700 font-medium">Peso</p>
+                        <p class="text-sm font-bold text-blue-900">{{ formatarPeso(medidaMaisRecente.peso) }} kg</p>
+                    </div>
+
+                    <div class="border-t border-blue-200 pt-2 mt-2">
+                        <p class="text-xs font-bold text-blue-700 mb-1.5 uppercase">Sugestões</p>
+                        <div class="space-y-1 text-xs">
+                            <p class="text-blue-800">🔥 Emagrecimento: {{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('emagrecer', medidaMaisRecente.gasto_energetico_total)) }} kcal</p>
+                            <p class="text-blue-800">🌱 Saúde: {{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('melhorar_saude', medidaMaisRecente.gasto_energetico_total)) }} kcal</p>
+                            <p class="text-blue-800">💪 Ganho de massa: {{ formatarCaloria(calcularSugestaoCaloriaPorObjetivo('ganhar_massa', medidaMaisRecente.gasto_energetico_total)) }} kcal</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-blue-500 mt-1.5 text-center">Avaliação: {{ medidaMaisRecente.data_avaliacao ? new Date(medidaMaisRecente.data_avaliacao).toLocaleDateString('pt-BR') : '—' }}</p>
+                </div>
+            </div>
+
+            <!-- Estimativa de Resultado (NOVO - Full Width) -->
+            <div v-if="medidaMaisRecente && formularioPlano.objetivo && formularioPlano.calorias_meta > 0" class="p-3 bg-linear-to-br from-emerald-50 to-emerald-100 rounded-lg border-2 border-emerald-200 mt-3">
+                <div class="flex items-center gap-1.5 mb-2">
+                    <div class="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white text-xs">
+                        <i class="pi pi-chart-line text-xs"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-emerald-900 uppercase">Estimativa de Resultado</h3>
+                </div>
+
+                <div v-if="Math.abs(calcularDeficitSuperavitCalorico(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total)) <= 50" class="text-center">
+                    <p class="text-xs font-semibold text-emerald-700 uppercase mb-2">
+                        <i class="pi pi-check-circle text-sm mr-1"></i>
+                        Plano de manutenção de peso
+                    </p>
+                    <p class="text-xs text-emerald-600">A meta está alinhada com o gasto energético do paciente.</p>
+                </div>
+
+                <div v-else>
+                    <div v-if="verificarAvisosSeguranca(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).deficit_alto" class="mb-2 p-2 bg-yellow-50 border border-yellow-300 rounded-lg text-xs text-yellow-800">
+                        <i class="pi pi-exclamation-triangle text-xs mr-1"></i>
+                        Déficit alto. Possível perda de massa muscular.
+                    </div>
+
+                    <div v-if="verificarAvisosSeguranca(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).superavit_alto" class="mb-2 p-2 bg-yellow-50 border border-yellow-300 rounded-lg text-xs text-yellow-800">
+                        <i class="pi pi-exclamation-triangle text-xs mr-1"></i>
+                        Superávit elevado. Possível ganho de gordura.
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                        <div class="flex items-center justify-between text-xs p-2 bg-white rounded border border-emerald-200">
+                            <div class="flex items-center gap-1.5">
+                                <i class="pi pi-calendar text-xs text-emerald-700"></i>
+                                <span class="text-emerald-700 font-medium">Em 4 semanas</span>
+                            </div>
+                            <span :class="[calcularVariacaoPesoPeriodos(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).variacao_4_semanas < 0 ? 'text-red-600' : 'text-blue-600', 'font-bold']">
+                                {{ calcularVariacaoPesoPeriodos(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).variacao_4_semanas }} kg
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs p-2 bg-white rounded border border-emerald-200">
+                            <div class="flex items-center gap-1.5">
+                                <i class="pi pi-calendar text-xs text-emerald-700"></i>
+                                <span class="text-emerald-700 font-medium">Em 8 semanas</span>
+                            </div>
+                            <span :class="[calcularVariacaoPesoPeriodos(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).variacao_8_semanas < 0 ? 'text-red-600' : 'text-blue-600', 'font-bold']">
+                                {{ calcularVariacaoPesoPeriodos(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).variacao_8_semanas }} kg
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between text-xs p-2 bg-white rounded border border-emerald-200">
+                            <div class="flex items-center gap-1.5">
+                                <i class="pi pi-calendar text-xs text-emerald-700"></i>
+                                <span class="text-emerald-700 font-medium">Em 12 semanas</span>
+                            </div>
+                            <span :class="[calcularVariacaoPesoPeriodos(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).variacao_12_semanas < 0 ? 'text-red-600' : 'text-blue-600', 'font-bold']">
+                                {{ calcularVariacaoPesoPeriodos(formularioPlano.calorias_meta, medidaMaisRecente.gasto_energetico_total).variacao_12_semanas }} kg
+                            </span>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-600 italic pt-3 border-t border-emerald-300">
+                        <i class="pi pi-info-circle text-xs mr-1"></i>
+                        Estimativa baseada em 7.700 kcal = 1 kg de gordura. Resultados variam conforme adesão e metabolismo.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Refeições por dia -->
+            <div class="p-3 bg-linear-to-br from-blue-50 to-blue-100 rounded-lg border-2 border-blue-200 mt-2">
+                <div class="flex items-center gap-1.5 mb-2">
+                    <div class="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs">
+                        <i class="pi pi-home text-xs"></i>
+                    </div>
+                    <span class="text-xs font-semibold text-blue-900 uppercase">Refeições/dia <span class="text-red-600">*</span></span>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button
+                        v-for="num in [3, 4, 5, 6]"
+                        :key="num"
+                        @click="emit('update:formularioPlano', { ...formularioPlano, refeicoes_dia: num })"
+                        :class="[
+                            'py-1.5 rounded-lg border-2 transition-all text-center font-bold text-sm',
+                            formularioPlano.refeicoes_dia === num ? 'border-blue-600 bg-blue-600 text-white shadow-lg' : 'border-blue-300 bg-white text-blue-700 hover:border-blue-500 hover:bg-blue-50'
+                        ]"
+                    >
+                        {{ num }}
+                    </button>
+                </div>
+                <p class="text-xs text-blue-600 mt-1.5">
+                    <i class="pi pi-lightning text-xs mr-0.5"></i>
+                    <span v-if="formularioPlano.refeicoes_dia">
+                        Aproximadamente <strong>{{ Math.round(formularioPlano.calorias_meta / formularioPlano.refeicoes_dia) }}</strong> kcal por refeição
+                    </span>
+                    <span v-else>Selecione a quantidade</span>
+                </p>
+            </div>
+        </section>
+
+        <!-- Seção 3: Distribuição de Macros -->
+        <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-sm">📊</div>
+                    <h3 class="text-base font-bold text-slate-800">Distribuição de Macros</h3>
+                </div>
+                <span
+                    :class="[
+                        'px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider',
+                        formularioPlano.proteina_perc + formularioPlano.carboidrato_perc + formularioPlano.gordura_perc === 100
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : formularioPlano.proteina_perc + formularioPlano.carboidrato_perc + formularioPlano.gordura_perc > 100
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                    ]"
+                >
+                    {{ formularioPlano.proteina_perc + formularioPlano.carboidrato_perc + formularioPlano.gordura_perc }}%
+                </span>
+            </div>
+
+            <!-- Barra Visual de Distribuição -->
+            <div class="mb-2">
+                <div class="w-full h-4 rounded-full overflow-hidden flex bg-slate-100 border border-slate-200">
+                    <div class="h-full bg-emerald-600 transition-all duration-300 shrink-0" :style="{ width: formularioPlano.proteina_perc + '%' }"></div>
+                    <div class="h-full bg-blue-600 transition-all duration-300 shrink-0" :style="{ width: formularioPlano.carboidrato_perc + '%' }"></div>
+                    <div class="h-full bg-red-600 transition-all duration-300 shrink-0" :style="{ width: formularioPlano.gordura_perc + '%' }"></div>
+                </div>
+            </div>
+
+            <!-- Cards de Macros -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+                <div class="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <div class="w-2 h-2 rounded-full bg-emerald-600"></div>
+                        <p class="text-xs font-bold text-emerald-700 uppercase">Proteína</p>
+                    </div>
+                    <p class="text-lg font-bold text-emerald-700">{{ formularioPlano.proteina_g }}<span class="text-xs text-emerald-600">g</span></p>
+                    <p class="text-xs text-emerald-600 mt-0.5">{{ Math.round(formularioPlano.proteina_g * 4) }} kcal</p>
+                </div>
+
+                <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <div class="w-2 h-2 rounded-full bg-blue-600"></div>
+                        <p class="text-xs font-bold text-blue-700 uppercase">Carboidrato</p>
+                    </div>
+                    <p class="text-lg font-bold text-blue-700">{{ formularioPlano.carboidrato_g }}<span class="text-xs text-blue-600">g</span></p>
+                    <p class="text-xs text-blue-600 mt-0.5">{{ Math.round(formularioPlano.carboidrato_g * 4) }} kcal</p>
+                </div>
+
+                <div class="p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                        <div class="w-2 h-2 rounded-full bg-red-600"></div>
+                        <p class="text-xs font-bold text-red-700 uppercase">Gordura</p>
+                    </div>
+                    <p class="text-lg font-bold text-red-700">{{ formularioPlano.gordura_g }}<span class="text-xs text-red-600">g</span></p>
+                    <p class="text-xs text-red-600 mt-0.5">{{ Math.round(formularioPlano.gordura_g * 9) }} kcal</p>
+                </div>
+            </div>
+
+            <!-- Sliders com Labels -->
+            <div class="space-y-2 mt-3">
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-1">
+                            <div class="w-2 h-2 rounded-full bg-emerald-600"></div>
+                            <span class="text-xs font-semibold text-slate-700">Proteínas</span>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-600">{{ proteinaPerc }}%</span>
+                    </div>
+                    <Slider v-model="proteinaPerc" :min="5" :max="70" class="w-full" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, proteina_perc: $event })" />
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-1">
+                            <div class="w-2 h-2 rounded-full bg-blue-600"></div>
+                            <span class="text-xs font-semibold text-slate-700">Carboidratos</span>
+                        </div>
+                        <span class="text-xs font-bold text-blue-600">{{ carboidratoPerc }}%</span>
+                    </div>
+                    <Slider v-model="carboidratoPerc" :min="5" :max="70" class="w-full" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, carboidrato_perc: $event })" />
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-1">
+                            <div class="w-2 h-2 rounded-full bg-red-600"></div>
+                            <span class="text-xs font-semibold text-slate-700">Gorduras</span>
+                        </div>
+                        <span class="text-xs font-bold text-red-600">{{ gorduraPerc }}%</span>
+                    </div>
+                    <Slider v-model="gorduraPerc" :min="5" :max="70" class="w-full" @update:model-value="emit('update:formularioPlano', { ...formularioPlano, gordura_perc: $event })" />
+                </div>
+            </div>
+
+            <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-xs text-blue-700 flex items-start gap-1.5">
+                    <i class="pi pi-info-circle text-xs shrink-0 mt-0.5"></i>
+                    <span>Ajuste os sliders para distribuir as calorias.</span>
+                </p>
+            </div>
+        </section>
     </div>
 </template>
