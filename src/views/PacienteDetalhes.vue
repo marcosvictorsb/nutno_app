@@ -4,7 +4,7 @@ import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
 import { useMedidas } from '@/composables/useMedidas';
-import AlimentoService from '@/service/AlimentoService';
+import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
 import AnamneseService from '@/service/AnamneseService';
 import MedidaService from '@/service/MedidaService';
 import PacienteService from '@/service/PacienteService';
@@ -50,6 +50,10 @@ const {
     salvarMedida,
     deletarMedida
 } = useMedidas(null, paciente, activeTab);
+
+// ===== Composable usePlanosAlimentares =====
+const { distribuirCalorias, converterParaGramas, calcularNutrienteItem, calcularTotalRefeicao, calcularTotaisDia, calcularTotaisPlano, calcularDiferencaCalorica, obterStatusComparativo, formatarValor, inicializarRefeicoes, gerarMensagemPadrao } =
+    usePlanosAlimentares();
 
 // Estados
 const loading = ref(true);
@@ -1090,94 +1094,8 @@ watch(
     }
 );
 
-// ===== FUNÇÕES DE TRADUÇÃO PARA ABA RESUMO =====
-
-const traduzirObjetivo = (valor) => {
-    const mapa = {
-        emagrecer: 'Emagrecimento',
-        ganhar_massa: 'Ganho de Massa',
-        melhorar_saude: 'Saúde',
-        controlar_doenca: 'Controlar Doença',
-        melhorar_performance: 'Performance',
-        outro: 'Outro'
-    };
-    return mapa[valor] || valor;
-};
-
-const traduzirRestricao = (valor) => {
-    const mapa = {
-        lactose: 'Intolerância à lactose',
-        gluten: 'Doença celíaca (glúten)',
-        vegetariano: 'Vegetariano',
-        vegano: 'Vegano',
-        religiao: 'Restrição religiosa',
-        outra: 'Outra restrição',
-        nenhuma: 'Nenhuma'
-    };
-    return mapa[valor] || valor;
-};
-
-const traduzirNivelAtividade = (valor) => {
-    const mapa = {
-        sedentario: 'Sedentário',
-        leve: 'Leve',
-        moderado: 'Moderado',
-        intenso: 'Intenso',
-        muito_intenso: 'Muito Intenso'
-    };
-    return mapa[valor] || valor;
-};
-
-const traduzirQualidadeSono = (valor) => {
-    const mapa = {
-        otimo: 'Ótimo',
-        bom: 'Bom',
-        ruim: 'Ruim',
-        pessimo: 'Péssimo'
-    };
-    return mapa[valor] || valor;
-};
-
-const traduzirConsumoAlcool = (valor) => {
-    const mapa = {
-        nao: 'Não consome',
-        socialmente: 'Socialmente',
-        frequentemente: 'Frequentemente'
-    };
-    return mapa[valor] || valor;
-};
-
-const obterCorSono = (valor) => {
-    const cores = {
-        otimo: 'success',
-        bom: 'info',
-        ruim: 'warning',
-        pessimo: 'danger'
-    };
-    return cores[valor] || 'secondary';
-};
-
-const obterCorEstresse = (nivel) => {
-    if (nivel <= 2) return 'success';
-    if (nivel === 3) return 'warning';
-    return 'danger';
-};
-
-const obterClassificacaoIMC = (imc) => {
-    if (imc < 18.5) {
-        return { label: 'Abaixo do peso', severity: 'info' };
-    } else if (imc < 25) {
-        return { label: 'Normal', severity: 'success' };
-    } else if (imc < 30) {
-        return { label: 'Sobrepeso', severity: 'warning' };
-    } else if (imc < 35) {
-        return { label: 'Obesidade I', severity: 'warning' };
-    } else if (imc < 40) {
-        return { label: 'Obesidade II', severity: 'danger' };
-    } else {
-        return { label: 'Obesidade III', severity: 'danger' };
-    }
-};
+// ===== FUNÇÕES DE TRADUÇÃO (Movidas para @/utils/traducoes.js) =====
+// As funções foram extraídas para um arquivo dedicado e importadas acima
 
 const abrirEdicaoPlano = async (planoId) => {
     try {
@@ -1545,7 +1463,7 @@ const avancarStep = () => {
             // Se está editando (editandoPlanoId !== null), as refeições já foram carregadas do API
             if (!editandoPlanoId.value) {
                 console.log('📝 Modo CRIAÇÃO - Inicializando refeições padrão');
-                inicializarRefeicoes();
+                formularioPlano.value.refeicoes = inicializarRefeicoes(formularioPlano.value);
             } else {
                 console.log('✏️ Modo EDIÇÃO - Mantendo refeições carregadas do API');
             }
@@ -1638,444 +1556,20 @@ const salvarPlano = async () => {
 };
 
 // ========== FUNÇÕES DO STEP 4 - ENVIAR ==========
+// Funções para Step 4 serão adicionadas conforme necessário
 
-// Função para copiar o link do plano para a área de transferência
-const copiarLinkPlano = async () => {
-    try {
-        await navigator.clipboard.writeText(linkPlano.value);
-        toast.add({
-            severity: 'success',
-            summary: 'Sucesso',
-            detail: 'Link copiado para a área de transferência!',
-            life: 2000
-        });
-    } catch (error) {
-        console.error('Erro ao copiar link:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Erro',
-            detail: 'Não foi possível copiar o link',
-            life: 2000
-        });
-    }
-};
-
-// Função para calcular totais nutricionais do plano
-const calcularTotaisPlano = () => {
-    let totalCalorias = 0;
-    let totalProteinas = 0;
-    let totalCarboidratos = 0;
-    let totalGorduras = 0;
-
-    formularioPlano.value.refeicoes.forEach((refeicao) => {
-        if (refeicao.itens && refeicao.itens.length > 0) {
-            refeicao.itens.forEach((item) => {
-                totalCalorias += item.calorias_calculadas || 0;
-                totalProteinas += item.proteinas_calculadas || 0;
-                totalCarboidratos += item.carboidratos_calculados || 0;
-                totalGorduras += item.gorduras_calculadas || 0;
-            });
-        }
-    });
-
-    return {
-        totalCalorias: Math.round(totalCalorias),
-        totalProteinas: Math.round(totalProteinas * 10) / 10,
-        totalCarboidratos: Math.round(totalCarboidratos * 10) / 10,
-        totalGorduras: Math.round(totalGorduras * 10) / 10
-    };
-};
-
-// Gerar mensagem personalizada padrão
-const gerarMensagemPadrao = () => {
-    const nomePaciente = paciente.value?.nome || 'Paciente';
-    return `Olá ${nomePaciente}! \n\nFinalizei seu novo plano alimentar. Ele foi montado com base nas suas medidas e objetivo definidos em consulta. \n\nAcesse pelo link para ver suas refeições e registre sua adesão diária. Qualquer dúvida, estou por aqui! 💚`;
-};
-
-// ========== FUNÇÕES DO STEP 2 - REFEIÇÕES ==========
-
-// Distribuição de calorias por refeição baseado em quantidade
-const distribuirCalorias = (refeicoes_dia) => {
-    const distribuicoes = {
-        3: [
-            { nome: 'Café da manhã', horario: '07:00', perc: 0.25 },
-            { nome: 'Almoço', horario: '13:00', perc: 0.4 },
-            { nome: 'Jantar', horario: '19:30', perc: 0.35 }
-        ],
-        4: [
-            { nome: 'Café da manhã', horario: '07:00', perc: 0.25 },
-            { nome: 'Almoço', horario: '13:00', perc: 0.35 },
-            { nome: 'Lanche tarde', horario: '16:00', perc: 0.1 },
-            { nome: 'Jantar', horario: '19:30', perc: 0.3 }
-        ],
-        5: [
-            { nome: 'Café da manhã', horario: '07:00', perc: 0.25 },
-            { nome: 'Lanche manhã', horario: '10:00', perc: 0.1 },
-            { nome: 'Almoço', horario: '13:00', perc: 0.35 },
-            { nome: 'Lanche tarde', horario: '16:00', perc: 0.1 },
-            { nome: 'Jantar', horario: '19:30', perc: 0.2 }
-        ],
-        6: [
-            { nome: 'Café da manhã', horario: '07:00', perc: 0.25 },
-            { nome: 'Lanche manhã', horario: '10:00', perc: 0.1 },
-            { nome: 'Almoço', horario: '13:00', perc: 0.3 },
-            { nome: 'Lanche tarde', horario: '16:00', perc: 0.1 },
-            { nome: 'Jantar', horario: '19:30', perc: 0.2 },
-            { nome: 'Ceia', horario: '22:00', perc: 0.05 }
-        ]
-    };
-    return distribuicoes[refeicoes_dia] || distribuicoes[5];
-};
-
-// Inicializar array de refeições com metas calculadas
-const inicializarRefeicoes = () => {
-    console.log('🔄 Inicializando refeições para o plano');
-    console.log('📊 Dados atuais do plano:', formularioPlano.value);
-    // if (formularioPlano.value.refeicoes.length > 0) {
-    //     // Já tem dados, não reinicializa
-    //     return;
-    // }
-
-    console.log('📊 Refeições antes da inicialização:', formularioPlano.value.refeicoes);
-
-    const refeicoesDia = parseInt(formularioPlano.value.refeicoes_dia);
-    const distribuicao = distribuirCalorias(refeicoesDia);
-
-    formularioPlano.value.refeicoes = distribuicao.map((ref, idx) => ({
-        nome: ref.nome,
-        horario: ref.horario,
-        ordem: idx + 1,
-        notas: '',
-        itens: [],
-        meta_calorias: Math.round(formularioPlano.value.calorias_meta * ref.perc),
-        meta_proteinas_g: Math.round(formularioPlano.value.proteina_g * ref.perc),
-        meta_carboidrato_g: Math.round(formularioPlano.value.carboidrato_g * ref.perc),
-        meta_gordura_g: Math.round(formularioPlano.value.gordura_g * ref.perc),
-        total_calorias: 0,
-        total_proteinas_g: 0,
-        total_carboidrato_g: 0,
-        total_gordura_g: 0
-    }));
-};
-
-// Buscar alimentos com debounce (400ms)
-const buscarAlimentosDebounce = (termo) => {
-    clearTimeout(debounceTimer);
-
-    if (termo.length < 2) {
-        resultadosBusca.value = [];
-        paginaAtualAlimentos.value = 1;
-        totalPaginasAlimentos.value = 1;
-        return;
-    }
-
-    loadingBusca.value = true;
-    paginaAtualAlimentos.value = 1; // Reset para primeira página
-    debounceTimer = setTimeout(async () => {
-        try {
-            const response = await AlimentoService.buscarAlimentos({
-                busca: termo,
-                limite: 10,
-                pagina: 1
-            });
-            resultadosBusca.value = response.data?.data?.dados || [];
-            totalPaginasAlimentos.value = response.data?.data?.totalPaginas || 1;
-        } catch (error) {
-            console.error('❌ Erro ao buscar alimentos:', error);
-            resultadosBusca.value = [];
-            totalPaginasAlimentos.value = 1;
-        } finally {
-            loadingBusca.value = false;
-        }
-    }, 400);
-};
-
-// Carregar mais alimentos (paginação infinita)
-const carregarMaisAlimentos = async () => {
-    if (carregandoMaisAlimentos.value || !buscarAlimentoText.value || paginaAtualAlimentos.value >= totalPaginasAlimentos.value) {
-        return;
-    }
-
-    carregandoMaisAlimentos.value = true;
-    const proximaPagina = paginaAtualAlimentos.value + 1;
-
-    try {
-        const response = await AlimentoService.buscarAlimentos({
-            busca: buscarAlimentoText.value,
-            limite: 10,
-            pagina: proximaPagina
-        });
-        const novosAlimentos = response.data?.data?.dados || [];
-        resultadosBusca.value = [...resultadosBusca.value, ...novosAlimentos];
-        paginaAtualAlimentos.value = proximaPagina;
-        // Re-setup observer após carregar mais alimentos
-        setupDropdownObserver();
-    } catch (error) {
-        console.error('❌ Erro ao carregar mais alimentos:', error);
-    } finally {
-        carregandoMaisAlimentos.value = false;
-    }
-};
-
-// Setup Intersection Observer para detectar quando antepenúltimo item fica visível
-const setupDropdownObserver = async () => {
-    await nextTick();
-
-    if (resultadosBusca.value.length < 2) {
-        return;
-    }
-
-    // Limpar observer anterior se existir
-    if (dropdownObserver.value) {
-        dropdownObserver.value.disconnect();
-    }
-
-    // Criar novo observer
-    const observer = new IntersectionObserver(
-        (entries) => {
-            entries.forEach((entry) => {
-                // Quando o antepenúltimo item ficar visível, carregar mais
-                if (entry.isIntersecting) {
-                    carregarMaisAlimentos();
-                }
-            });
-        },
-        {
-            root: document.querySelector('[data-dropdown-results]'), // Viewport do dropdown
-            threshold: 0.1 // Quando 10% do elemento estiver visível
-        }
-    );
-
-    // Monitorar o antepenúltimo item da lista
-    const elementos = document.querySelectorAll('[data-alimento-item]');
-    if (elementos.length >= 2) {
-        const antepenultimoIndex = elementos.length - 2;
-        observer.observe(elementos[antepenultimoIndex]);
-    }
-
-    dropdownObserver.value = observer;
-};
-
-// Watcher para setup observer quando os resultados mudam
-watch(
-    () => resultadosBusca.value.length,
-    () => {
-        setupDropdownObserver();
-    }
-);
-
-// Converter unidades para gramas
-const converterParaGramas = (quantidade, unidade) => {
-    const conversoes = {
-        g: quantidade,
-        ml: quantidade,
-        'colher de sopa': quantidade * 15,
-        'colher de chá': quantidade * 5,
-        xícara: quantidade * 200,
-        unidade: 100
-    };
-    return conversoes[unidade] || 100;
-};
-
-// Calcular nutrientes de um item baseado em quantidade
-const calcularNutrienteItem = (alimento, quantidade, unidade) => {
-    const gramasTotal = converterParaGramas(quantidade, unidade);
-    const fator = gramasTotal / 100;
-
-    // Converter strings para números (API retorna como string)
-    const energiaKcal = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : alimento.energiaKcal;
-    const proteina = typeof alimento.proteina === 'string' ? parseFloat(alimento.proteina) : alimento.proteina;
-    const carboidrato = typeof alimento.carboidrato === 'string' ? parseFloat(alimento.carboidrato) : alimento.carboidrato;
-    const lipidios = typeof alimento.lipidios === 'string' ? parseFloat(alimento.lipidios) : alimento.lipidios;
-
-    return {
-        calorias: Math.round(energiaKcal * fator * 10) / 10,
-        proteinas: Math.round(proteina * fator * 10) / 10,
-        carboidrato: Math.round(carboidrato * fator * 10) / 10,
-        gordura: Math.round(lipidios * fator * 10) / 10
-    };
-};
-
-// Selecionar alimento do dropdown
-const selecionarAlimento = (alimento) => {
-    formQuantidade.value.alimento_id = alimento.id;
-    formQuantidade.value.nome_alimento = alimento.nome;
-    formQuantidade.value.grupo_alimento = alimento.grupo;
-    // Converter para número se vier como string
-    formQuantidade.value.calorias_por_100 = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : alimento.energiaKcal;
-    formQuantidade.value.alimento = alimento;
-    resultadosBusca.value = [];
-    buscarAlimentoText.value = '';
-};
-
-// Adicionar item à refeição
-const adicionarItem = (refeicaoIndex) => {
-    if (!formQuantidade.value.alimento_id) return;
-
-    const refeicao = formularioPlano.value.refeicoes[refeicaoIndex];
-    const nutrientes = calcularNutrienteItem(formQuantidade.value.alimento, formQuantidade.value.quantidade, formQuantidade.value.unidade);
-
-    const novoItem = {
-        alimento_id: formQuantidade.value.alimento_id,
-        nome_alimento: formQuantidade.value.nome_alimento,
-        grupo_alimento: formQuantidade.value.grupo_alimento,
-        quantidade: formQuantidade.value.quantidade,
-        unidade: formQuantidade.value.unidade,
-        calorias_calculadas: nutrientes.calorias,
-        proteinas_calculadas: nutrientes.proteinas,
-        carboidrato_calculado: nutrientes.carboidrato,
-        gordura_calculada: nutrientes.gordura
-    };
-
-    refeicao.itens.push(novoItem);
-    calcularTotalRefeicao(refeicao);
-
-    // Limpar formulário
-    formQuantidade.value = {
-        alimento_id: null,
-        nome_alimento: '',
-        grupo_alimento: '',
-        quantidade: 100,
-        unidade: 'g',
-        calorias_por_100: 0
-    };
-    buscarAlimentoText.value = '';
-};
-
-// Deletar item da refeição
-const deletarItem = (refeicaoIndex, itemIndex) => {
-    formularioPlano.value.refeicoes[refeicaoIndex].itens.splice(itemIndex, 1);
-    calcularTotalRefeicao(formularioPlano.value.refeicoes[refeicaoIndex]);
-};
-
-// Recalcular totais de uma refeição
-const calcularTotalRefeicao = (refeicao) => {
-    refeicao.total_calorias = 0;
-    refeicao.total_proteinas_g = 0;
-    refeicao.total_carboidrato_g = 0;
-    refeicao.total_gordura_g = 0;
-
-    refeicao.itens.forEach((item) => {
-        refeicao.total_calorias += item.calorias_calculadas;
-        refeicao.total_proteinas_g += item.proteinas_calculadas;
-        refeicao.total_carboidrato_g += item.carboidrato_calculado;
-        refeicao.total_gordura_g += item.gordura_calculada;
-    });
-
-    refeicao.total_calorias = Math.round(refeicao.total_calorias * 10) / 10;
-    refeicao.total_proteinas_g = Math.round(refeicao.total_proteinas_g * 10) / 10;
-    refeicao.total_carboidrato_g = Math.round(refeicao.total_carboidrato_g * 10) / 10;
-    refeicao.total_gordura_g = Math.round(refeicao.total_gordura_g * 10) / 10;
-};
-
-// Calcular totais do dia (para barra sticky)
-const calcularTotaisDia = () => {
-    console.log('🔢 Calculando totais do dia. Refeições:', formularioPlano.value.refeicoes);
-    let total_calorias = 0;
-    let total_proteinas = 0;
-    let total_carboidrato = 0;
-    let total_gordura = 0;
-
-    formularioPlano.value.refeicoes.forEach((refeicao) => {
-        total_calorias += refeicao.total_calorias;
-        total_proteinas += refeicao.total_proteinas_g;
-        total_carboidrato += refeicao.total_carboidrato_g;
-        total_gordura += refeicao.total_gordura_g;
-    });
-
-    return {
-        total_calorias: Math.round(total_calorias * 10) / 10,
-        total_proteinas: Math.round(total_proteinas * 10) / 10,
-        total_carboidrato: Math.round(total_carboidrato * 10) / 10,
-        total_gordura: Math.round(total_gordura * 10) / 10,
-        perc_calorias: Math.round((total_calorias / formularioPlano.value.calorias_meta) * 100),
-        perc_proteinas: Math.round((total_proteinas / formularioPlano.value.proteina_g) * 100),
-        perc_carboidrato: Math.round((total_carboidrato / formularioPlano.value.carboidrato_g) * 100),
-        perc_gordura: Math.round((total_gordura / formularioPlano.value.gordura_g) * 100)
-    };
-};
-
-// ========== FUNÇÕES DO STEP 3 - REVISÃO ==========
-
-// Traduzir objetivo interno para texto legível
-// const traduzirObjetivo = (objetivo) => {
-//     const traducoes = {
-//         Emagrecimento: 'Emagrecimento',
-//         'Ganho de massa': 'Ganho de Massa',
-//         Manutenção: 'Manutenção',
-//         Performance: 'Performance'
-//     };
-//     return traducoes[objetivo] || objetivo;
-// };
-
-// Calcular diferença entre realizado e meta calórica
-const calcularDiferencaCalorica = () => {
-    const totais = calcularTotaisDia();
-    return {
-        diferenca: totais.total_calorias - formularioPlano.value.calorias_meta,
-        realizado: totais.total_calorias,
-        meta: formularioPlano.value.calorias_meta
-    };
-};
-
-// Obter status comparativo com a meta
-const obterStatusComparativo = () => {
-    const { diferenca } = calcularDiferencaCalorica();
-
-    if (diferenca >= -200 && diferenca <= 200) {
-        return {
-            status: 'dentro',
-            titulo: 'Dentro da meta calórica',
-            icone: 'pi-check-circle',
-            classe: 'bg-emerald-50 border-emerald-200',
-            textoClasse: 'text-emerald-700',
-            descricao: 'O plano atual atende a recomendação basal + atividade física.'
-        };
-    } else if (diferenca < -200) {
-        return {
-            status: 'abaixo',
-            titulo: 'Abaixo da meta calórica',
-            icone: 'pi-arrow-down-circle',
-            classe: 'bg-amber-50 border-amber-200',
-            textoClasse: 'text-amber-700',
-            descricao: `O plano está ${Math.abs(Math.round(diferenca))} kcal abaixo da meta.`
-        };
-    } else {
-        return {
-            status: 'acima',
-            titulo: 'Acima da meta calórica',
-            icone: 'pi-exclamation-circle',
-            classe: 'bg-red-50 border-red-200',
-            textoClasse: 'text-red-700',
-            descricao: `O plano está ${Math.round(diferenca)} kcal acima da meta.`
-        };
-    }
-};
-
-// Formatar valor numérico sem casas decimais
-const formatarValor = (valor) => {
-    return Math.round(valor);
-};
-
-// Adicionar refeição extra personalizada
-const adicionarRefeicaoExtra = () => {
-    const ordem = formularioPlano.value.refeicoes.length + 1;
-    formularioPlano.value.refeicoes.push({
-        nome: 'Personalizado',
-        horario: '',
-        ordem: ordem,
-        notas: '',
-        itens: [],
-        meta_calorias: 0,
-        meta_proteinas_g: 0,
-        meta_carboidrato_g: 0,
-        meta_gordura_g: 0,
-        total_calorias: 0,
-        total_proteinas_g: 0,
-        total_carboidrato_g: 0,
-        total_gordura_g: 0
-    });
-};
+// ===== FUNÇÕES DO PLANO ALIMENTAR (Movidas para @/composables/usePlanosAlimentares.js) =====
+// As funções foram extraídas para um composable dedicado:
+// - distribuirCalorias()
+// - converterParaGramas()
+// - calcularNutrienteItem()
+// - calcularTotalRefeicao()
+// - calcularTotaisDia() → agora recebe formularioPlano como parâmetro
+// - calcularTotaisPlano() → agora recebe formularioPlano como parâmetro
+// - calcularDiferencaCalorica() → agora recebe formularioPlano como parâmetro
+// - obterStatusComparativo() → agora recebe formularioPlano como parâmetro
+// - formatarValor()
+// Todas são acessadas via usePlanosAlimentares()
 
 // Validar Step 2 - Deve ter ao menos 1 alimento em alguma refeição
 const validarStep2Plano = () => {
@@ -2132,7 +1626,7 @@ onMounted(async () => {
 // Watcher para inicializar mensagem quando chegar ao Step 4
 watch(stepAtualPlano, (novoStep) => {
     if (novoStep === 4 && !mensagemPersonalizada.value) {
-        mensagemPersonalizada.value = gerarMensagemPadrao();
+        mensagemPersonalizada.value = gerarMensagemPadrao(paciente.value?.nome || 'Paciente');
     }
 });
 </script>
