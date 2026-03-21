@@ -3,6 +3,7 @@ import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
 import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
+import WizardStep1Configurar from '@/components/wizard/WizardStep1Configurar.vue';
 import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
 import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
 import { useMedidas } from '@/composables/useMedidas';
@@ -2874,8 +2875,10 @@ onMounted(async () => {
             @voltar-step="() => stepAtualPlano--"
             @salvar-plano="salvarPlano"
         >
-            <!-- STEP 1: Placeholder -->
-            <template #step-1> Step 1 content will be added here </template>
+            <!-- STEP 1: Configuração do Plano -->
+            <template #step-1>
+                <WizardStep1Configurar :formularioPlano="formularioPlano" :medidaMaisRecente="medidaMaisRecente" :anamnese="anamnese" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
+            </template>
 
             <!-- STEP 2: Refeições -->
             <template #step-2>
