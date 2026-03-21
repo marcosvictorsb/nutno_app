@@ -214,7 +214,6 @@ watch(
                     }
                 }
             } catch (error) {
-                console.error('❌ Erro ao carregar dados do wizard:', error);
                 toast.add({
                     severity: 'error',
                     summary: 'Erro',
@@ -251,7 +250,6 @@ watch(
     (novoValor, valorAnterior) => {
         if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
             macrosForamEditadosManualmente.value = true;
-            console.log(`✏️ Proteína editada manualmente para ${novoValor}%`);
         }
     }
 );
@@ -262,7 +260,6 @@ watch(
     (novoValor, valorAnterior) => {
         if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
             macrosForamEditadosManualmente.value = true;
-            console.log(`✏️ Carboidrato editado manualmente para ${novoValor}%`);
         }
     }
 );
@@ -273,7 +270,6 @@ watch(
     (novoValor, valorAnterior) => {
         if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
             macrosForamEditadosManualmente.value = true;
-            console.log(`✏️ Gordura editada manualmente para ${novoValor}%`);
         }
     }
 );
@@ -287,8 +283,6 @@ watch(
             formularioPlano.value.proteina_g = Math.round((calorias * formularioPlano.value.proteina_perc) / 100 / 4);
             formularioPlano.value.carboidrato_g = Math.round((calorias * formularioPlano.value.carboidrato_perc) / 100 / 4);
             formularioPlano.value.gordura_g = Math.round((calorias * formularioPlano.value.gordura_perc) / 100 / 9);
-
-            console.log(`🔄 Gramas de macros recalculados: Prot: ${formularioPlano.value.proteina_g}g, Carb: ${formularioPlano.value.carboidrato_g}g, Gord: ${formularioPlano.value.gordura_g}g`);
         }
     }
 );
@@ -296,9 +290,7 @@ watch(
 // Debug watch for step changes
 watch(
     () => stepAtualPlano.value,
-    (novoStep, stepAnterior) => {
-        console.log(`📍 Step mudou de ${stepAnterior} → ${novoStep}`);
-    }
+    (novoStep, stepAnterior) => {}
 );
 
 // ========== VALIDATION FUNCTIONS ==========
@@ -338,14 +330,12 @@ const avancarStep = () => {
     if (stepAtualPlano.value === 1) {
         if (validarStep1Plano()) {
             stepAtualPlano.value++;
-            console.log('✅ Step 1 validado, avançando para Step 2');
 
             // Só inicializar refeições se estiver em MODO CRIAÇÃO
             if (!props.editandoPlanoId) {
-                console.log('📝 Modo CRIAÇÃO - Inicializando refeições padrão');
                 formularioPlano.value.refeicoes = inicializarRefeicoes(formularioPlano.value);
             } else {
-                console.log('✏️ Modo EDIÇÃO - Mantendo refeições carregadas do API');
+                // Modo edição - manter refeições carregadas
             }
         } else {
             toast.add({
@@ -397,9 +387,7 @@ const salvarPlano = async () => {
 
         // Verificar se é modo edição ou criação
         if (props.editandoPlanoId) {
-            console.log('✏️ Atualizando plano alimentar:', payload);
             response = await PlanoAlimentarService.atualizar(idPaciente, props.editandoPlanoId, payload);
-            console.log('✅ Plano atualizado com sucesso:', response);
             toast.add({
                 severity: 'success',
                 summary: 'Sucesso',
@@ -407,9 +395,7 @@ const salvarPlano = async () => {
                 life: 3000
             });
         } else {
-            console.log('✏️ Criando novo plano alimentar:', payload);
             response = await PlanoAlimentarService.criar(idPaciente, payload);
-            console.log('✅ Plano criado com sucesso:', response);
             toast.add({
                 severity: 'success',
                 summary: 'Sucesso',
@@ -422,7 +408,6 @@ const salvarPlano = async () => {
         stepAtualPlano.value = 4;
         emit('concluido', response);
     } catch (error) {
-        console.error('❌ Erro ao salvar plano:', error);
         toast.add({
             severity: 'error',
             summary: 'Erro',

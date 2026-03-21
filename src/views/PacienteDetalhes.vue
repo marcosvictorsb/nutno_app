@@ -332,7 +332,6 @@ const carregarPaciente = async () => {
             erro.value = response.data.message || 'Paciente não encontrado';
         }
     } catch (error) {
-        console.error('Erro ao carregar paciente:', error);
         erro.value = 'Erro ao carregar os dados do paciente';
         toast.add({
             severity: 'error',
@@ -408,7 +407,6 @@ const atualizarPaciente = async (dadosFormulario) => {
         showDialogEdicao.value = false;
         await carregarPaciente();
     } catch (error) {
-        console.error('Erro ao atualizar paciente:', error);
         toast.add({
             severity: 'error',
             summary: 'Erro',
@@ -476,7 +474,6 @@ const enviarFoto = async (event) => {
             throw new Error(response.data.message || 'Erro ao enviar foto');
         }
     } catch (error) {
-        console.error('❌ Erro ao enviar foto:', error);
         toast.add({
             severity: 'error',
             summary: 'Erro',
@@ -501,7 +498,7 @@ watch(
                 delete formErrors.value.nome;
             }
         } catch (e) {
-            console.error('Erro no watcher de nome:', e);
+            // ignore
         }
     }
 );
@@ -514,7 +511,7 @@ watch(
                 delete formErrors.value.email;
             }
         } catch (e) {
-            console.error('Erro no watcher de email:', e);
+            // ignore
         }
     }
 );
@@ -527,7 +524,7 @@ watch(
                 delete formErrors.value.sexo;
             }
         } catch (e) {
-            console.error('Erro no watcher de sexo:', e);
+            // ignore
         }
     }
 );
@@ -549,7 +546,6 @@ const carregarAnamnese = async () => {
             anamnese.value = null;
         }
     } catch (error) {
-        console.error('❌ Erro ao carregar anamnese:', error);
         erroAnamnese.value = 'Erro ao carregar anamnese. Tente enviar o formulário novamente.';
         anamnese.value = null;
     } finally {
@@ -658,7 +654,6 @@ const salvarEdicaoAnamnese = async (dadosAnamnese) => {
             throw new Error(response.data.message || 'Erro ao salvar anamnese');
         }
     } catch (error) {
-        console.error('❌ Erro ao salvar anamnese:', error);
         toast.add({
             severity: 'error',
             summary: 'Erro',
@@ -699,7 +694,6 @@ const carregarPlanos = async () => {
             erroPlanos.value = null;
         }
     } catch (error) {
-        console.error('❌ Erro ao carregar planos:', error);
         erroPlanos.value = 'Erro ao carregar planos. Tente novamente.';
         planos.value = [];
     } finally {
@@ -759,7 +753,6 @@ const deletarPlano = async (idPlano) => {
 
         await carregarPlanos();
     } catch (error) {
-        console.error('❌ Erro ao deletar plano:', error);
         toast.add({
             severity: 'error',
             summary: 'Erro',

@@ -116,10 +116,8 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
         try {
             const idPaciente = route.params.id;
-            console.log('📊 Carregando medidas do paciente:', idPaciente);
 
             const response = await MedidaService.listarMedidasPaciente(idPaciente);
-            console.log('✅ Resposta de medidas:', response.data);
 
             if (response.data.success && response.data.data) {
                 if (Array.isArray(response.data.data) && response.data.data.length > 0) {
@@ -128,8 +126,7 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
                     // A primeira medida é sempre a mais recente - preencher a seleção
                     medidaSelecionada.value = medidas.value[0];
-                    console.log('📊 Medida selecionada definida para a mais recente:', medidaSelecionada.value);
-                    console.log('📍 Medida selecionada:', medidaSelecionada.value.id, '- Peso:', medidaSelecionada.value.peso, 'kg');
+
                     medidaSelecionada.value.imc = medidaSelecionada.value.imc ? parseFloat(medidaSelecionada.value.imc) : null;
 
                     erroMedidas.value = null;
@@ -138,17 +135,14 @@ export function useMedidas(pacienteId, paciente, activeTab) {
                     medidas.value = [];
                     medidaSelecionada.value = null;
                     erroMedidas.value = null;
-                    console.log('ℹ️ Nenhuma medida registrada para este paciente');
                 }
             } else {
                 // API retornou erro
                 erroMedidas.value = response.data.message || 'Erro ao listar medidas';
                 medidas.value = [];
                 medidaSelecionada.value = null;
-                console.error('❌ Erro na resposta da API:', erroMedidas.value);
             }
         } catch (error) {
-            console.error('❌ Erro ao carregar medidas:', error);
             erroMedidas.value = 'Erro ao carregar medidas. Tente novamente.';
             medidas.value = [];
             medidaSelecionada.value = null;
@@ -241,7 +235,6 @@ export function useMedidas(pacienteId, paciente, activeTab) {
                 }
             }
         } catch (error) {
-            console.warn('Erro ao buscar anamnese para preencher medida:', error);
             // Continuar mesmo se não conseguir buscar a anamnese
         }
     };
@@ -291,7 +284,6 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
         try {
             const idPaciente = route.params.id;
-            console.log('📝 Salvando medida para paciente:', idPaciente);
 
             // Converter a data para o formato YYYY-MM-DD
             let dataFormatada = null;
@@ -409,11 +401,7 @@ export function useMedidas(pacienteId, paciente, activeTab) {
                 dadosMedida.observacoes = formularioMedida.value.observacoes;
             }
 
-            console.log('📤 Dados da medida a serem enviados:', dadosMedida);
-
             const response = await MedidaService.criarMedida(idPaciente, dadosMedida);
-
-            console.log('✅ Medida criada:', response.data);
 
             if (response.data.success) {
                 fecharCriacaoMedida();
@@ -429,7 +417,6 @@ export function useMedidas(pacienteId, paciente, activeTab) {
                 throw new Error(response.data.message || 'Erro ao criar medida');
             }
         } catch (error) {
-            console.error('❌ Erro ao salvar medida:', error);
             toast.add({
                 severity: 'error',
                 summary: 'Erro',
@@ -473,7 +460,6 @@ export function useMedidas(pacienteId, paciente, activeTab) {
 
                     await carregarMedidas();
                 } catch (error) {
-                    console.error('❌ Erro ao deletar medida:', error);
                     toast.add({
                         severity: 'error',
                         summary: 'Erro',
