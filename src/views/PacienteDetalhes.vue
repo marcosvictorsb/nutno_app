@@ -82,6 +82,10 @@ const formularioPlano = ref({
     notas: ''
 });
 
+// Estados do Step 4 - Enviar
+const linkPlano = ref('nutno.com.br/plano/token-aqui');
+const mensagemPersonalizada = ref('');
+
 // Estados do Wizard - Referência de Medidas
 const medidaMaisRecente = ref(null);
 const calorias_metaEditada = ref(false); // Flag para rastrear edição manual de calorias
@@ -2407,6 +2411,61 @@ const salvarPlano = async () => {
     }
 };
 
+// ========== FUNÇÕES DO STEP 4 - ENVIAR ==========
+
+// Função para copiar o link do plano para a área de transferência
+const copiarLinkPlano = async () => {
+    try {
+        await navigator.clipboard.writeText(linkPlano.value);
+        toast.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: 'Link copiado para a área de transferência!',
+            life: 2000
+        });
+    } catch (error) {
+        console.error('Erro ao copiar link:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Não foi possível copiar o link',
+            life: 2000
+        });
+    }
+};
+
+// Função para calcular totais nutricionais do plano
+const calcularTotaisPlano = () => {
+    let totalCalorias = 0;
+    let totalProteinas = 0;
+    let totalCarboidratos = 0;
+    let totalGorduras = 0;
+
+    formularioPlano.value.refeicoes.forEach((refeicao) => {
+        if (refeicao.itens && refeicao.itens.length > 0) {
+            refeicao.itens.forEach((item) => {
+                totalCalorias += item.calorias_calculadas || 0;
+                totalProteinas += item.proteinas_calculadas || 0;
+                totalCarboidratos += item.carboidratos_calculados || 0;
+                totalGorduras += item.gorduras_calculadas || 0;
+            });
+        }
+    });
+
+    return {
+        totalCalorias: Math.round(totalCalorias),
+        totalProteinas: Math.round(totalProteinas * 10) / 10,
+        totalCarboidratos: Math.round(totalCarboidratos * 10) / 10,
+        totalGorduras: Math.round(totalGorduras * 10) / 10
+    };
+};
+
+// Gerar mensagem personalizada padrão
+const gerarMensagemPadrao = () => {
+    const nomePaciente = paciente.value?.nome || 'Paciente';
+    return `Olá ${nomePaciente}! \n\nFinalizei seu novo plano alimentar. Ele foi montado com base nas suas medidas e objetivo definidos em consulta. \n\nAcesse pelo link para ver suas refeições e registre sua adesão diária. Qualquer dúvida, estou por aqui! 💚`;
+};
+
 // ========== FUNÇÕES DO STEP 2 - REFEIÇÕES ==========
 
 // Distribuição de calorias por refeição baseado em quantidade
@@ -2841,6 +2900,13 @@ onMounted(async () => {
     // Carregar dados da aba padrão (anamnese)
     if (activeTab.value === 'anamnese' && !anamneseCarregada.value) {
         carregarAnamnese();
+    }
+});
+
+// Watcher para inicializar mensagem quando chegar ao Step 4
+watch(stepAtualPlano, (novoStep) => {
+    if (novoStep === 4 && !mensagemPersonalizada.value) {
+        mensagemPersonalizada.value = gerarMensagemPadrao();
     }
 });
 </script>
@@ -5762,13 +5828,115 @@ onMounted(async () => {
             </div>
 
             <!-- Conteúdo do Step 4: Enviar -->
-            <div v-if="stepAtualPlano === 4" class="max-h-[calc(95vh-300px)] overflow-y-auto flex items-center justify-center">
-                <div class="text-center">
-                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-6">
-                        <i class="pi pi-check text-3xl text-emerald-600"></i>
+            <div v-if="stepAtualPlano === 4" class="max-h-[calc(95vh-300px)] overflow-y-auto p-3 space-y-2">
+                <!-- Confirmation Hero -->
+                <div class="text-center mb-2">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 mb-2">
+                        <i class="pi pi-check text-2xl text-emerald-600"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-slate-800 mb-2">✅ Plano salvo com sucesso!</h2>
-                    <p class="text-slate-500">O plano alimentar foi registrado no sistema.</p>
+                    <h1 class="text-lg font-extrabold text-slate-800 mb-1">Plano salvo com sucesso! 🎉</h1>
+                    <p class="text-xs text-slate-500">O plano alimentar está pronto para ser enviado.</p>
+                </div>
+
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                    <!-- Left Column: Enviar para o paciente -->
+                    <div class="lg:col-span-2 space-y-2">
+                        <!-- Card: Enviar para o paciente -->
+                        <div class="border border-slate-200 rounded-lg p-3 bg-white shadow-sm">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="pi pi-send text-primary text-sm"></i>
+                                <h2 class="text-sm font-bold text-slate-800">Enviar para o paciente</h2>
+                            </div>
+
+                            <div class="space-y-2">
+                                <!-- E-mail Button -->
+                                <button @click="() => {}" class="w-full flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-all group active:scale-[0.98]">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <div class="w-8 h-8 rounded-full bg-white flex flex-shrink-0 items-center justify-center text-slate-500 shadow-sm border border-slate-200">
+                                            <i class="pi pi-envelope text-xs"></i>
+                                        </div>
+                                        <div class="text-left min-w-0">
+                                            <p class="font-bold text-slate-800 text-xs">Enviar por E-mail</p>
+                                            <p class="text-xs text-slate-500">Link e instruções</p>
+                                        </div>
+                                    </div>
+                                    <i class="pi pi-chevron-right text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0"></i>
+                                </button>
+                            </div>
+
+                            <!-- Divider -->
+                            <div class="flex items-center gap-2 my-2">
+                                <div class="flex-1 h-px bg-slate-200"></div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">ou</span>
+                                <div class="flex-1 h-px bg-slate-200"></div>
+                            </div>
+
+                            <!-- Link Direto do Plano -->
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Link direto</label>
+                                <div class="flex items-center gap-1 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                                    <i class="pi pi-link text-slate-500 text-xs"></i>
+                                    <span class="text-xs font-medium text-slate-700 flex-1 truncate">{{ linkPlano }}</span>
+                                    <Button label="Copiar" severity="success" size="small" @click="copiarLinkPlano" class="px-2 py-0 text-xs h-6" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Link para enviar depois -->
+                        <div class="text-center pt-1">
+                            <a href="#" class="text-xs font-semibold text-slate-600 hover:text-primary transition-colors inline-flex items-center gap-1 group">
+                                Enviar depois
+                                <i class="pi pi-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Mensagem Personalizada e Sugestão -->
+                    <div class="space-y-2">
+                        <!-- Card: Mensagem Personalizada -->
+                        <div class="border border-slate-200 rounded-lg p-2 bg-white shadow-sm">
+                            <h2 class="text-xs font-bold text-slate-800 mb-1">Mensagem</h2>
+                            <textarea
+                                v-model="mensagemPersonalizada"
+                                class="w-full h-24 rounded-lg border border-slate-200 bg-white text-xs p-2 focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none text-slate-700 font-medium placeholder-slate-400"
+                            />
+                        </div>
+
+                        <!-- Card: Sugestão -->
+                        <div class="bg-emerald-50 border border-emerald-200 p-2 rounded-lg flex gap-2">
+                            <i class="pi pi-lightbulb text-emerald-600 text-xs flex-shrink-0 pt-0.5"></i>
+                            <p class="text-xs text-emerald-800 font-medium leading-tight"><span class="font-bold">Dica:</span> mencione o objetivo para mais engajamento.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Section: Resumo Nutricional -->
+                <div class="mt-2 bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col lg:flex-row justify-between items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <div class="relative w-14 h-14 rounded-full border-3 border-primary flex flex-col items-center justify-center bg-white shadow-sm">
+                            <span class="text-xs font-black text-primary leading-none">{{ Math.round(calcularTotaisPlano().totalCalorias / 3) / 100 }}k</span>
+                            <span class="text-xs font-bold text-slate-500 uppercase">kcal</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-800">Resumo</h3>
+                            <p class="text-xs text-slate-600">Médias diárias</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 w-full lg:w-auto">
+                        <div class="bg-white rounded-lg p-2 border border-slate-200 shadow-sm text-center">
+                            <p class="text-xs font-bold text-slate-500 uppercase mb-0.5">Proteína</p>
+                            <p class="text-sm font-black text-primary">{{ calcularTotaisPlano().totalProteinas }}g</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-2 border border-slate-200 shadow-sm text-center">
+                            <p class="text-xs font-bold text-slate-500 uppercase mb-0.5">Carbo</p>
+                            <p class="text-sm font-black text-slate-800">{{ calcularTotaisPlano().totalCarboidratos }}g</p>
+                        </div>
+                        <div class="bg-white rounded-lg p-2 border border-slate-200 shadow-sm text-center">
+                            <p class="text-xs font-bold text-slate-500 uppercase mb-0.5">Gordura</p>
+                            <p class="text-sm font-black text-slate-800">{{ calcularTotaisPlano().totalGorduras }}g</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
