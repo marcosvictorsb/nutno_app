@@ -4,6 +4,7 @@ import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
 import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
+import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
 import { useMedidas } from '@/composables/useMedidas';
 import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
 import AnamneseService from '@/service/AnamneseService';
@@ -2881,16 +2882,19 @@ onMounted(async () => {
                 <WizardStep2Refeicoes :formularioPlano="formularioPlano" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
             </template>
 
-            <!-- STEP 3: Placeholder -->
-            <template #step-3> Step 3 content will be added here </template>
+            <!-- STEP 3: Revisão -->
+            <template #step-3>
+                <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" :loadingSalvar="loadingCriacaoPlano" @salvar="salvarPlano" @voltar="stepAtualPlano--" />
+            </template>
 
             <!-- STEP 4: Placeholder -->
             <template #step-4> Step 4 content will be added here </template>
 
             <!-- Footer Buttons -->
             <template #footer-buttons>
-                <Button v-if="stepAtualPlano < 4" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
-                <Button v-else label="Salvar Plano" severity="success" @click="salvarPlano" icon="pi pi-check" icon-pos="right" :loading="loadingCriacaoPlano" />
+                <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+                <Button v-else-if="stepAtualPlano === 2" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+                <!-- Step 3 e 4 têm seus próprios botões dentro dos componentes -->
             </template>
         </ModalCriacaoPlano>
         <!-- END: Modal Criar Plano Alimentar -->
