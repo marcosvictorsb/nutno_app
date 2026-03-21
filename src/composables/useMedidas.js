@@ -191,39 +191,30 @@ export function useMedidas(pacienteId, paciente, activeTab) {
         };
         pressaoArterialCombinada.value = '';
 
-        // Buscar dados da última anamnese para preencher campos automaticamente
-        try {
-            const response = await AnamneseService.obterAnamnesePaciente(paciente.value.id);
-            if (response.data.success && response.data.data) {
-                const anamneseData = response.data.data;
+        // Verificar se há medidas anteriores
+        const temMedidasAnteriores = medidas.value && medidas.value.length > 0;
+
+        if (temMedidasAnteriores) {
+            // OPÇÃO 1: Há medidas anteriores - buscar da última medida registrada
+            try {
+                const ultimaMedida = medidas.value[0]; // A API retorna em DESC (mais recente primeiro)
                 let preencheuDados = false;
 
-                // Preencher peso
-                if (anamneseData.peso_atual) {
-                    formularioMedida.value.peso = parseFloat(anamneseData.peso_atual);
+                // Preencher peso da última medida
+                if (ultimaMedida.peso) {
+                    formularioMedida.value.peso = parseFloat(ultimaMedida.peso);
                     preencheuDados = true;
                 }
 
-                // Preencher altura
-                if (anamneseData.altura) {
-                    formularioMedida.value.altura = parseFloat(anamneseData.altura);
+                // Preencher altura da última medida
+                if (ultimaMedida.altura) {
+                    formularioMedida.value.altura = parseFloat(ultimaMedida.altura);
                     preencheuDados = true;
                 }
 
-                // Definir nível de atividade baseado nos dados da anamnese
-                if (anamneseData.faz_exercicios && anamneseData.frequencia_exercicio_semana) {
-                    const frequencia = parseInt(anamneseData.frequencia_exercicio_semana);
-                    if (frequencia >= 5) {
-                        formularioMedida.value.nivel_atividade = 'intenso';
-                    } else if (frequencia >= 3) {
-                        formularioMedida.value.nivel_atividade = 'moderado';
-                    } else if (frequencia > 0) {
-                        formularioMedida.value.nivel_atividade = 'leve';
-                    } else {
-                        formularioMedida.value.nivel_atividade = 'sedentario';
-                    }
-                } else {
-                    formularioMedida.value.nivel_atividade = 'sedentario';
+                // Manter nível de atividade da última medida
+                if (ultimaMedida.nivel_atividade) {
+                    formularioMedida.value.nivel_atividade = ultimaMedida.nivel_atividade;
                 }
 
                 // Calcular TMB automaticamente se temos todos os dados necessários
@@ -240,13 +231,71 @@ export function useMedidas(pacienteId, paciente, activeTab) {
                     toast.add({
                         severity: 'info',
                         summary: 'Dados carregados',
-                        detail: 'Peso, altura e nível de atividade foram preenchidos automaticamente da anamnese',
+                        detail: 'Peso e altura foram preenchidos automaticamente a partir da última medida registrada',
                         life: 3000
                     });
                 }
+            } catch (error) {
+                // Continuar mesmo se não conseguir carregar a última medida
             }
-        } catch (error) {
-            // Continuar mesmo se não conseguir buscar a anamnese
+        } else {
+            // OPÇÃO 2: Primeira medida - buscar dados da anamnese
+            try {
+                const response = await AnamneseService.obterAnamnesePaciente(paciente.value.id);
+                if (response.data.success && response.data.data) {
+                    const anamneseData = response.data.data;
+                    let preencheuDados = false;
+
+                    // Preencher peso
+                    if (anamneseData.peso_atual) {
+                        formularioMedida.value.peso = parseFloat(anamneseData.peso_atual);
+                        preencheuDados = true;
+                    }
+
+                    // Preencher altura
+                    if (anamneseData.altura) {
+                        formularioMedida.value.altura = parseFloat(anamneseData.altura);
+                        preencheuDados = true;
+                    }
+
+                    // Definir nível de atividade baseado nos dados da anamnese
+                    if (anamneseData.faz_exercicios && anamneseData.frequencia_exercicio_semana) {
+                        const frequencia = parseInt(anamneseData.frequencia_exercicio_semana);
+                        if (frequencia >= 5) {
+                            formularioMedida.value.nivel_atividade = 'intenso';
+                        } else if (frequencia >= 3) {
+                            formularioMedida.value.nivel_atividade = 'moderado';
+                        } else if (frequencia > 0) {
+                            formularioMedida.value.nivel_atividade = 'leve';
+                        } else {
+                            formularioMedida.value.nivel_atividade = 'sedentario';
+                        }
+                    } else {
+                        formularioMedida.value.nivel_atividade = 'sedentario';
+                    }
+
+                    // Calcular TMB automaticamente se temos todos os dados necessários
+                    if (paciente.value?.data_nascimento && formularioMedida.value.peso && formularioMedida.value.altura) {
+                        const idade = calcularIdade(paciente.value.data_nascimento);
+                        const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
+                        if (tmb) {
+                            formularioMedida.value.tmb = tmb;
+                        }
+                    }
+
+                    // Mostrar feedback ao usuário
+                    if (preencheuDados) {
+                        toast.add({
+                            severity: 'info',
+                            summary: 'Dados carregados',
+                            detail: 'Peso, altura e nível de atividade foram preenchidos automaticamente da anamnese',
+                            life: 3000
+                        });
+                    }
+                }
+            } catch (error) {
+                // Continuar mesmo se não conseguir buscar a anamnese
+            }
         }
 
         // Abrir modal APÓS carregar dados
