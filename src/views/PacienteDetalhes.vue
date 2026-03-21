@@ -23,10 +23,10 @@
 
         <!-- BEGIN: Content Area -->
         <div class="flex-1 overflow-y-auto mt-3">
-            <AbaResumo v-if="activeTab === 'resumo'" @ir-para-anamnese="activeTab = 'anamnese'" @ir-para-medidas="activeTab = 'medidas'" @ir-para-planos="activeTab = 'planos'" />
+            <!-- <AbaResumo v-if="activeTab === 'resumo'" @ir-para-anamnese="activeTab = 'anamnese'" @ir-para-medidas="activeTab = 'medidas'" @ir-para-planos="activeTab = 'planos'" /> -->
 
             <AbaAnamnese
-                v-else-if="activeTab === 'anamnese'"
+                v-if="activeTab === 'anamnese'"
                 :loadingAnamnese="loadingAnamnese"
                 :erroAnamnese="erroAnamnese"
                 :anamnese="anamnese"
@@ -57,7 +57,7 @@
                 @arquivar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Arquivar plano - a implementar' })"
             />
 
-            <AbaAdesao v-else-if="activeTab === 'adesao'" />
+            <!-- <AbaAdesao v-else-if="activeTab === 'adesao'" /> -->
 
             <div v-else class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-emerald-50 p-12 text-center">
                 <i class="pi pi-home text-4xl text-slate-300 mb-4"></i>
@@ -139,11 +139,9 @@
 import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
-import AbaAdesao from '@/components/paciente/AbaAdesao.vue';
 import AbaAnamnese from '@/components/paciente/AbaAnamnese.vue';
 import AbaMedidas from '@/components/paciente/AbaMedidas.vue';
 import AbaPlanos from '@/components/paciente/AbaPlanos.vue';
-import AbaResumo from '@/components/paciente/AbaResumo.vue';
 import PacienteHeader from '@/components/paciente/PacienteHeader.vue';
 import WizardPlano from '@/components/wizard/WizardPlano.vue';
 import { useMedidas } from '@/composables/useMedidas';
