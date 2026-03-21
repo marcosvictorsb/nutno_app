@@ -1,18 +1,14 @@
 <script setup>
 import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
-import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
-import WizardStep1Configurar from '@/components/wizard/WizardStep1Configurar.vue';
-import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
-import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
 import { useMedidas } from '@/composables/useMedidas';
 import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
 import AnamneseService from '@/service/AnamneseService';
 import MedidaService from '@/service/MedidaService';
 import PacienteService from '@/service/PacienteService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
-import { calcularGET, calcularSugestaoCaloriaPorObjetivo, calcularTMB, obterDistribuicaoMacrosPorObjetivo, parsePressoArterial } from '@/utils/nutricionais';
+import { calcularGET, calcularTMB, parsePressoArterial } from '@/utils/nutricionais';
 import { construirUrlFotoPaciente } from '@/utils/urlHelper';
 import Avatar from 'primevue/avatar';
 import Button from 'primevue/button';
@@ -83,10 +79,8 @@ const loadingPlanos = ref(false);
 const erroPlanos = ref(null);
 const planosCarregada = ref(false);
 const showDialogCriacaoPlano = ref(false);
-const loadingCriacaoPlano = ref(false);
 const editandoPlanoId = ref(null); // ID do plano sendo editado (null = modo criação)
-const stepAtualPlano = ref(1);
-const errosPlano = ref({});
+const linkPlano = ref('nutno.com.br/plano/token-aqui');
 const formularioPlano = ref({
     nome: '',
     objetivo: '',
@@ -102,18 +96,17 @@ const formularioPlano = ref({
     notas: ''
 });
 
-// Estados do Step 4 - Enviar
-const linkPlano = ref('nutno.com.br/plano/token-aqui');
-const mensagemPersonalizada = ref('');
-
-// Estados do Wizard - Referência de Medidas
-const calorias_metaEditada = ref(false); // Flag para rastrear edição manual de calorias
-const calorias_metaSugeridaPor = ref(null); // Armazena qual objetivo sugeriu a caloria
-const formularioPlanoCalorias_metaOriginal = ref(2000); // Armazena o valor original para detectar mudanças
-const objetivoPreSelecionadoCom = ref(null); // Rastreia qual objetivo foi pré-selecionado pela anamnese
-const macrosForamEditadosManualmente = ref(false); // Flag para rastrear edição manual de macros
-const macrosSugeridosPor = ref(null); // Armazena qual objetivo sugeriu os macros
-const atualizandoMacrosProgramaticamente = ref(false); // Flag interna para diferenciação de mudanças programáticas vs do usuário
+// Wizard state variables
+const stepAtualPlano = ref(1);
+const errosPlano = ref({});
+const loadingCriacaoPlano = ref(false);
+const calorias_metaEditada = ref(false);
+const calorias_metaSugeridaPor = ref(null);
+const formularioPlanoCalorias_metaOriginal = ref(2000);
+const objetivoPreSelecionadoCom = ref(null);
+const macrosForamEditadosManualmente = ref(false);
+const macrosSugeridosPor = ref(null);
+const atualizandoMacrosProgramaticamente = ref(false);
 
 // Estados do gráfico de evolução
 const periodoEvoucao = ref('6meses');
@@ -347,172 +340,6 @@ watch(
 );
 
 // ===== WATCHERS PARA WIZARD DE PLANO ALIMENTAR =====
-
-// **REGRA 3**: Atualizar calorias_meta ao selecionar objetivo (REGRA 6: não atualizar se já foi editado manualmente)
-watch(
-    () => formularioPlano.value.objetivo,
-    (novoObjetivo) => {
-        // Sempre resetar a flag de "macros editados manualmente" quando objetivo muda
-        // Isso permite que a nova distribuição seja aplicada mesmo se o usuário ajustou antes
-        macrosForamEditadosManualmente.value = false;
-
-        // Só atualizar automaticamente se:
-        // 1. Há medida disponível
-        // 2. Calorias_meta ainda não foi editada manualmente
-        // 3. O novo objetivo é diferente do anterior
-
-        if (!calorias_metaEditada.value && medidaMaisRecente.value?.gasto_energetico_total) {
-            const get = Math.round(parseFloat(medidaMaisRecente.value.gasto_energetico_total));
-            const sugestao = calcularSugestaoCaloriaPorObjetivo(novoObjetivo, get);
-
-            if (sugestao && sugestao > 0) {
-                const valorAnterior = formularioPlano.value.calorias_meta;
-                formularioPlano.value.calorias_meta = sugestao;
-                calorias_metaSugeridaPor.value = novoObjetivo;
-
-                console.log(`🎯 Calorias atualizadas automaticamente para ${novoObjetivo}: ${sugestao} kcal (era ${valorAnterior})`);
-
-                // Animar o fundo do campo por 1 segundo
-                const caloriaInput = document.querySelector('input[id*="calorias_meta"], input[value="' + sugestao + '"]');
-                if (caloriaInput?.parentElement) {
-                    caloriaInput.parentElement.classList.add('bg-green-50', 'transition-colors', 'duration-1000');
-                    setTimeout(() => {
-                        caloriaInput.parentElement?.classList.remove('bg-green-50');
-                    }, 1000);
-                }
-            }
-        }
-
-        // **REGRA 1+2**: Atualizar distribuição de macros se não foram editados manualmente
-        if (!macrosForamEditadosManualmente.value && novoObjetivo) {
-            const distrib = obterDistribuicaoMacrosPorObjetivo(novoObjetivo);
-
-            const valores_anteriores = {
-                proteina_perc: formularioPlano.value.proteina_perc,
-                carboidrato_perc: formularioPlano.value.carboidrato_perc,
-                gordura_perc: formularioPlano.value.gordura_perc
-            };
-
-            // Setar flag para indicar que é uma atualização programática
-            atualizandoMacrosProgramaticamente.value = true;
-
-            // Atualizar percentuais
-            formularioPlano.value.proteina_perc = distrib.proteina_perc;
-            formularioPlano.value.carboidrato_perc = distrib.carboidrato_perc;
-            formularioPlano.value.gordura_perc = distrib.gordura_perc;
-            macrosSugeridosPor.value = novoObjetivo;
-
-            // Recalcular gramas com base nos novos percentuais
-            formularioPlano.value.proteina_g = Math.round((formularioPlano.value.calorias_meta * distrib.proteina_perc) / 100 / 4);
-            formularioPlano.value.carboidrato_g = Math.round((formularioPlano.value.calorias_meta * distrib.carboidrato_perc) / 100 / 4);
-            formularioPlano.value.gordura_g = Math.round((formularioPlano.value.calorias_meta * distrib.gordura_perc) / 100 / 9);
-
-            // Resetar flag após a atualização usando nextTick para garantir que os watchers rodem antes
-            nextTick(() => {
-                atualizandoMacrosProgramaticamente.value = false;
-            });
-
-            console.log(
-                `🥗 Macros atualizados automaticamente para ${novoObjetivo}:`,
-                `Prot: ${valores_anteriores.proteina_perc}% → ${distrib.proteina_perc}%,`,
-                `Carb: ${valores_anteriores.carboidrato_perc}% → ${distrib.carboidrato_perc}%,`,
-                `Gord: ${valores_anteriores.gordura_perc}% → ${distrib.gordura_perc}%`
-            );
-        }
-
-        // Se objetivo foi alterado pelo usuário (não é mais a pré-seleção), resetar o rastreador
-        if (novoObjetivo && novoObjetivo !== objetivoPreSelecionadoCom.value) {
-            objetivoPreSelecionadoCom.value = null;
-        }
-    }
-);
-
-// **REGRA 6**: Detectar edição manual de calorias_meta
-watch(
-    () => formularioPlano.value.calorias_meta,
-    (novoValor) => {
-        // Marcar como editado manualmente se o valor é diferente do original
-        if (novoValor !== formularioPlanoCalorias_metaOriginal.value) {
-            calorias_metaEditada.value = true;
-        }
-    }
-);
-
-// **REGRA 2**: Detectar edição manual de proteína (marca como editado)
-watch(
-    () => formularioPlano.value.proteina_perc,
-    (novoValor, valorAnterior) => {
-        // Só marcar como editado se:
-        // 1. O valor realmente mudou
-        // 2. NÃO estamos atualizando programaticamente
-        if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
-            macrosForamEditadosManualmente.value = true;
-            console.log(`✏️ Proteína editada manualmente para ${novoValor}%`);
-        }
-    }
-);
-
-// **REGRA 2**: Detectar edição manual de carboidrato (marca como editado)
-watch(
-    () => formularioPlano.value.carboidrato_perc,
-    (novoValor, valorAnterior) => {
-        // Só marcar como editado se:
-        // 1. O valor realmente mudou
-        // 2. NÃO estamos atualizando programaticamente
-        if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
-            macrosForamEditadosManualmente.value = true;
-            console.log(`✏️ Carboidrato editado manualmente para ${novoValor}%`);
-        }
-    }
-);
-
-// **REGRA 2**: Detectar edição manual de gordura (marca como editado)
-watch(
-    () => formularioPlano.value.gordura_perc,
-    (novoValor, valorAnterior) => {
-        // Só marcar como editado se:
-        // 1. O valor realmente mudou
-        // 2. NÃO estamos atualizando programaticamente
-        if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
-            macrosForamEditadosManualmente.value = true;
-            console.log(`✏️ Gordura editada manualmente para ${novoValor}%`);
-        }
-    }
-);
-
-// **REGRA 2**: Recalcular gramas centralizadamente quando qualquer percentual ou caloria muda
-watch(
-    () => [formularioPlano.value.proteina_perc, formularioPlano.value.carboidrato_perc, formularioPlano.value.gordura_perc, formularioPlano.value.calorias_meta],
-    () => {
-        const calorias = formularioPlano.value.calorias_meta;
-        if (calorias && calorias > 0) {
-            // Recalcular gramas com base nos percentuais atuais e meta calórica
-            formularioPlano.value.proteina_g = Math.round((calorias * formularioPlano.value.proteina_perc) / 100 / 4);
-            formularioPlano.value.carboidrato_g = Math.round((calorias * formularioPlano.value.carboidrato_perc) / 100 / 4);
-            formularioPlano.value.gordura_g = Math.round((calorias * formularioPlano.value.gordura_perc) / 100 / 9);
-
-            console.log(
-                `🔄 Gramas de macros recalculados:`,
-                `Prot: ${formularioPlano.value.proteina_g}g (${formularioPlano.value.proteina_perc}%),`,
-                `Carb: ${formularioPlano.value.carboidrato_g}g (${formularioPlano.value.carboidrato_perc}%),`,
-                `Gord: ${formularioPlano.value.gordura_g}g (${formularioPlano.value.gordura_perc}%)`
-            );
-        }
-    }
-);
-
-// Monitorar mudanças no step para debugar refeições
-watch(
-    () => stepAtualPlano.value,
-    (novoStep, stepAnterior) => {
-        console.log(`📍 Step mudou de ${stepAnterior} → ${novoStep}`);
-        console.log(`   Refeições neste momento:`, {
-            qtde: formularioPlano.value.refeicoes.length,
-            refeicoes: formularioPlano.value.refeicoes,
-            formularioCompleto: formularioPlano.value
-        });
-    }
-);
 
 // Estados do formulário de edição
 const formEdicaoPaciente = ref({
@@ -1299,16 +1126,7 @@ const abrirEdicaoPlano = async (planoId) => {
 };
 
 const abrirCriacaoPlano = async () => {
-    stepAtualPlano.value = 1;
-    errosPlano.value = {};
     editandoPlanoId.value = null; // Modo criação
-
-    // Resetar flags de edição
-    calorias_metaEditada.value = false;
-    calorias_metaSugeridaPor.value = null;
-    macrosForamEditadosManualmente.value = false; // **REGRA 6**: Resetar flag de macros
-    macrosSugeridosPor.value = null;
-    atualizandoMacrosProgramaticamente.value = false; // Resetar flag de atualização programática
 
     // **REGRA 1**: Carregar medidas se não estiverem carregadas
     if (!medidas.value || medidas.value.length === 0) {
@@ -1334,236 +1152,9 @@ const abrirCriacaoPlano = async () => {
         medidaMaisRecente.value = medidas.value[0];
     }
 
-    // Definir valor padrão para calorias_meta
-    let calorias_meta_padrao = 2000;
-
-    // **REGRA 2**: Pré-preencher calorias_meta com GET da medida mais recente
-    if (medidaMaisRecente.value && medidaMaisRecente.value.gasto_energetico_total) {
-        const get = Math.round(parseFloat(medidaMaisRecente.value.gasto_energetico_total));
-        if (get > 0) {
-            calorias_meta_padrao = get;
-        }
-    }
-
-    formularioPlano.value = {
-        nome: '',
-        objetivo: '',
-        calorias_meta: calorias_meta_padrao,
-        refeicoes_dia: 5,
-        proteina_g: 150,
-        proteina_perc: 30,
-        carboidrato_g: 250,
-        carboidrato_perc: 45,
-        gordura_g: 66,
-        gordura_perc: 25,
-        refeicoes: [],
-        notas: ''
-    };
-
-    // **REGRA 2**: Pré-selecionar objetivo baseado na anamnese
-    if (anamnese.value && anamnese.value.objetivo && !formularioPlano.value.objetivo) {
-        formularioPlano.value.objetivo = anamnese.value.objetivo;
-        objetivoPreSelecionadoCom.value = anamnese.value.objetivo;
-
-        // **REGRA 6**: Aplicar distribuição de macros correspondente ao objetivo
-        const distrib = obterDistribuicaoMacrosPorObjetivo(anamnese.value.objetivo);
-        formularioPlano.value.proteina_perc = distrib.proteina_perc;
-        formularioPlano.value.carboidrato_perc = distrib.carboidrato_perc;
-        formularioPlano.value.gordura_perc = distrib.gordura_perc;
-        macrosSugeridosPor.value = anamnese.value.objetivo;
-
-        // Recalcular gramas com base nos percentuais iniciais e calorias_meta_padrao
-        formularioPlano.value.proteina_g = Math.round((calorias_meta_padrao * distrib.proteina_perc) / 100 / 4);
-        formularioPlano.value.carboidrato_g = Math.round((calorias_meta_padrao * distrib.carboidrato_perc) / 100 / 4);
-        formularioPlano.value.gordura_g = Math.round((calorias_meta_padrao * distrib.gordura_perc) / 100 / 9);
-
-        console.log(`🥗 Distribuição de macros pré-preenchida baseado no objetivo da anamnese: ${anamnese.value.objetivo}`);
-    } else {
-        objetivoPreSelecionadoCom.value = null;
-    }
-
-    formularioPlanoCalorias_metaOriginal.value = calorias_meta_padrao;
-
     console.log('📋 Wizard de plano aberto - medida mais recente:', medidaMaisRecente.value);
-    console.log('🎯 Calorias sugeridas:', calorias_meta_padrao);
-    console.log('🎯 Objetivo pré-selecionado:', formularioPlano.value.objetivo);
 
     showDialogCriacaoPlano.value = true;
-};
-
-const fecharCriacaoPlano = () => {
-    showDialogCriacaoPlano.value = false;
-    stepAtualPlano.value = 1;
-    editandoPlanoId.value = null; // Limpar ID de edição
-    formularioPlano.value = {
-        nome: '',
-        objetivo: '',
-        calorias_meta: 2000,
-        refeicoes_dia: 5,
-        proteina_g: 150,
-        proteina_perc: 30,
-        carboidrato_g: 250,
-        carboidrato_perc: 45,
-        gordura_g: 66,
-        gordura_perc: 25,
-        refeicoes: [],
-        notas: ''
-    };
-    errosPlano.value = {};
-    objetivoPreSelecionadoCom.value = null;
-    macrosForamEditadosManualmente.value = false; // **REGRA 6**: Resetar flag de macros ao fechar
-    macrosSugeridosPor.value = null;
-    atualizandoMacrosProgramaticamente.value = false; // Resetar flag de atualização programática
-};
-
-const validarStep1Plano = () => {
-    errosPlano.value = {};
-
-    if (!formularioPlano.value.nome || formularioPlano.value.nome.trim() === '') {
-        errosPlano.value.nome = 'Nome do plano é obrigatório';
-    }
-
-    if (!formularioPlano.value.objetivo || formularioPlano.value.objetivo.trim() === '') {
-        errosPlano.value.objetivo = 'Objetivo do plano é obrigatório';
-    }
-
-    if (!formularioPlano.value.calorias_meta || formularioPlano.value.calorias_meta <= 0) {
-        errosPlano.value.calorias_meta = 'Meta calórica é obrigatória e deve ser maior que 0';
-    }
-
-    return Object.keys(errosPlano.value).length === 0;
-};
-
-const avancarStep = () => {
-    if (stepAtualPlano.value === 1) {
-        if (validarStep1Plano()) {
-            stepAtualPlano.value++;
-            console.log('✅ Step 1 validado, avançando para Step 2');
-
-            // Só inicializar refeições se estiver em MODO CRIAÇÃO
-            // Se está editando (editandoPlanoId !== null), as refeições já foram carregadas do API
-            if (!editandoPlanoId.value) {
-                console.log('📝 Modo CRIAÇÃO - Inicializando refeições padrão');
-                formularioPlano.value.refeicoes = inicializarRefeicoes(formularioPlano.value);
-            } else {
-                console.log('✏️ Modo EDIÇÃO - Mantendo refeições carregadas do API');
-            }
-        } else {
-            toast.add({
-                severity: 'warn',
-                summary: 'Campos obrigatórios',
-                detail: 'Preencha todos os campos obrigatórios',
-                life: 3000
-            });
-        }
-    } else if (stepAtualPlano.value === 2) {
-        if (validarStep2Plano()) {
-            stepAtualPlano.value++;
-        }
-    } else {
-        stepAtualPlano.value++;
-    }
-};
-
-const salvarPlano = async () => {
-    try {
-        loadingCriacaoPlano.value = true;
-
-        // Construir payload no formato esperado pela API
-        const payload = {
-            nome: formularioPlano.value.nome,
-            objetivo: formularioPlano.value.objetivo,
-            observacoes: formularioPlano.value.notas || '',
-            calorias_objetivo: formularioPlano.value.calorias_meta,
-            proteinas_objetivo_pct: formularioPlano.value.proteina_perc,
-            carboidratos_objetivo_pct: formularioPlano.value.carboidrato_perc,
-            gorduras_objetivo_pct: formularioPlano.value.gordura_perc,
-            refeicoes: formularioPlano.value.refeicoes.map((refeicao) => ({
-                nome: refeicao.nome,
-                horario_sugerido: refeicao.horario ? `${refeicao.horario}:00` : '',
-                ordem: refeicao.ordem,
-                observacoes: refeicao.notas || '',
-                itens: refeicao.itens.map((item) => ({
-                    id_alimento: item.alimento_id,
-                    quantidade: item.quantidade,
-                    unidade: item.unidade,
-                    observacoes: '' // Vazio por enquanto
-                }))
-            }))
-        };
-
-        const idPaciente = paciente.value.id;
-        let response;
-
-        // Verificar se é modo edição ou criação
-        if (editandoPlanoId.value) {
-            console.log('✏️ Atualizando plano alimentar:', payload);
-            response = await PlanoAlimentarService.atualizar(idPaciente, editandoPlanoId.value, payload);
-            console.log('✅ Plano atualizado com sucesso:', response);
-            toast.add({
-                severity: 'success',
-                summary: 'Sucesso',
-                detail: 'Plano alimentar atualizado com sucesso!',
-                life: 3000
-            });
-        } else {
-            console.log('✏️ Criando novo plano alimentar:', payload);
-            response = await PlanoAlimentarService.criar(idPaciente, payload);
-            console.log('✅ Plano criado com sucesso:', response);
-            toast.add({
-                severity: 'success',
-                summary: 'Sucesso',
-                detail: 'Plano alimentar criado com sucesso!',
-                life: 3000
-            });
-        }
-
-        // Recarregar lista de planos
-        await carregarPlanos();
-
-        // Avançar para Step 4 (Enviar)
-        stepAtualPlano.value = 4;
-    } catch (error) {
-        console.error('❌ Erro ao salvar plano:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'Erro',
-            detail: error.response?.data?.message || 'Erro ao salvar o plano alimentar',
-            life: 3000
-        });
-    } finally {
-        loadingCriacaoPlano.value = false;
-    }
-};
-
-// ========== FUNÇÕES DO STEP 4 - ENVIAR ==========
-// Funções para Step 4 serão adicionadas conforme necessário
-
-// ===== FUNÇÕES DO PLANO ALIMENTAR (Movidas para @/composables/usePlanosAlimentares.js) =====
-// As funções foram extraídas para um composable dedicado:
-// - distribuirCalorias()
-// - converterParaGramas()
-// - calcularNutrienteItem()
-// - calcularTotalRefeicao()
-// - calcularTotaisDia() → agora recebe formularioPlano como parâmetro
-// - calcularTotaisPlano() → agora recebe formularioPlano como parâmetro
-// - calcularDiferencaCalorica() → agora recebe formularioPlano como parâmetro
-// - obterStatusComparativo() → agora recebe formularioPlano como parâmetro
-// - formatarValor()
-// Todas são acessadas via usePlanosAlimentares()
-
-// Validar Step 2 - Deve ter ao menos 1 alimento em alguma refeição
-const validarStep2Plano = () => {
-    const temAlimento = formularioPlano.value.refeicoes.some((ref) => ref.itens.length > 0);
-    if (!temAlimento) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Refeições vazias',
-            detail: 'Adicione pelo menos 1 alimento em alguma refeição para continuar.',
-            life: 3000
-        });
-    }
-    return temAlimento;
 };
 
 const deletarPlano = async (idPlano) => {
@@ -2862,44 +2453,17 @@ onMounted(async () => {
         <!-- END: Dialog Editar Anamnese -->
 
         <!-- BEGIN: Modal Criar Plano Alimentar (4 Steps) -->
-        <ModalCriacaoPlano
+        <WizardPlano
             :visible="showDialogCriacaoPlano"
-            :step="stepAtualPlano"
             :paciente="paciente"
             :editandoPlanoId="editandoPlanoId"
-            :loading="loadingCriacaoPlano"
+            :medidaMaisRecente="medidaMaisRecente"
+            :anamnese="anamnese"
+            :linkPlano="linkPlano"
             @update:visible="showDialogCriacaoPlano = $event"
-            @update:step="stepAtualPlano = $event"
-            @fechar="fecharCriacaoPlano"
-            @avancar-step="avancarStep"
-            @voltar-step="() => stepAtualPlano--"
-            @salvar-plano="salvarPlano"
-        >
-            <!-- STEP 1: Configuração do Plano -->
-            <template #step-1>
-                <WizardStep1Configurar :formularioPlano="formularioPlano" :medidaMaisRecente="medidaMaisRecente" :anamnese="anamnese" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
-            </template>
-
-            <!-- STEP 2: Refeições -->
-            <template #step-2>
-                <WizardStep2Refeicoes :formularioPlano="formularioPlano" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
-            </template>
-
-            <!-- STEP 3: Revisão -->
-            <template #step-3>
-                <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" :loadingSalvar="loadingCriacaoPlano" @salvar="salvarPlano" @voltar="stepAtualPlano--" />
-            </template>
-
-            <!-- STEP 4: Placeholder -->
-            <template #step-4> Step 4 content will be added here </template>
-
-            <!-- Footer Buttons -->
-            <template #footer-buttons>
-                <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
-                <Button v-else-if="stepAtualPlano === 2" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
-                <!-- Step 3 e 4 têm seus próprios botões dentro dos componentes -->
-            </template>
-        </ModalCriacaoPlano>
+            @fechar="showDialogCriacaoPlano = false"
+            @concluido="carregarPlanos"
+        />
         <!-- END: Modal Criar Plano Alimentar -->
     </main>
 </template>

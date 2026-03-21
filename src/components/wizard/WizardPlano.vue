@@ -1,0 +1,342 @@
+<script setup>
+import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
+import WizardStep1Configurar from '@/components/wizard/WizardStep1Configurar.vue';
+import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
+import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
+import WizardStep4Enviar from '@/components/wizard/WizardStep4Enviar.vue';
+import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
+import PlanoAlimentarService from '@/service/PlanoAlimentarService';
+import Button from 'primevue/button';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref, watch } from 'vue';
+
+const toast = useToast();
+const { inicializarRefeicoes } = usePlanosAlimentares();
+
+// ========== PROPS & EMITS ==========
+const props = defineProps({
+    paciente: {
+        type: Object,
+        required: true
+    },
+    editandoPlanoId: [String, Number],
+    visible: Boolean,
+    loading: Boolean,
+    medidaMaisRecente: Object,
+    anamnese: Object,
+    linkPlano: String
+});
+
+const emit = defineEmits(['update:visible', 'fechar', 'concluido']);
+
+// ========== STATE ==========
+const stepAtualPlano = ref(1);
+const loadingCriacaoPlano = ref(false);
+const errosPlano = ref({});
+
+// Macro tracking flags
+const macrosForamEditadosManualmente = ref(false);
+const macrosSugeridosPor = ref(null);
+const atualizandoMacrosProgramaticamente = ref(false);
+const objetivoPreSelecionadoCom = ref(null);
+
+// Tracking flags for calories
+const calorias_metaEditada = ref(false);
+const calorias_metaSugeridaPor = ref(null);
+const formularioPlanoCalorias_metaOriginal = ref(2000);
+
+// Formulário padrão
+const formularioPlano = ref({
+    nome: '',
+    objetivo: '',
+    calorias_meta: 2000,
+    refeicoes_dia: 5,
+    proteina_g: 150,
+    proteina_perc: 30,
+    carboidrato_g: 250,
+    carboidrato_perc: 45,
+    gordura_g: 66,
+    gordura_perc: 25,
+    refeicoes: [],
+    notas: ''
+});
+
+// ========== COMPUTED ==========
+const modalVisible = computed({
+    get: () => props.visible ?? false,
+    set: (value) => emit('update:visible', value)
+});
+
+// ========== WATCH & LIFECYCLE ==========
+// **REGRA 6**: Detectar edição manual de calorias_meta
+watch(
+    () => formularioPlano.value.calorias_meta,
+    (novoValor) => {
+        if (novoValor !== formularioPlanoCalorias_metaOriginal.value) {
+            calorias_metaEditada.value = true;
+        }
+    }
+);
+
+// **REGRA 2**: Detectar edição manual de proteína
+watch(
+    () => formularioPlano.value.proteina_perc,
+    (novoValor, valorAnterior) => {
+        if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
+            macrosForamEditadosManualmente.value = true;
+            console.log(`✏️ Proteína editada manualmente para ${novoValor}%`);
+        }
+    }
+);
+
+// **REGRA 2**: Detectar edição manual de carboidrato
+watch(
+    () => formularioPlano.value.carboidrato_perc,
+    (novoValor, valorAnterior) => {
+        if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
+            macrosForamEditadosManualmente.value = true;
+            console.log(`✏️ Carboidrato editado manualmente para ${novoValor}%`);
+        }
+    }
+);
+
+// **REGRA 2**: Detectar edição manual de gordura
+watch(
+    () => formularioPlano.value.gordura_perc,
+    (novoValor, valorAnterior) => {
+        if (valorAnterior !== undefined && novoValor !== valorAnterior && !atualizandoMacrosProgramaticamente.value) {
+            macrosForamEditadosManualmente.value = true;
+            console.log(`✏️ Gordura editada manualmente para ${novoValor}%`);
+        }
+    }
+);
+
+// **REGRA 2**: Recalcular gramas quando percentuais ou calorias mudam
+watch(
+    () => [formularioPlano.value.proteina_perc, formularioPlano.value.carboidrato_perc, formularioPlano.value.gordura_perc, formularioPlano.value.calorias_meta],
+    () => {
+        const calorias = formularioPlano.value.calorias_meta;
+        if (calorias && calorias > 0) {
+            formularioPlano.value.proteina_g = Math.round((calorias * formularioPlano.value.proteina_perc) / 100 / 4);
+            formularioPlano.value.carboidrato_g = Math.round((calorias * formularioPlano.value.carboidrato_perc) / 100 / 4);
+            formularioPlano.value.gordura_g = Math.round((calorias * formularioPlano.value.gordura_perc) / 100 / 9);
+
+            console.log(`🔄 Gramas de macros recalculados: Prot: ${formularioPlano.value.proteina_g}g, Carb: ${formularioPlano.value.carboidrato_g}g, Gord: ${formularioPlano.value.gordura_g}g`);
+        }
+    }
+);
+
+// Debug watch for step changes
+watch(
+    () => stepAtualPlano.value,
+    (novoStep, stepAnterior) => {
+        console.log(`📍 Step mudou de ${stepAnterior} → ${novoStep}`);
+    }
+);
+
+// ========== VALIDATION FUNCTIONS ==========
+const validarStep1Plano = () => {
+    errosPlano.value = {};
+
+    if (!formularioPlano.value.nome || formularioPlano.value.nome.trim() === '') {
+        errosPlano.value.nome = 'Nome do plano é obrigatório';
+    }
+
+    if (!formularioPlano.value.objetivo || formularioPlano.value.objetivo.trim() === '') {
+        errosPlano.value.objetivo = 'Objetivo do plano é obrigatório';
+    }
+
+    if (!formularioPlano.value.calorias_meta || formularioPlano.value.calorias_meta <= 0) {
+        errosPlano.value.calorias_meta = 'Meta calórica é obrigatória e deve ser maior que 0';
+    }
+
+    return Object.keys(errosPlano.value).length === 0;
+};
+
+const validarStep2Plano = () => {
+    const temAlimento = formularioPlano.value.refeicoes.some((ref) => ref.itens.length > 0);
+    if (!temAlimento) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Refeições vazias',
+            detail: 'Adicione pelo menos 1 alimento em alguma refeição para continuar.',
+            life: 3000
+        });
+    }
+    return temAlimento;
+};
+
+// ========== WIZARD NAVIGATION ==========
+const avancarStep = () => {
+    if (stepAtualPlano.value === 1) {
+        if (validarStep1Plano()) {
+            stepAtualPlano.value++;
+            console.log('✅ Step 1 validado, avançando para Step 2');
+
+            // Só inicializar refeições se estiver em MODO CRIAÇÃO
+            if (!props.editandoPlanoId) {
+                console.log('📝 Modo CRIAÇÃO - Inicializando refeições padrão');
+                formularioPlano.value.refeicoes = inicializarRefeicoes(formularioPlano.value);
+            } else {
+                console.log('✏️ Modo EDIÇÃO - Mantendo refeições carregadas do API');
+            }
+        } else {
+            toast.add({
+                severity: 'warn',
+                summary: 'Campos obrigatórios',
+                detail: 'Preencha todos os campos obrigatórios',
+                life: 3000
+            });
+        }
+    } else if (stepAtualPlano.value === 2) {
+        if (validarStep2Plano()) {
+            stepAtualPlano.value++;
+        }
+    } else {
+        stepAtualPlano.value++;
+    }
+};
+
+// ========== SAVE PLAN ==========
+const salvarPlano = async () => {
+    try {
+        loadingCriacaoPlano.value = true;
+
+        // Construir payload no formato esperado pela API
+        const payload = {
+            nome: formularioPlano.value.nome,
+            objetivo: formularioPlano.value.objetivo,
+            observacoes: formularioPlano.value.notas || '',
+            calorias_objetivo: formularioPlano.value.calorias_meta,
+            proteinas_objetivo_pct: formularioPlano.value.proteina_perc,
+            carboidratos_objetivo_pct: formularioPlano.value.carboidrato_perc,
+            gorduras_objetivo_pct: formularioPlano.value.gordura_perc,
+            refeicoes: formularioPlano.value.refeicoes.map((refeicao) => ({
+                nome: refeicao.nome,
+                horario_sugerido: refeicao.horario ? `${refeicao.horario}:00` : '',
+                ordem: refeicao.ordem,
+                observacoes: refeicao.notas || '',
+                itens: refeicao.itens.map((item) => ({
+                    id_alimento: item.alimento_id,
+                    quantidade: item.quantidade,
+                    unidade: item.unidade,
+                    observacoes: ''
+                }))
+            }))
+        };
+
+        const idPaciente = props.paciente.id;
+        let response;
+
+        // Verificar se é modo edição ou criação
+        if (props.editandoPlanoId) {
+            console.log('✏️ Atualizando plano alimentar:', payload);
+            response = await PlanoAlimentarService.atualizar(idPaciente, props.editandoPlanoId, payload);
+            console.log('✅ Plano atualizado com sucesso:', response);
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Plano alimentar atualizado com sucesso!',
+                life: 3000
+            });
+        } else {
+            console.log('✏️ Criando novo plano alimentar:', payload);
+            response = await PlanoAlimentarService.criar(idPaciente, payload);
+            console.log('✅ Plano criado com sucesso:', response);
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Plano alimentar criado com sucesso!',
+                life: 3000
+            });
+        }
+
+        // Avançar para Step 4 (Enviar)
+        stepAtualPlano.value = 4;
+        emit('concluido', response);
+    } catch (error) {
+        console.error('❌ Erro ao salvar plano:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: error.response?.data?.message || 'Erro ao salvar o plano alimentar',
+            life: 3000
+        });
+    } finally {
+        loadingCriacaoPlano.value = false;
+    }
+};
+
+// ========== CLOSE WIZARD ==========
+const fecharCriacaoPlano = () => {
+    modalVisible.value = false;
+    stepAtualPlano.value = 1;
+    formularioPlano.value = {
+        nome: '',
+        objetivo: '',
+        calorias_meta: 2000,
+        refeicoes_dia: 5,
+        proteina_g: 150,
+        proteina_perc: 30,
+        carboidrato_g: 250,
+        carboidrato_perc: 45,
+        gordura_g: 66,
+        gordura_perc: 25,
+        refeicoes: [],
+        notas: ''
+    };
+    errosPlano.value = {};
+    objetivoPreSelecionadoCom.value = null;
+    macrosForamEditadosManualmente.value = false;
+    macrosSugeridosPor.value = null;
+    atualizandoMacrosProgramaticamente.value = false;
+    emit('fechar');
+};
+
+const handleFechar = () => {
+    fecharCriacaoPlano();
+};
+</script>
+
+<template>
+    <ModalCriacaoPlano
+        :visible="modalVisible"
+        :step="stepAtualPlano"
+        :paciente="paciente"
+        :editandoPlanoId="editandoPlanoId"
+        :loading="loadingCriacaoPlano"
+        @update:visible="modalVisible = $event"
+        @update:step="stepAtualPlano = $event"
+        @fechar="handleFechar"
+        @avancar-step="avancarStep"
+        @voltar-step="() => stepAtualPlano--"
+        @salvar-plano="salvarPlano"
+    >
+        <!-- STEP 1: Configuração do Plano -->
+        <template #step-1>
+            <WizardStep1Configurar :formularioPlano="formularioPlano" :medidaMaisRecente="medidaMaisRecente" :anamnese="anamnese" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
+        </template>
+
+        <!-- STEP 2: Refeições -->
+        <template #step-2>
+            <WizardStep2Refeicoes :formularioPlano="formularioPlano" @update:formularioPlano="(atualizado) => (formularioPlano = atualizado)" />
+        </template>
+
+        <!-- STEP 3: Revisão -->
+        <template #step-3>
+            <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" :loadingSalvar="loadingCriacaoPlano" @salvar="salvarPlano" @voltar="stepAtualPlano--" />
+        </template>
+
+        <!-- STEP 4: Enviar -->
+        <template #step-4>
+            <WizardStep4Enviar :formularioPlano="formularioPlano" :paciente="paciente" :linkPlano="linkPlano" @enviar-depois="fecharCriacaoPlano" @fechar="fecharCriacaoPlano" />
+        </template>
+
+        <!-- Footer Buttons -->
+        <template #footer-buttons>
+            <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+            <Button v-else-if="stepAtualPlano === 2" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
+            <!-- Step 3 e 4 têm seus próprios botões dentro dos componentes -->
+        </template>
+    </ModalCriacaoPlano>
+</template>
