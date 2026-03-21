@@ -196,6 +196,7 @@ export function useMedidas(pacienteId, paciente, activeTab) {
             observacoes: ''
         };
         pressaoArterialCombinada.value = '';
+        showDialogCriacaoMedida.value = true;
 
         // Buscar dados da última anamnese para preencher campos
         try {
@@ -236,7 +237,6 @@ export function useMedidas(pacienteId, paciente, activeTab) {
                     const tmb = calcularTMB(formularioMedida.value.peso, formularioMedida.value.altura, idade, paciente.value.sexo);
                     if (tmb) {
                         formularioMedida.value.tmb = tmb;
-                        console.log('✅ TMB calculado automaticamente:', tmb, 'kcal/dia');
                     }
                 }
             }
@@ -244,8 +244,6 @@ export function useMedidas(pacienteId, paciente, activeTab) {
             console.warn('Erro ao buscar anamnese para preencher medida:', error);
             // Continuar mesmo se não conseguir buscar a anamnese
         }
-
-        showDialogCriacaoMedida.value = true;
     };
 
     /**

@@ -9,7 +9,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Data</label>
-                    <DatePicker :model-value="formularioMedida.data_avaliacao" @update:model-value="handleFormularioUpdate('data_avaliacao', $event)" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
+                    <DatePicker v-model="formularioLocal.data_avaliacao" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
                 </div>
             </section>
 
@@ -25,13 +25,13 @@
                         <!-- Peso (editável) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Peso (kg)</label>
-                            <InputNumber :model-value="formularioMedida.peso" @update:model-value="handleFormularioUpdate('peso', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                            <InputNumber v-model="formularioLocal.peso" :maxFractionDigits="2" placeholder="00.00" />
                         </div>
 
                         <!-- Altura (editável) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Altura (cm)</label>
-                            <InputNumber :model-value="formularioMedida.altura" @update:model-value="handleFormularioUpdate('altura', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                            <InputNumber v-model="formularioLocal.altura" :maxFractionDigits="2" placeholder="00.00" />
                         </div>
 
                         <!-- IMC (calculado) -->
@@ -40,8 +40,8 @@
                                 <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">IMC <span class="text-gray-400 font-normal">(calculado)</span></label>
                             </div>
                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center justify-between">
-                                <span class="text-sm font-semibold text-gray-800">{{ imcComClassificacao.valor }}</span>
-                                <Tag v-if="imcComClassificacao.classificacao" :value="imcComClassificacao.classificacao" :severity="imcComClassificacao.cor" class="text-xs" />
+                                <span class="text-sm font-semibold text-gray-800">{{ imcExibicao.valor }}</span>
+                                <Tag v-if="imcExibicao.classificacao" :value="imcExibicao.classificacao" :severity="imcExibicao.cor" class="text-xs" />
                             </div>
                             <p class="text-xs text-gray-400 italic mt-1">Calculado automaticamente a partir do peso e altura.</p>
                         </div>
@@ -52,7 +52,7 @@
                         <!-- % Gordura Corporal (editável) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">% Gordura Corporal</label>
-                            <InputNumber :model-value="formularioMedida.perc_gordura_corporal" @update:model-value="handleFormularioUpdate('perc_gordura_corporal', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                            <InputNumber v-model="formularioLocal.perc_gordura_corporal" :maxFractionDigits="2" placeholder="00.00" />
                         </div>
 
                         <!-- % Massa Magra (calculada) -->
@@ -61,7 +61,7 @@
                                 <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">% Massa Magra <span class="text-gray-400 font-normal">(calculada)</span></label>
                             </div>
                             <div class="bg-green-50 border border-green-200 rounded-lg p-2">
-                                <span class="text-sm font-semibold text-gray-800">{{ massaMagraCalculada }}</span>
+                                <span class="text-sm font-semibold text-gray-800">{{ massaMagraExibicao }}</span>
                             </div>
                             <p class="text-xs text-gray-400 italic mt-1">100% − % Gordura Corporal</p>
                         </div>
@@ -69,7 +69,7 @@
                         <!-- Idade Metabólica (editável) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Idade Metabólica (anos)</label>
-                            <InputNumber :model-value="formularioMedida.idade_metabolica" @update:model-value="handleFormularioUpdate('idade_metabolica', $event)" :maxFractionDigits="0" placeholder="00" />
+                            <InputNumber v-model="formularioLocal.idade_metabolica" :maxFractionDigits="0" placeholder="00" />
                         </div>
                     </div>
 
@@ -87,8 +87,8 @@
                             <button
                                 v-for="nivel in ['sedentario', 'leve', 'moderado', 'intenso']"
                                 :key="nivel"
-                                @click="handleFormularioUpdate('nivel_atividade', nivel)"
-                                :class="['px-3 py-1 rounded-full text-xs font-medium transition-all', formularioMedida.nivel_atividade === nivel ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
+                                @click="formularioLocal.nivel_atividade = nivel"
+                                :class="['px-3 py-1 rounded-full text-xs font-medium transition-all', formularioLocal.nivel_atividade === nivel ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
                             >
                                 {{ MedidaService.formatarValor('nivel_atividade', nivel) }}
                             </button>
@@ -102,7 +102,7 @@
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">TMB (kcal/dia)</label>
                             <div class="flex gap-2">
-                                <InputNumber :model-value="formularioMedida.tmb" @update:model-value="handleFormularioUpdate('tmb', $event)" :maxFractionDigits="0" placeholder="0000" class="flex-1" />
+                                <InputNumber v-model="formularioLocal.tmb" :maxFractionDigits="0" placeholder="0000" class="flex-1" />
                                 <Button icon="pi pi-calculator" @click="calcularTMBParam" severity="secondary" class="px-3" title="Calcular usando Harris-Benedict" />
                             </div>
                             <p class="text-xs text-gray-400 italic mt-1">Taxa Metabólica Basal — energia mínima em repouso. Clique em 🧮 para calcular automaticamente usando Harris-Benedict.</p>
@@ -114,7 +114,7 @@
                                 <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">GET <span class="text-gray-400 font-normal">(calculada)</span></label>
                             </div>
                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                                <span class="text-sm font-semibold text-gray-800">{{ getCalculado }} kcal/dia</span>
+                                <span class="text-sm font-semibold text-gray-800">{{ getExibicao }}<span v-if="getExibicao !== '—'"> kcal/dia</span></span>
                             </div>
                             <p class="text-xs text-gray-400 italic mt-1">Gasto Energético Total — energia diária estimada com base na TMB e nível de atividade selecionado.</p>
                         </div>
@@ -131,45 +131,45 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Cintura</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_cintura" @update:model-value="handleFormularioUpdate('circunferencia_cintura', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_cintura" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Quadril</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_quadril" @update:model-value="handleFormularioUpdate('circunferencia_quadril', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_quadril" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider">RCQ <span class="text-gray-400 font-normal">(calculada)</span></label>
                         </div>
                         <div class="bg-purple-50 border border-purple-200 rounded-lg p-2 flex items-center justify-between">
-                            <span class="text-sm font-semibold text-gray-800">{{ rcqComClassificacao.valor }}</span>
-                            <Tag v-if="rcqComClassificacao.classificacao" :value="rcqComClassificacao.classificacao" :severity="rcqComClassificacao.cor" class="text-xs" />
+                            <span class="text-sm font-semibold text-gray-800">{{ rcqExibicao.valor }}</span>
+                            <Tag v-if="rcqExibicao.classificacao" :value="rcqExibicao.classificacao" :severity="rcqExibicao.cor" class="text-xs" />
                         </div>
                         <p class="text-xs text-gray-400 italic mt-1">Cintura ÷ Quadril. Risco cardiovascular baseado no sexo do paciente.</p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Abdominal</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_abdominal" @update:model-value="handleFormularioUpdate('circunferencia_abdominal', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_abdominal" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Braço</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_braco" @update:model-value="handleFormularioUpdate('circunferencia_braco', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_braco" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Tórax</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_torax" @update:model-value="handleFormularioUpdate('circunferencia_torax', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_torax" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Coxa Direita</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_coxa_direita" @update:model-value="handleFormularioUpdate('circunferencia_coxa_direita', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_coxa_direita" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Coxa Esquerda</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_coxa_esquerda" @update:model-value="handleFormularioUpdate('circunferencia_coxa_esquerda', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_coxa_esquerda" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Panturrilha</label>
-                        <InputNumber :model-value="formularioMedida.circunferencia_panturrilha" @update:model-value="handleFormularioUpdate('circunferencia_panturrilha', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.circunferencia_panturrilha" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                 </div>
             </section>
@@ -183,31 +183,31 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Subscapular</label>
-                        <InputNumber :model-value="formularioMedida.dobra_subescapular" @update:model-value="handleFormularioUpdate('dobra_subescapular', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_subescapular" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Tríceps</label>
-                        <InputNumber :model-value="formularioMedida.dobra_tricipital" @update:model-value="handleFormularioUpdate('dobra_tricipital', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_tricipital" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Bíceps</label>
-                        <InputNumber :model-value="formularioMedida.dobra_bicipital" @update:model-value="handleFormularioUpdate('dobra_bicipital', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_bicipital" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Suprailíaca</label>
-                        <InputNumber :model-value="formularioMedida.dobra_suprailíaca" @update:model-value="handleFormularioUpdate('dobra_suprailíaca', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_suprailíaca" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Abdominal</label>
-                        <InputNumber :model-value="formularioMedida.dobra_abdominal" @update:model-value="handleFormularioUpdate('dobra_abdominal', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_abdominal" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Coxal</label>
-                        <InputNumber :model-value="formularioMedida.dobra_coxal" @update:model-value="handleFormularioUpdate('dobra_coxal', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_coxal" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Peitoral</label>
-                        <InputNumber :model-value="formularioMedida.dobra_peitoral" @update:model-value="handleFormularioUpdate('dobra_peitoral', $event)" :maxFractionDigits="2" placeholder="00.00" />
+                        <InputNumber v-model="formularioLocal.dobra_peitoral" :maxFractionDigits="2" placeholder="00.00" />
                     </div>
                 </div>
             </section>
@@ -224,14 +224,14 @@
                         <!-- Pressão Arterial (merged: 120/80) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Pressão Arterial (mmHg)</label>
-                            <InputMask :model-value="pressaoArterialCombinada" @update:model-value="handlePressaoUpdate" mask="999/99" placeholder="120/80" class="w-full" slotChar=" " />
+                            <InputMask v-model="pressaoLocal" mask="999/99" placeholder="120/80" class="w-full" slotChar=" " />
                             <p class="text-xs text-gray-400 italic mt-1">Formato: sistólica/diastólica. Ex: 120/80</p>
                         </div>
 
                         <!-- Frequência Cardíaca -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Frequência Cardíaca (bpm)</label>
-                            <InputNumber :model-value="formularioMedida.frequencia_cardiaca" @update:model-value="handleFormularioUpdate('frequencia_cardiaca', $event)" :maxFractionDigits="0" placeholder="72" />
+                            <InputNumber v-model="formularioLocal.frequencia_cardiaca" :maxFractionDigits="0" placeholder="72" />
                         </div>
                     </div>
 
@@ -239,8 +239,7 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Observações</label>
                         <textarea
-                            :model-value="formularioMedida.observacoes"
-                            @update:model-value="handleFormularioUpdate('observacoes', $event)"
+                            v-model="formularioLocal.observacoes"
                             placeholder="Adicione observações importantes"
                             rows="2"
                             class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
@@ -258,6 +257,8 @@
 </template>
 
 <script setup>
+import { computed, ref, watch } from 'vue';
+
 import Button from 'primevue/button';
 import DatePicker from 'primevue/datepicker';
 import Dialog from 'primevue/dialog';
@@ -266,6 +267,7 @@ import InputNumber from 'primevue/inputnumber';
 import Tag from 'primevue/tag';
 
 import MedidaService from '@/service/MedidaService';
+import { calcularGET, calcularIMCComClassificacao, calcularRCQComClassificacao } from '@/utils/nutricionais';
 
 const props = defineProps({
     visible: {
@@ -276,25 +278,9 @@ const props = defineProps({
         type: Object,
         required: true
     },
-    imcComClassificacao: {
+    paciente: {
         type: Object,
-        default: () => ({ valor: '—', classificacao: '', cor: 'secondary' })
-    },
-    massaMagraCalculada: {
-        type: [String, Number],
-        default: '—'
-    },
-    rcqComClassificacao: {
-        type: Object,
-        default: () => ({ valor: '—', classificacao: '', cor: 'secondary' })
-    },
-    getCalculado: {
-        type: String,
-        default: '0 kcal/dia'
-    },
-    pressaoArterialCombinada: {
-        type: String,
-        default: ''
+        default: null
     },
     loading: {
         type: Boolean,
@@ -306,34 +292,90 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['update:visible', 'update:formularioMedida', 'update:pressaoArterialCombinada', 'fechar', 'salvar-medida']);
+const emit = defineEmits(['update:visible', 'fechar', 'salvar-medida']);
+
+const formularioLocal = ref({});
+const pressaoLocal = ref('');
+
+const normalizarNumero = (valor) => {
+    if (valor === null || valor === undefined || valor === '') {
+        return null;
+    }
+
+    const numero = parseFloat(String(valor).replace(',', '.'));
+    return Number.isFinite(numero) ? numero : null;
+};
+
+const recalcularCamposDerivados = (formulario) => {
+    const peso = normalizarNumero(formulario.peso);
+    const altura = normalizarNumero(formulario.altura);
+
+    if (peso && altura && altura > 0) {
+        const alturaMetros = altura / 100;
+        const imc = peso / (alturaMetros * alturaMetros);
+        formulario.imc = parseFloat(imc.toFixed(2));
+    } else {
+        formulario.imc = null;
+    }
+
+    const percentualGordura = normalizarNumero(formulario.perc_gordura_corporal);
+    formulario.perc_massa_magra = percentualGordura !== null ? parseFloat((100 - percentualGordura).toFixed(2)) : null;
+
+    const tmb = normalizarNumero(formulario.tmb);
+    formulario.gasto_energetico_total = tmb ? calcularGET(tmb, formulario.nivel_atividade) : null;
+};
+
+const imcExibicao = computed(() => calcularIMCComClassificacao(formularioLocal.value.peso, formularioLocal.value.altura));
+
+const massaMagraExibicao = computed(() => {
+    const gordura = normalizarNumero(formularioLocal.value.perc_gordura_corporal);
+    if (gordura === null) {
+        return '—';
+    }
+
+    return (100 - gordura).toFixed(1);
+});
+
+const rcqExibicao = computed(() => calcularRCQComClassificacao(formularioLocal.value.circunferencia_cintura, formularioLocal.value.circunferencia_quadril, props.paciente?.sexo));
+
+const getExibicao = computed(() => {
+    return calcularGET(formularioLocal.value.tmb, formularioLocal.value.nivel_atividade);
+});
 
 // Update handlers for v-model
 const handleVisibilityUpdate = (value) => {
     emit('update:visible', value);
 };
 
-const handleFormularioUpdate = (path, value) => {
-    // Clone o objeto da prop
-    const updated = JSON.parse(JSON.stringify(props.formularioMedida));
-    const keys = path.split('.');
-    let obj = updated;
-    for (let i = 0; i < keys.length - 1; i++) {
-        obj = obj[keys[i]];
-    }
-    obj[keys[keys.length - 1]] = value;
-    emit('update:formularioMedida', updated);
-};
+watch(
+    () => props.visible,
+    (visible) => {
+        if (visible) {
+            formularioLocal.value = JSON.parse(JSON.stringify(props.formularioMedida || {}));
 
-const handlePressaoUpdate = (value) => {
-    emit('update:pressaoArterialCombinada', value);
-};
+            const sistolica = formularioLocal.value.pressao_arterial_sistolica;
+            const diastolica = formularioLocal.value.pressao_arterial_diastolica;
+
+            pressaoLocal.value = sistolica && diastolica ? `${sistolica}/${diastolica}` : '';
+        }
+    }
+);
 
 const handleClose = () => {
     emit('fechar');
 };
 
 const handleSave = () => {
-    emit('salvar-medida');
+    const payload = JSON.parse(JSON.stringify(formularioLocal.value || {}));
+    recalcularCamposDerivados(payload);
+
+    const [sistolicaRaw, diastolicaRaw] = String(pressaoLocal.value || '').split('/');
+    const sistolica = parseInt(sistolicaRaw, 10);
+    const diastolica = parseInt(diastolicaRaw, 10);
+
+    payload.pressao_arterial_sistolica = Number.isFinite(sistolica) ? sistolica : null;
+    payload.pressao_arterial_diastolica = Number.isFinite(diastolica) ? diastolica : null;
+
+    emit('salvar-medida', payload);
 };
 </script>

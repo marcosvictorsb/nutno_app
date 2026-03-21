@@ -70,18 +70,12 @@
         <ModalAdicionarMedida
             :visible="showDialogCriacaoMedida"
             :formularioMedida="formularioMedida"
-            :imcComClassificacao="imcComClassificacao"
-            :massaMagraCalculada="massaMagraCalculada"
-            :rcqComClassificacao="rcqComClassificacao"
-            :getCalculado="getCalculado"
-            :pressaoArterialCombinada="pressaoArterialCombinada"
+            :paciente="paciente"
             :loading="loadingCriacaoMedida"
             :calcularTMBParam="calcularTMBParam"
             @update:visible="showDialogCriacaoMedida = $event"
-            @update:formularioMedida="formularioMedida = $event"
-            @update:pressaoArterialCombinada="pressaoArterialCombinada = $event"
             @fechar="fecharCriacaoMedida"
-            @salvar-medida="salvarMedida"
+            @salvar-medida="handleSalvarMedida"
         />
         <!-- END: Modal Adicionar Medida -->
 
@@ -149,7 +143,7 @@ import AnamneseService from '@/service/AnamneseService';
 import MedidaService from '@/service/MedidaService';
 import PacienteService from '@/service/PacienteService';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
-import { calcularGET, calcularTMB, parsePressoArterial } from '@/utils/nutricionais';
+import { calcularGET, calcularTMB } from '@/utils/nutricionais';
 import { construirUrlFotoPaciente } from '@/utils/urlHelper';
 import Button from 'primevue/button';
 import ConfirmPopup from 'primevue/confirmpopup';
@@ -175,11 +169,6 @@ const {
     showDialogCriacaoMedida,
     loadingCriacaoMedida,
     formularioMedida,
-    pressaoArterialCombinada,
-    imcComClassificacao,
-    massaMagraCalculada,
-    rcqComClassificacao,
-    getCalculado,
     carregarMedidas,
     abrirCriacaoMedida,
     fecharCriacaoMedida,
@@ -314,17 +303,10 @@ watch(
     }
 );
 
-// Sincronizar pressão arterial entre campo combinado e campos individuais
-watch(
-    () => pressaoArterialCombinada.value,
-    (novoValor) => {
-        const parsed = parsePressoArterial(novoValor);
-        if (parsed.valido && parsed.sistolica && parsed.diastolica) {
-            formularioMedida.value.pressao_arterial_sistolica = parsed.sistolica;
-            formularioMedida.value.pressao_arterial_diastolica = parsed.diastolica;
-        }
-    }
-);
+const handleSalvarMedida = (dadosFormulario) => {
+    formularioMedida.value = dadosFormulario;
+    salvarMedida();
+};
 
 // ===== WATCHERS PARA WIZARD DE PLANO ALIMENTAR =====
 
