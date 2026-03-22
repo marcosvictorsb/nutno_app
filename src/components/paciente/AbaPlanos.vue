@@ -21,7 +21,7 @@
         <div v-else-if="!loadingPlanos && planos.length > 0" class="space-y-3">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-xl font-bold text-slate-800">Planos Alimentares</h2>
-                <Button label="Novo Plano" icon="pi pi-plus" @click="$emit('criar-plano')" class="bg-emerald-600 hover:bg-emerald-700" />
+                <Button label="Novo Plano" icon="pi pi-plus" severity="success" @click="$emit('criar-plano')" />
             </div>
 
             <div class="space-y-3">
@@ -29,7 +29,7 @@
                     <div v-if="plano.status === 'ativo'" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div class="flex-1">
-                                <div class="flex items-center gap-3 mb-3">
+                                <div class="flex items-baseline gap-3 mb-3">
                                     <Tag value="ATIVO" severity="success" class="text-xs font-bold uppercase" />
                                     <h4 class="text-xl font-semibold text-slate-800">{{ plano.nome }}</h4>
                                 </div>
@@ -57,9 +57,9 @@
                                 </div>
                             </div>
                             <div class="flex flex-row md:flex-col gap-2 justify-end">
-                                <Button icon="pi pi-send" label="Enviar" class="bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium text-sm" @click="$emit('enviar-plano', plano.id)" />
-                                <Button icon="pi pi-pencil" label="Editar" class="bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium text-sm" @click="$emit('editar-plano', plano.id)" />
-                                <Button icon="pi pi-inbox" label="Arquivar" class="bg-slate-100 text-slate-800 hover:bg-slate-200 font-medium text-sm" @click="$emit('arquivar-plano', plano.id)" />
+                                <Button icon="pi pi-send" label="Enviar" severity="help" @click="$emit('enviar-plano', plano.id)" />
+                                <Button icon="pi pi-pencil" label="Editar" severity="info" @click="$emit('editar-plano', plano.id)" />
+                                <Button icon="pi pi-inbox" label="Arquivar" severity="warn" @click="$emit('arquivar-plano', plano.id)" />
                             </div>
                         </div>
                     </div>
@@ -77,13 +77,14 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <Button label="Deletar" text severity="danger" @click="$emit('deletar-plano', plano.id)" />
-                                <Button label="Continuar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium" @click="$emit('editar-plano', plano.id)" />
+                                <Button label="Arquivar" severity="warn" @click="$emit('arquivar-plano', plano.id)" />
+                                <Button v-if="planoTemRefeicoes(plano)" label="Enviar" severity="help" @click="$emit('enviar-plano', plano.id)" />
+                                <Button label="Continuar" severity="info" @click="$emit('editar-plano', plano.id)" />
                             </div>
                         </div>
                     </div>
 
-                    <div v-else-if="plano.status === 'arquivado'" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 opacity-60">
+                    <div v-else-if="plano.status === 'arquivado'" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 opacity-80">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500"><span class="material-symbols-outlined text-2xl" data-icon="inventory_2">inventory_2</span></div>
@@ -95,7 +96,7 @@
                                     <p class="text-xs text-slate-500">Finalizado em {{ formatarDataBrasileira(plano.atualizado_em) }}</p>
                                 </div>
                             </div>
-                            <Button icon="pi pi-ellipsis-v" class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 p-2" />
+                            <Button icon="pi pi-check" label="Ativar" severity="success" @click="$emit('ativar-plano', plano.id)" />
                         </div>
                     </div>
                 </template>
@@ -123,5 +124,13 @@ defineProps({
     }
 });
 
-defineEmits(['criar-plano', 'editar-plano', 'deletar-plano', 'enviar-plano', 'arquivar-plano']);
+defineEmits(['criar-plano', 'editar-plano', 'deletar-plano', 'enviar-plano', 'arquivar-plano', 'ativar-plano']);
+
+// Helper function to check if plan has meals with items
+const planoTemRefeicoes = (plano) => {
+    if (!plano || !plano.refeicoes || !Array.isArray(plano.refeicoes)) {
+        return false;
+    }
+    return plano.refeicoes.some((refeicao) => refeicao.itens && Array.isArray(refeicao.itens) && refeicao.itens.length > 0);
+};
 </script>

@@ -27,11 +27,6 @@
             <WizardStep3Revisao :formularioPlano="formularioPlano" :paciente="paciente" />
         </template>
 
-        <!-- STEP 4: Enviar -->
-        <template #step-4>
-            <WizardStep4Enviar :formularioPlano="formularioPlano" :paciente="paciente" :linkPlano="linkPlanoGerado" @enviar-depois="fecharCriacaoPlano" @fechar="fecharCriacaoPlano" />
-        </template>
-
         <!-- Footer Buttons -->
         <template #footer-buttons>
             <Button v-if="stepAtualPlano === 1" label="Próximo" severity="success" @click="avancarStep" icon="pi pi-chevron-right" icon-pos="right" />
@@ -46,7 +41,6 @@ import ModalCriacaoPlano from '@/components/ModalCriacaoPlano.vue';
 import WizardStep1Configurar from '@/components/wizard/WizardStep1Configurar.vue';
 import WizardStep2Refeicoes from '@/components/wizard/WizardStep2Refeicoes.vue';
 import WizardStep3Revisao from '@/components/wizard/WizardStep3Revisao.vue';
-import WizardStep4Enviar from '@/components/wizard/WizardStep4Enviar.vue';
 import { usePlanosAlimentares } from '@/composables/usePlanosAlimentares';
 import PlanoAlimentarService from '@/service/PlanoAlimentarService';
 import Button from 'primevue/button';
@@ -56,7 +50,7 @@ import { useRoute } from 'vue-router';
 
 const toast = useToast();
 const route = useRoute();
-const { inicializarRefeicoes } = usePlanosAlimentares();
+const { inicializarRefeicoes, distribuirCalorias } = usePlanosAlimentares();
 
 // ========== PROPS & EMITS ==========
 const props = defineProps({
@@ -68,8 +62,7 @@ const props = defineProps({
     visible: Boolean,
     loading: Boolean,
     medidaMaisRecente: Object,
-    anamnese: Object,
-    linkPlano: String
+    anamnese: Object
 });
 
 const emit = defineEmits(['update:visible', 'fechar', 'concluido']);
@@ -78,7 +71,6 @@ const emit = defineEmits(['update:visible', 'fechar', 'concluido']);
 const stepAtualPlano = ref(1);
 const loadingCriacaoPlano = ref(false);
 const errosPlano = ref({});
-const linkPlanoGerado = ref('');
 
 // Macro tracking flags
 const macrosForamEditadosManualmente = ref(false);
@@ -302,6 +294,141 @@ watch(
     (novoStep, stepAnterior) => {}
 );
 
+// **Ajustar refeições quando muda a quantidade de refeições por dia**
+watch(
+    () => formularioPlano.value.refeicoes_dia,
+    (novaQtdRefeicoes, qtdRefeicõesAnterior) => {
+        if (qtdRefeicõesAnterior === undefined) return; // Skip na inicialização
+
+        const refeicoes = formularioPlano.value.refeicoes;
+        const qtdAtual = refeicoes.length;
+
+        console.log(`📊 Quantidade de refeições alterada: ${qtdRefeicõesAnterior} → ${novaQtdRefeicoes} (atual: ${qtdAtual})`);
+
+        if (novaQtdRefeicoes > qtdAtual) {
+            // ===== AUMENTOU: Adicionar apenas refeições que faltam =====
+            const distribuicao = distribuirCalorias(novaQtdRefeicoes);
+            const nomesExistentes = refeicoes.map((r) => r.nome);
+
+            console.log(`📝 Refeições existentes: ${nomesExistentes.join(', ')}`);
+            console.log(
+                `📋 Distribuição para ${novaQtdRefeicoes} refeições:`,
+                distribuicao.map((r) => r.nome)
+            );
+
+            // Adicionar apenas as refeições que não existem já no array
+            let adicionadas = 0;
+            for (let i = 0; i < distribuicao.length; i++) {
+                const ref = distribuicao[i];
+
+                if (!nomesExistentes.includes(ref.nome)) {
+                    console.log(`✨ Adicionando refeição nova: ${ref.nome} (${ref.perc * 100}%)`);
+                    refeicoes.push({
+                        nome: ref.nome,
+                        horario: ref.horario,
+                        ordem: refeicoes.length + 1,
+                        notas: '',
+                        itens: [],
+                        meta_calorias: Math.round(formularioPlano.value.calorias_meta * ref.perc),
+                        meta_proteinas_g: Math.round(formularioPlano.value.proteina_g * ref.perc),
+                        meta_carboidrato_g: Math.round(formularioPlano.value.carboidrato_g * ref.perc),
+                        meta_gordura_g: Math.round(formularioPlano.value.gordura_g * ref.perc),
+                        total_calorias: 0,
+                        total_proteinas_g: 0,
+                        total_carboidrato_g: 0,
+                        total_gordura_g: 0
+                    });
+                    adicionadas++;
+                }
+            }
+
+            console.log(`✅ ${adicionadas} nova(s) refeição(ões) adicionada(s). Total: ${refeicoes.length}`);
+        } else if (novaQtdRefeicoes < qtdAtual) {
+            // ===== DIMINUIU: Validar se pode remover =====
+            const qtdRemover = qtdAtual - novaQtdRefeicoes;
+            const refeicõesComItens = [];
+
+            // Verificar de trás para frente quais seriam removidas
+            for (let i = refeicoes.length - 1; i >= refeicoes.length - qtdRemover; i--) {
+                if (refeicoes[i].itens.length > 0) {
+                    refeicõesComItens.push({
+                        nome: refeicoes[i].nome,
+                        qtdItens: refeicoes[i].itens.length
+                    });
+                }
+            }
+
+            // Se houver refeições com itens, impedir e mostrar erro
+            if (refeicõesComItens.length > 0) {
+                const nomes = refeicõesComItens.map((r) => `"${r.nome}" (${r.qtdItens} itens)`).join(', ');
+                console.error(`❌ Não é possível diminuir para ${novaQtdRefeicoes} refeições. Refeições com alimentos: ${nomes}`);
+
+                // Reverter para o valor anterior
+                formularioPlano.value.refeicoes_dia = qtdRefeicõesAnterior;
+
+                toast.add({
+                    severity: 'error',
+                    summary: 'Não é possível alterar',
+                    detail: `Não pode diminuir para ${novaQtdRefeicoes} refeições porque as seguintes contêm alimentos: ${nomes}. Remova os alimentos primeiro.`,
+                    life: 4000
+                });
+
+                return;
+            }
+
+            // Remover refeições vazias do final
+            let removidas = 0;
+            for (let i = refeicoes.length - 1; i >= 0 && removidas < qtdRemover; i--) {
+                if (refeicoes[i].itens.length === 0) {
+                    console.log(`🗑️ Removendo refeição vazia: ${refeicoes[i].nome}`);
+                    refeicoes.splice(i, 1);
+                    removidas++;
+                }
+            }
+
+            console.log(`✅ ${removidas} refeição(ões) removida(s). Total: ${refeicoes.length}`);
+        }
+
+        // Recalcular metas das refeições existentes com a nova distribuição
+        const distribuicaoAtual = distribuirCalorias(novaQtdRefeicoes);
+        refeicoes.forEach((refeicao, idx) => {
+            if (distribuicaoAtual[idx]) {
+                const ref = distribuicaoAtual[idx];
+                console.log(`🔄 Atualizando metas de "${refeicao.nome}" com ${ref.perc * 100}% de distribuição`);
+
+                refeicao.meta_calorias = Math.round(formularioPlano.value.calorias_meta * ref.perc);
+                refeicao.meta_proteinas_g = Math.round(formularioPlano.value.proteina_g * ref.perc);
+                refeicao.meta_carboidrato_g = Math.round(formularioPlano.value.carboidrato_g * ref.perc);
+                refeicao.meta_gordura_g = Math.round(formularioPlano.value.gordura_g * ref.perc);
+            }
+        });
+
+        // **Ordenar refeições por ordem cronológica correta**
+        const ordemCronologica = {
+            'Café da manhã': 1,
+            'Lanche manhã': 2,
+            Almoço: 3,
+            'Lanche tarde': 4,
+            Jantar: 5,
+            Ceia: 6
+        };
+
+        refeicoes.sort((a, b) => {
+            const ordemA = ordemCronologica[a.nome] || 99;
+            const ordemB = ordemCronologica[b.nome] || 99;
+            return ordemA - ordemB;
+        });
+
+        // Atualizar ordem dos índices (1-based)
+        refeicoes.forEach((refeicao, idx) => {
+            refeicao.ordem = idx + 1;
+        });
+
+        console.log(`✅ Metas recalculadas e refeições ordenadas. Total: ${refeicoes.length}`);
+        console.log(`📋 Ordem final: ${refeicoes.map((r) => r.nome).join(' → ')}`);
+    }
+);
+
 // ========== VALIDATION FUNCTIONS ==========
 const validarStep1Plano = () => {
     errosPlano.value = {};
@@ -413,16 +540,10 @@ const salvarPlano = async () => {
             });
         }
 
-        // Extrair token_visualizacao e gerar link do plano
-        const planoData = Array.isArray(response.dados) ? response.dados[0] : response.dados;
-        if (planoData && planoData.token_visualizacao) {
-            const token = planoData.token_visualizacao;
-            const baseUrl = import.meta.env.VITE_API_BASE_URL?.includes('localhost') || import.meta.env.DEV ? 'localhost:5173' : 'www.nutno.com.br';
-            linkPlanoGerado.value = `${import.meta.env.DEV ? 'http://' : 'https://'}${baseUrl}/plano/${token}`;
-        }
+        // Fechar o wizard após salvar
+        fecharCriacaoPlano();
 
-        // Avançar para Step 4 (Enviar)
-        stepAtualPlano.value = 4;
+        // Emitir evento concluido com os dados do plano salvo
         emit('concluido', response);
     } catch (error) {
         toast.add({

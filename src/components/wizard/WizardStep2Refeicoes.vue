@@ -133,7 +133,12 @@
                             </div>
 
                             <!-- Dropdown de Resultados -->
-                            <div v-if="resultadosBusca.length > 0" class="top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden max-h-64 overflow-y-auto">
+                            <div
+                                v-if="resultadosBusca.length > 0"
+                                ref="dropdownAlimentosRef"
+                                @scroll="handleScrollDropdown"
+                                class="top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden max-h-64 overflow-y-auto"
+                            >
                                 <button
                                     v-for="(alimento, idx) in resultadosBusca"
                                     :key="`${obterIdAlimento(alimento)}-${idx}`"
@@ -147,6 +152,12 @@
                                     </div>
                                     <i class="pi pi-plus-circle text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity"></i>
                                 </button>
+
+                                <!-- Indicador de carregamento -->
+                                <div v-if="carregandoMaisAlimentos" class="w-full py-3 text-center border-t border-slate-100">
+                                    <i class="pi pi-spin pi-spinner text-emerald-600 text-sm"></i>
+                                    <p class="text-xs text-slate-500 mt-1">Carregando mais alimentos...</p>
+                                </div>
                             </div>
                         </div>
 
@@ -208,6 +219,8 @@ const paginaAtualAlimentos = ref(1);
 const totalPaginasAlimentos = ref(1);
 const totalAlimentos = ref(0);
 const loading = ref(false);
+const carregandoMaisAlimentos = ref(false);
+const dropdownAlimentosRef = ref(null);
 let searchTimeout = null;
 
 // Helper function to calculate daily totals
@@ -289,6 +302,7 @@ const buscarAlimentosDebounce = (texto) => {
             resultadosBusca.value = alimentos;
             paginaAtualAlimentos.value = 1;
             totalPaginasAlimentos.value = response.data?.data?.totalPaginas || 1;
+            totalAlimentos.value = response.data?.data?.total || 0;
         } catch (error) {
             console.error('❌ Erro ao buscar alimentos:', error);
             console.error('❌ Status:', error.response?.status);
@@ -298,6 +312,36 @@ const buscarAlimentosDebounce = (texto) => {
             loading.value = false;
         }
     }, 300);
+};
+
+// Carregar próxima página de alimentos quando scroll chegar ao final
+const handleScrollDropdown = async (event) => {
+    const element = event.target;
+    const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 5;
+
+    if (isAtBottom && !carregandoMaisAlimentos.value && paginaAtualAlimentos.value < totalPaginasAlimentos.value) {
+        try {
+            carregandoMaisAlimentos.value = true;
+            const proximaPagina = paginaAtualAlimentos.value + 1;
+
+            const response = await AlimentoService.buscarAlimentos({
+                busca: buscarAlimentoText.value,
+                limite: 20,
+                pagina: proximaPagina
+            });
+
+            const novosAlimentos = response.data?.data?.dados || [];
+            console.log(`📄 Página ${proximaPagina} carregada com ${novosAlimentos.length} alimentos`);
+
+            // Concatenar os novos alimentos aos existentes
+            resultadosBusca.value = [...resultadosBusca.value, ...novosAlimentos];
+            paginaAtualAlimentos.value = proximaPagina;
+        } catch (error) {
+            console.error('❌ Erro ao carregar próxima página:', error);
+        } finally {
+            carregandoMaisAlimentos.value = false;
+        }
+    }
 };
 
 // Calculate nutrient item

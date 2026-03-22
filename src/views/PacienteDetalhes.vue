@@ -53,8 +53,9 @@
                 @criar-plano="abrirCriacaoPlano"
                 @editar-plano="abrirEdicaoPlano"
                 @deletar-plano="deletarPlano"
-                @enviar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Enviar plano alimentar - a implementar' })"
-                @arquivar-plano="() => toast.add({ severity: 'info', summary: 'Funcionalidade', detail: 'Arquivar plano - a implementar' })"
+                @enviar-plano="handleEnviarPlano"
+                @arquivar-plano="handleArquivarPlano"
+                @ativar-plano="handleAtivarPlano"
             />
 
             <!-- <AbaAdesao v-else-if="activeTab === 'adesao'" /> -->
@@ -117,12 +118,15 @@
             :editandoPlanoId="editandoPlanoId"
             :medidaMaisRecente="medidaMaisRecente"
             :anamnese="anamnese"
-            :linkPlano="linkPlano"
             @update:visible="showDialogCriacaoPlano = $event"
             @fechar="showDialogCriacaoPlano = false"
             @concluido="carregarPlanos"
         />
         <!-- END: Modal Criar Plano Alimentar -->
+
+        <!-- BEGIN: Modal Enviar Plano -->
+        <ModalEnviarPlano :visible="showModalEnviarPlano" :paciente="paciente" :plano="planoParaEnviar" @update:visible="showModalEnviarPlano = $event" @fechar="showModalEnviarPlano = false" />
+        <!-- END: Modal Enviar Plano -->
     </main>
 </template>
 
@@ -130,6 +134,7 @@
 import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
+import ModalEnviarPlano from '@/components/ModalEnviarPlano.vue';
 import AbaAnamnese from '@/components/paciente/AbaAnamnese.vue';
 import AbaMedidas from '@/components/paciente/AbaMedidas.vue';
 import AbaPlanos from '@/components/paciente/AbaPlanos.vue';
@@ -199,7 +204,10 @@ const erroPlanos = ref(null);
 const planosCarregada = ref(false);
 const showDialogCriacaoPlano = ref(false);
 const editandoPlanoId = ref(null); // ID do plano sendo editado (null = modo criação)
-const linkPlano = ref('nutno.com.br/plano/token-aqui');
+
+// Estados para o modal de envio de plano
+const showModalEnviarPlano = ref(false);
+const planoParaEnviar = ref(null);
 
 // ===== COMPUTED PROPERTIES (estados do composable removidos) =====
 const fotoPacienteUrl = computed(() => {
@@ -705,8 +713,14 @@ const carregarPlanos = async () => {
 watch(
     () => activeTab.value,
     (novaTab) => {
-        if (novaTab === 'planos' && !planosCarregada.value) {
-            carregarPlanos();
+        if (novaTab === 'planos') {
+            if (!planosCarregada.value) {
+                carregarPlanos();
+            }
+            // Carregar medidas também para exibir ações rápidas no wizard
+            if (!medidasCarregada.value) {
+                carregarMedidas();
+            }
         }
         // Carregar dados para a aba resumo
         if (novaTab === 'resumo') {
@@ -723,6 +737,16 @@ watch(
     }
 );
 
+// Watch para carregar medidas quando o wizard de criação for aberto
+watch(
+    () => showDialogCriacaoPlano.value,
+    (isOpen) => {
+        if (isOpen && !medidasCarregada.value) {
+            carregarMedidas();
+        }
+    }
+);
+
 // ===== FUNÇÕES DE TRADUÇÃO (Movidas para @/utils/traducoes.js) =====
 const abrirEdicaoPlano = async (planoId) => {
     editandoPlanoId.value = planoId;
@@ -732,6 +756,89 @@ const abrirEdicaoPlano = async (planoId) => {
 const abrirCriacaoPlano = () => {
     editandoPlanoId.value = null;
     showDialogCriacaoPlano.value = true;
+};
+
+const handleEnviarPlano = async (planoId) => {
+    try {
+        const idPaciente = route.params.id;
+        const response = await PlanoAlimentarService.buscar(idPaciente, planoId);
+
+        if (response && response.dados) {
+            planoParaEnviar.value = response.dados;
+            showModalEnviarPlano.value = true;
+        } else {
+            throw new Error('Plano não encontrado');
+        }
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Erro ao carregar o plano para envio',
+            life: 3000
+        });
+    }
+};
+
+const handleArquivarPlano = (idPlano) => {
+    confirm.require({
+        message: 'Tem certeza que deseja arquivar este plano alimentar?',
+        header: 'Confirmação de Arquivamento',
+        icon: 'pi pi-exclamation-triangle',
+        accept: async () => {
+            try {
+                const idPaciente = route.params.id;
+
+                await PlanoAlimentarService.arquivar(idPaciente, idPlano);
+
+                toast.add({
+                    severity: 'success',
+                    summary: 'Sucesso',
+                    detail: 'Plano arquivado com sucesso',
+                    life: 3000
+                });
+
+                await carregarPlanos();
+            } catch (error) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'Erro',
+                    detail: 'Erro ao arquivar o plano',
+                    life: 3000
+                });
+            }
+        }
+    });
+};
+
+const handleAtivarPlano = (idPlano) => {
+    confirm.require({
+        message: 'Tem certeza que deseja ativar este plano alimentar?',
+        header: 'Confirmação de Ativação',
+        icon: 'pi pi-exclamation-triangle',
+        accept: async () => {
+            try {
+                const idPaciente = route.params.id;
+
+                await PlanoAlimentarService.ativar(idPaciente, idPlano);
+
+                toast.add({
+                    severity: 'success',
+                    summary: 'Sucesso',
+                    detail: 'Plano ativado com sucesso',
+                    life: 3000
+                });
+
+                await carregarPlanos();
+            } catch (error) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'Erro',
+                    detail: 'Erro ao ativar o plano',
+                    life: 3000
+                });
+            }
+        }
+    });
 };
 
 const deletarPlano = async (idPlano) => {

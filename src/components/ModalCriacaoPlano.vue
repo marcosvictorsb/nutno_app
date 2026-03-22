@@ -14,7 +14,7 @@
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800">{{ editandoPlanoId ? '✏️ Editar plano' : 'Novo plano' }} — {{ paciente?.nome }}</h2>
-                    <p class="text-xs text-slate-500 uppercase tracking-wider mt-1">Passo {{ step }} de 4</p>
+                    <p class="text-xs text-slate-500 uppercase tracking-wider mt-1">Passo {{ step }} de 3</p>
                 </div>
                 <button @click="handleFechar" class="text-slate-400 hover:text-slate-600">
                     <i class="pi pi-times text-2xl"></i>
@@ -36,11 +36,6 @@
                     <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" :class="step >= 3 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'"> 3 </span>
                     <span :class="['font-medium', step >= 3 ? 'text-emerald-600' : 'text-slate-400']">Revisão</span>
                 </div>
-                <div class="w-12 h-px bg-slate-200"></div>
-                <div class="flex items-center gap-3">
-                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" :class="step >= 4 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'"> 4 </span>
-                    <span :class="['font-medium', step >= 4 ? 'text-emerald-600' : 'text-slate-400']">Enviar</span>
-                </div>
             </div>
         </div>
 
@@ -49,7 +44,6 @@
             <slot v-if="step === 1" name="step-1"></slot>
             <slot v-else-if="step === 2" name="step-2"></slot>
             <slot v-else-if="step === 3" name="step-3"></slot>
-            <slot v-else-if="step === 4" name="step-4"></slot>
         </div>
 
         <!-- Footer -->
