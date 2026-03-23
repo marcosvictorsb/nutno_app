@@ -50,7 +50,7 @@ import { useRoute } from 'vue-router';
 
 const toast = useToast();
 const route = useRoute();
-const { inicializarRefeicoes, distribuirCalorias } = usePlanosAlimentares();
+const { inicializarRefeicoes, distribuirCalorias, calcularNutrienteItem } = usePlanosAlimentares();
 
 // ========== PROPS & EMITS ==========
 const props = defineProps({
@@ -142,7 +142,7 @@ watch(
 
                     // Mapear refeições se existirem
                     if (planoData.refeicoes && Array.isArray(planoData.refeicoes) && planoData.refeicoes.length > 0) {
-                        formularioPlano.value.refeicoes = planoData.refeicoes.map((refeicaoApi) => {
+                        const refeicoesMapeadas = planoData.refeicoes.map((refeicaoApi) => {
                             const distribuicoes = {
                                 'Café da manhã': 0.25,
                                 'Lanche manhã': 0.1,
@@ -152,28 +152,54 @@ watch(
                             };
                             const percDistribuicao = distribuicoes[refeicaoApi.nome] || 0.2;
 
-                            const itensMap = (refeicaoApi.itens || []).map((item) => ({
-                                id: item.id,
-                                alimento_id: item.alimento_id,
-                                nome_alimento: item.alimento ? item.alimento.nome : '',
-                                grupo_alimento: item.alimento ? item.alimento.grupo : '',
-                                quantidade: parseFloat(item.quantidade),
-                                unidade: item.unidade,
-                                calorias_calculadas: parseFloat(item.calorias_calculadas),
-                                proteinas_calculadas: parseFloat(item.proteinas_calculadas),
-                                carboidratos_calculados: parseFloat(item.carboidratos_calculados),
-                                gorduras_calculadas: parseFloat(item.gorduras_calculadas)
-                            }));
+                            const itensMap = (refeicaoApi.itens || []).map((item) => {
+                                // Verificar se precisa recalcular nutrientes
+                                let nutrientes = {
+                                    calorias: 0,
+                                    proteinas: 0,
+                                    carboidrato: 0,
+                                    gordura: 0
+                                };
+
+                                // Se os valores são null ou NaN, recalcula usando dados do alimento
+                                if (item.alimento && (!item.calorias_calculadas || item.calorias_calculadas === null || isNaN(item.calorias_calculadas))) {
+                                    nutrientes = calcularNutrienteItem(item.alimento, parseFloat(item.quantidade), item.unidade);
+                                    console.log(`📊 Recalculado: ${item.alimento.nome} (${item.quantidade}${item.unidade}) = ${nutrientes.calorias}kcal, P:${nutrientes.proteinas}g, C:${nutrientes.carboidrato}g, G:${nutrientes.gordura}g`);
+                                } else if (item.calorias_calculadas && !isNaN(item.calorias_calculadas)) {
+                                    // Usar valores que vieram do backend
+                                    nutrientes = {
+                                        calorias: parseFloat(item.calorias_calculadas) || 0,
+                                        proteinas: parseFloat(item.proteinas_calculadas) || 0,
+                                        carboidrato: parseFloat(item.carboidratos_calculados) || 0,
+                                        gordura: parseFloat(item.gorduras_calculadas) || 0
+                                    };
+                                }
+
+                                return {
+                                    id: item.id,
+                                    alimento_id: item.alimento_id,
+                                    nome_alimento: item.alimento ? item.alimento.nome : '',
+                                    grupo_alimento: item.alimento ? item.alimento.grupo : '',
+                                    quantidade: parseFloat(item.quantidade),
+                                    unidade: item.unidade,
+                                    calorias_calculadas: nutrientes.calorias,
+                                    proteinas_calculadas: nutrientes.proteinas,
+                                    carboidratos_calculados: nutrientes.carboidrato,
+                                    gorduras_calculadas: nutrientes.gordura
+                                };
+                            });
+
+                            console.log(`✅ Refeição: ${refeicaoApi.nome} - ${itensMap.length} itens`);
 
                             let total_calorias = 0;
                             let total_proteinas_g = 0;
                             let total_carboidrato_g = 0;
                             let total_gordura_g = 0;
                             itensMap.forEach((item) => {
-                                total_calorias += item.calorias_calculadas;
-                                total_proteinas_g += item.proteinas_calculadas;
-                                total_carboidrato_g += item.carboidratos_calculados;
-                                total_gordura_g += item.gorduras_calculadas;
+                                total_calorias += item.calorias_calculadas || 0;
+                                total_proteinas_g += item.proteinas_calculadas || 0;
+                                total_carboidrato_g += item.carboidratos_calculados || 0;
+                                total_gordura_g += item.gorduras_calculadas || 0;
                             });
 
                             return {
@@ -193,6 +219,9 @@ watch(
                                 total_gordura_g: Math.round(total_gordura_g * 10) / 10
                             };
                         });
+
+                        console.log('🔄 Atribuindo refeições ao formulário:', refeicoesMapeadas.length, 'refeições');
+                        formularioPlano.value.refeicoes = refeicoesMapeadas;
                     }
 
                     formularioPlanoCalorias_metaOriginal.value = formularioPlano.value.calorias_meta;

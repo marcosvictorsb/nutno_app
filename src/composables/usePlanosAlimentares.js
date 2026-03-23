@@ -49,7 +49,7 @@ export const usePlanosAlimentares = () => {
             'colher de sopa': quantidade * 15,
             'colher de chá': quantidade * 5,
             xícara: quantidade * 200,
-            unidade: 100
+            unidade: quantidade * 100
         };
         return conversoes[unidade] || 100;
     };
@@ -62,10 +62,12 @@ export const usePlanosAlimentares = () => {
         const fator = gramasTotal / 100;
 
         // Converter strings para números (API retorna como string)
-        const energiaKcal = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : alimento.energiaKcal;
-        const proteina = typeof alimento.proteina === 'string' ? parseFloat(alimento.proteina) : alimento.proteina;
-        const carboidrato = typeof alimento.carboidrato === 'string' ? parseFloat(alimento.carboidrato) : alimento.carboidrato;
-        const lipidios = typeof alimento.lipidios === 'string' ? parseFloat(alimento.lipidios) : alimento.lipidios;
+        // Aceita ambos formatos: camelCase (energiaKcal) e snake_case (energia_kcal)
+        const energiaKcal = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : typeof alimento.energia_kcal === 'string' ? parseFloat(alimento.energia_kcal) : alimento.energiaKcal || alimento.energia_kcal || 0;
+
+        const proteina = typeof alimento.proteina === 'string' ? parseFloat(alimento.proteina) : alimento.proteina || 0;
+        const carboidrato = typeof alimento.carboidrato === 'string' ? parseFloat(alimento.carboidrato) : alimento.carboidrato || 0;
+        const lipidios = typeof alimento.lipidios === 'string' ? parseFloat(alimento.lipidios) : alimento.lipidios || 0;
 
         return {
             calorias: Math.round(energiaKcal * fator * 10) / 10,
@@ -84,12 +86,16 @@ export const usePlanosAlimentares = () => {
         refeicao.total_carboidrato_g = 0;
         refeicao.total_gordura_g = 0;
 
-        refeicao.itens.forEach((item) => {
-            refeicao.total_calorias += item.calorias_calculadas;
-            refeicao.total_proteinas_g += item.proteinas_calculadas;
-            refeicao.total_carboidrato_g += item.carboidrato_calculado;
-            refeicao.total_gordura_g += item.gordura_calculada;
-        });
+        if (refeicao.itens && Array.isArray(refeicao.itens)) {
+            refeicao.itens.forEach((item) => {
+                refeicao.total_calorias += item.calorias_calculadas || 0;
+                refeicao.total_proteinas_g += item.proteinas_calculadas || 0;
+                // Aceita tanto carboidrato_calculado quanto carboidratos_calculados
+                refeicao.total_carboidrato_g += item.carboidratos_calculados || item.carboidrato_calculado || 0;
+                // Aceita tanto gordura_calculada quanto gorduras_calculadas
+                refeicao.total_gordura_g += item.gorduras_calculadas || item.gordura_calculada || 0;
+            });
+        }
 
         refeicao.total_calorias = Math.round(refeicao.total_calorias * 10) / 10;
         refeicao.total_proteinas_g = Math.round(refeicao.total_proteinas_g * 10) / 10;

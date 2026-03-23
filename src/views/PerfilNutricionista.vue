@@ -219,8 +219,8 @@
 </template>
 
 <script setup>
-import { construirUrlArquivo } from '@/utils/urlHelper';
 import NutricionistaService from '@/service/NutricionistaService';
+import { construirUrlArquivo } from '@/utils/urlHelper';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, ref } from 'vue';

@@ -148,7 +148,7 @@
                                 >
                                     <div>
                                         <p class="text-sm font-medium text-slate-800 group-hover:text-emerald-600">{{ alimento.nome }}</p>
-                                        <p class="text-xs text-slate-600">{{ Math.round(alimento.energiaKcal || 0) }} kcal / 100g</p>
+                                        <p class="text-xs text-slate-600">{{ Math.round(alimento.energiaKcal || alimento.energia_kcal || 0) }} kcal / 100g</p>
                                     </div>
                                     <i class="pi pi-plus-circle text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity"></i>
                                 </button>
@@ -360,7 +360,9 @@ const calcularNutrienteItem = (alimento, quantidade, unidade) => {
     const gramasTotal = conversoes[unidade] || quantidade;
     const fator = gramasTotal / 100;
 
-    const energiaKcal = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : alimento.energiaKcal;
+    // Aceita ambos formatos: camelCase (energiaKcal) e snake_case (energia_kcal)
+    const energiaKcal = typeof alimento.energiaKcal === 'string' ? parseFloat(alimento.energiaKcal) : typeof alimento.energia_kcal === 'string' ? parseFloat(alimento.energia_kcal) : alimento.energiaKcal || alimento.energia_kcal || 0;
+
     const proteina = typeof alimento.proteina === 'string' ? parseFloat(alimento.proteina) : alimento.proteina || 0;
     const carboidrato = typeof alimento.carboidrato === 'string' ? parseFloat(alimento.carboidrato) : alimento.carboidrato || 0;
     const lipidios = typeof alimento.lipidios === 'string' ? parseFloat(alimento.lipidios) : alimento.lipidios || 0;
