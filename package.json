@@ -5,6 +5,7 @@
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
+        "deploy": "node scripts/deploy.mjs",
         "lint": "eslint --fix . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
     },
     "dependencies": {
