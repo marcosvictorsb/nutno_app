@@ -84,6 +84,43 @@
                         </div>
                     </div>
 
+                    <div v-else-if="plano.status === 'enviado'" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-baseline gap-3 mb-3">
+                                    <Tag value="ENVIADO" severity="info" class="text-xs font-bold uppercase" />
+                                    <h4 class="text-xl font-semibold text-slate-800">{{ plano.nome }}</h4>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                                    <div class="bg-slate-50 p-3 rounded-xl">
+                                        <p class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-tight">Energia</p>
+                                        <p class="text-lg font-bold text-slate-800">{{ plano.calorias_objetivo }}<span class="text-xs font-normal text-slate-500">kcal</span></p>
+                                    </div>
+                                    <div class="bg-slate-50 p-3 rounded-xl">
+                                        <p class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-tight">Proteina</p>
+                                        <p class="text-lg font-bold text-emerald-600">{{ plano.proteinas_objetivo_pct }}<span class="text-xs font-normal">%</span></p>
+                                    </div>
+                                    <div class="bg-slate-50 p-3 rounded-xl">
+                                        <p class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-tight">Carboidrato</p>
+                                        <p class="text-lg font-bold text-slate-600">{{ plano.carboidratos_objetivo_pct }}<span class="text-xs font-normal">%</span></p>
+                                    </div>
+                                    <div class="bg-slate-50 p-3 rounded-xl">
+                                        <p class="text-xs text-slate-500 font-semibold mb-1 uppercase tracking-tight">Gordura</p>
+                                        <p class="text-lg font-bold text-slate-500">{{ plano.gorduras_objetivo_pct }}<span class="text-xs font-normal">%</span></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-slate-500">
+                                    <i class="pi pi-calendar text-base"></i><span>Enviado em {{ formatarDataBrasileira(plano.enviado_em) }}</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-row md:flex-col gap-2 justify-end">
+                                <Button icon="pi pi-send" label="Reenviar" severity="help" @click="$emit('enviar-plano', plano.id)" />
+                                <Button icon="pi pi-pencil" label="Editar" severity="info" @click="$emit('editar-plano', plano.id)" />
+                                <Button icon="pi pi-inbox" label="Arquivar" severity="warn" @click="$emit('arquivar-plano', plano.id)" />
+                            </div>
+                        </div>
+                    </div>
+
                     <div v-else-if="plano.status === 'arquivado'" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 opacity-80">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div class="flex items-center gap-4">
