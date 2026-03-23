@@ -30,9 +30,14 @@ export function useMedidas(pacienteId, paciente, activeTab) {
     const medidaSelecionada = ref(null);
     const medidaMaisRecente = ref(null);
 
-    // Dialog para criar/editar medida
+    // Dialog para criar medida
     const showDialogCriacaoMedida = ref(false);
     const loadingCriacaoMedida = ref(false);
+
+    // Dialog para editar medida
+    const showDialogEdicaoMedida = ref(false);
+    const loadingEdicaoMedida = ref(false);
+    const medidaEditando = ref(null);
 
     // Formulário de medida
     const formularioMedida = ref({
@@ -549,6 +554,181 @@ export function useMedidas(pacienteId, paciente, activeTab) {
         }
     );
 
+    /**
+     * Abrir dialog de edição de medida
+     */
+    const abrirEdicaoMedida = (medida) => {
+        // Converter data_avaliacao de string para Date se necessário
+        const medidaProcessada = { ...medida };
+        if (medidaProcessada.data_avaliacao && typeof medidaProcessada.data_avaliacao === 'string') {
+            medidaProcessada.data_avaliacao = new Date(medidaProcessada.data_avaliacao);
+        }
+        medidaEditando.value = medidaProcessada;
+        showDialogEdicaoMedida.value = true;
+    };
+
+    /**
+     * Fechar dialog de edição de medida
+     */
+    const fecharEdicaoMedida = () => {
+        showDialogEdicaoMedida.value = false;
+        medidaEditando.value = null;
+    };
+
+    /**
+     * Salvar edição de medida do paciente
+     */
+    const salvarEdicaoMedida = async (dadosMedida) => {
+        loadingEdicaoMedida.value = true;
+
+        try {
+            const idPaciente = route.params.id;
+            const idMedida = medidaEditando.value.id;
+
+            // Converter a data para o formato YYYY-MM-DD
+            let dataFormatada = null;
+            if (dadosMedida.data_avaliacao) {
+                const date = new Date(dadosMedida.data_avaliacao);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                dataFormatada = `${year}-${month}-${day}`;
+            }
+
+            // Preparar dados para enviar (todos os campos, apenas se preenchidos)
+            const dadosEnvio = {};
+
+            // Data
+            if (dataFormatada) dadosEnvio.data_avaliacao = dataFormatada;
+
+            // Dados Antropométricos Básicos
+            if (dadosMedida.peso !== null && dadosMedida.peso !== '') {
+                dadosEnvio.peso = dadosMedida.peso.toString();
+            }
+            if (dadosMedida.altura !== null && dadosMedida.altura !== '') {
+                dadosEnvio.altura = dadosMedida.altura.toString();
+            }
+
+            // IMC (enviar mesmo sendo calculado no backend, para consistência)
+            if (dadosMedida.imc !== null && dadosMedida.imc !== '') {
+                dadosEnvio.imc = dadosMedida.imc.toString();
+            }
+
+            // Percentuais e Composição Corporal
+            if (dadosMedida.perc_gordura_corporal !== null && dadosMedida.perc_gordura_corporal !== '') {
+                dadosEnvio.perc_gordura_corporal = dadosMedida.perc_gordura_corporal.toString();
+            }
+            if (dadosMedida.perc_massa_magra !== null && dadosMedida.perc_massa_magra !== '') {
+                dadosEnvio.perc_massa_magra = dadosMedida.perc_massa_magra.toString();
+            }
+            if (dadosMedida.idade_metabolica !== null && dadosMedida.idade_metabolica !== '') {
+                dadosEnvio.idade_metabolica = dadosMedida.idade_metabolica;
+            }
+
+            // Circunferências
+            if (dadosMedida.circunferencia_cintura !== null && dadosMedida.circunferencia_cintura !== '') {
+                dadosEnvio.circunferencia_cintura = dadosMedida.circunferencia_cintura.toString();
+            }
+            if (dadosMedida.circunferencia_quadril !== null && dadosMedida.circunferencia_quadril !== '') {
+                dadosEnvio.circunferencia_quadril = dadosMedida.circunferencia_quadril.toString();
+            }
+            if (dadosMedida.circunferencia_abdominal !== null && dadosMedida.circunferencia_abdominal !== '') {
+                dadosEnvio.circunferencia_abdominal = dadosMedida.circunferencia_abdominal.toString();
+            }
+            if (dadosMedida.circunferencia_braco !== null && dadosMedida.circunferencia_braco !== '') {
+                dadosEnvio.circunferencia_braco = dadosMedida.circunferencia_braco.toString();
+            }
+            if (dadosMedida.circunferencia_coxa_direita !== null && dadosMedida.circunferencia_coxa_direita !== '') {
+                dadosEnvio.circunferencia_coxa_direita = dadosMedida.circunferencia_coxa_direita.toString();
+            }
+            if (dadosMedida.circunferencia_coxa_esquerda !== null && dadosMedida.circunferencia_coxa_esquerda !== '') {
+                dadosEnvio.circunferencia_coxa_esquerda = dadosMedida.circunferencia_coxa_esquerda.toString();
+            }
+            if (dadosMedida.circunferencia_panturrilha !== null && dadosMedida.circunferencia_panturrilha !== '') {
+                dadosEnvio.circunferencia_panturrilha = dadosMedida.circunferencia_panturrilha.toString();
+            }
+            if (dadosMedida.circunferencia_torax !== null && dadosMedida.circunferencia_torax !== '') {
+                dadosEnvio.circunferencia_torax = dadosMedida.circunferencia_torax.toString();
+            }
+
+            // Dobras Cutâneas
+            if (dadosMedida.dobra_subescapular !== null && dadosMedida.dobra_subescapular !== '') {
+                dadosEnvio.dobra_subescapular = dadosMedida.dobra_subescapular.toString();
+            }
+            if (dadosMedida.dobra_tricipital !== null && dadosMedida.dobra_tricipital !== '') {
+                dadosEnvio.dobra_tricipital = dadosMedida.dobra_tricipital.toString();
+            }
+            if (dadosMedida.dobra_bicipital !== null && dadosMedida.dobra_bicipital !== '') {
+                dadosEnvio.dobra_bicipital = dadosMedida.dobra_bicipital.toString();
+            }
+            if (dadosMedida.dobra_suprailíaca !== null && dadosMedida.dobra_suprailíaca !== '') {
+                dadosEnvio.dobra_suprailíaca = dadosMedida.dobra_suprailíaca.toString();
+            }
+            if (dadosMedida.dobra_abdominal !== null && dadosMedida.dobra_abdominal !== '') {
+                dadosEnvio.dobra_abdominal = dadosMedida.dobra_abdominal.toString();
+            }
+            if (dadosMedida.dobra_coxal !== null && dadosMedida.dobra_coxal !== '') {
+                dadosEnvio.dobra_coxal = dadosMedida.dobra_coxal.toString();
+            }
+            if (dadosMedida.dobra_peitoral !== null && dadosMedida.dobra_peitoral !== '') {
+                dadosEnvio.dobra_peitoral = dadosMedida.dobra_peitoral.toString();
+            }
+
+            // Dados Cardiovasculares
+            if (dadosMedida.pressao_arterial_sistolica !== null && dadosMedida.pressao_arterial_sistolica !== '') {
+                dadosEnvio.pressao_arterial_sistolica = dadosMedida.pressao_arterial_sistolica;
+            }
+            if (dadosMedida.pressao_arterial_diastolica !== null && dadosMedida.pressao_arterial_diastolica !== '') {
+                dadosEnvio.pressao_arterial_diastolica = dadosMedida.pressao_arterial_diastolica;
+            }
+            if (dadosMedida.frequencia_cardiaca !== null && dadosMedida.frequencia_cardiaca !== '') {
+                dadosEnvio.frequencia_cardiaca = dadosMedida.frequencia_cardiaca;
+            }
+
+            // Metabolismo
+            if (dadosMedida.tmb !== null && dadosMedida.tmb !== '') {
+                dadosEnvio.tmb = dadosMedida.tmb.toString();
+            }
+            if (dadosMedida.gasto_energetico_total !== null && dadosMedida.gasto_energetico_total !== '') {
+                dadosEnvio.gasto_energetico_total = dadosMedida.gasto_energetico_total.toString();
+            }
+            if (dadosMedida.nivel_atividade) {
+                dadosEnvio.nivel_atividade = dadosMedida.nivel_atividade;
+            }
+
+            // Observações
+            if (dadosMedida.observacoes) {
+                dadosEnvio.observacoes = dadosMedida.observacoes;
+            }
+
+            // Fazer requisição PUT
+            await MedidaService.atualizarMedida(idPaciente, idMedida, dadosEnvio);
+
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Medida atualizada com sucesso',
+                life: 3000
+            });
+
+            // Fechar modal
+            fecharEdicaoMedida();
+
+            // Recarregar medidas
+            await carregarMedidas();
+        } catch (error) {
+            console.error('Erro ao atualizar medida:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'Erro',
+                detail: error.response?.data?.message || 'Erro ao atualizar medida',
+                life: 3000
+            });
+        } finally {
+            loadingEdicaoMedida.value = false;
+        }
+    };
+
     // ===== RETORNO DO COMPOSABLE =====
 
     return {
@@ -563,6 +743,9 @@ export function useMedidas(pacienteId, paciente, activeTab) {
         loadingCriacaoMedida,
         formularioMedida,
         pressaoArterialCombinada,
+        showDialogEdicaoMedida,
+        loadingEdicaoMedida,
+        medidaEditando,
 
         // Computed
         imcComClassificacao,
@@ -574,8 +757,11 @@ export function useMedidas(pacienteId, paciente, activeTab) {
         carregarMedidas,
         abrirCriacaoMedida,
         fecharCriacaoMedida,
+        abrirEdicaoMedida,
+        fecharEdicaoMedida,
         calcularTMBParam,
         salvarMedida,
+        salvarEdicaoMedida,
         deletarMedida
     };
 }

@@ -59,6 +59,9 @@ export default {
         }
         return (valorAtual - valorAnterior).toFixed(2);
     },
+    atualizarMedida(idPaciente, idMedida, dados) {
+        return apiClient.put(`/pacientes/${idPaciente}/medidas/${idMedida}`, dados);
+    },
 
     // Função para formatar data para exibição
     formatarData(data) {

@@ -80,6 +80,19 @@
         />
         <!-- END: Modal Adicionar Medida -->
 
+        <!-- Modal Editar Medida (Componente Extraído) -->
+        <ModalEditarMedida
+            :visible="showDialogEdicaoMedida"
+            :medida="medidaEditando"
+            :paciente="paciente"
+            :loading="loadingEdicaoMedida"
+            :calcularTMBParam="calcularTMBParam"
+            @update:visible="showDialogEdicaoMedida = $event"
+            @fechar="fecharEdicaoMedida"
+            @salvar-edicao-medida="handleSalvarEdicaoMedida"
+        />
+        <!-- END: Modal Editar Medida -->
+
         <!-- BEGIN: Modal Editar Paciente (Componente Extraído) -->
         <ModalEdicaoPaciente
             :visible="showDialogEdicao"
@@ -134,6 +147,7 @@
 import ModalAdicionarMedida from '@/components/ModalAdicionarMedida.vue';
 import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
+import ModalEditarMedida from '@/components/ModalEditarMedida.vue';
 import ModalEnviarPlano from '@/components/ModalEnviarPlano.vue';
 import AbaAnamnese from '@/components/paciente/AbaAnamnese.vue';
 import AbaMedidas from '@/components/paciente/AbaMedidas.vue';
@@ -149,7 +163,7 @@ import Button from 'primevue/button';
 import ConfirmPopup from 'primevue/confirmpopup';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -169,11 +183,17 @@ const {
     showDialogCriacaoMedida,
     loadingCriacaoMedida,
     formularioMedida,
+    showDialogEdicaoMedida,
+    loadingEdicaoMedida,
+    medidaEditando,
     carregarMedidas,
     abrirCriacaoMedida,
     fecharCriacaoMedida,
+    abrirEdicaoMedida,
+    fecharEdicaoMedida,
     calcularTMBParam,
     salvarMedida,
+    salvarEdicaoMedida,
     deletarMedida
 } = useMedidas(null, paciente, activeTab);
 
@@ -673,15 +693,13 @@ const salvarEdicaoAnamnese = async (dadosAnamnese) => {
     }
 };
 
-// Visualizar medida com scroll para seção de detalhes
+// Visualizar medida - abre modal para edição
 const visualizarMedida = (medida) => {
-    medidaSelecionada.value = medida;
-    nextTick(() => {
-        const elementoDetalhes = document.querySelector('[data-detalhes-medida]');
-        if (elementoDetalhes) {
-            elementoDetalhes.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    });
+    abrirEdicaoMedida(medida);
+};
+
+const handleSalvarEdicaoMedida = (dadosMedida) => {
+    salvarEdicaoMedida(dadosMedida);
 };
 
 // Funções de Planos Alimentares
