@@ -1,13 +1,8 @@
 <template>
-    <Dialog :visible="visible" :modal="true" :style="{ width: '90vw', maxWidth: '600px' }" :breakpoints="{ '575px': '95vw' }" @update:visible="emit('update:visible', $event)" :header="false" class="overflow-hidden">
+    <Dialog :visible="visible" :modal="true" :style="{ width: '90vw', maxWidth: '900px' }" :breakpoints="{ '575px': '95vw' }" @update:visible="emit('update:visible', $event)">
         <!-- Header -->
         <template #header>
-            <div class="flex items-center justify-between w-full">
-                <h2 class="text-2xl font-bold text-slate-800">Enviar Plano</h2>
-                <button @click="handleFechar" class="text-slate-400 hover:text-slate-600">
-                    <i class="pi pi-times text-2xl"></i>
-                </button>
-            </div>
+            <h2 class="text-2xl font-bold text-slate-800">Enviar Plano</h2>
         </template>
 
         <!-- Content -->
@@ -40,7 +35,7 @@
             </div>
 
             <!-- Seção 2: Link do Plano -->
-            <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6">
+            <!-- <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6">
                 <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <i class="pi pi-link text-slate-600"></i>
                     Link de Acesso
@@ -50,7 +45,7 @@
                     <Button :label="labelBotaoCopiar" :icon="iconBotaoCopiar" @click="copiarLink" :severity="statusBotaoCopiar" class="text-sm font-medium" />
                 </div>
                 <p class="text-xs text-slate-500 mt-2">Clique em "Copiar" para copiar o link para a área de transferência</p>
-            </div>
+            </div> -->
 
             <!-- Seção 3: Mensagem Personalizada -->
             <div class="bg-slate-50 rounded-2xl border border-slate-200 p-6">
@@ -65,16 +60,16 @@
             <!-- Seção 4: Botões de Envio -->
             <div class="space-y-3">
                 <!-- Aviso de WhatsApp não disponível -->
-                <div v-if="!paciente?.whatsapp" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
+                <!-- <div v-if="!paciente?.whatsapp" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
                     <i class="pi pi-exclamation-circle text-yellow-600 text-lg mt-0.5"></i>
                     <div>
                         <p class="text-sm font-semibold text-yellow-800">WhatsApp não disponível</p>
                         <p class="text-xs text-yellow-700">Este paciente não possui WhatsApp cadastrado</p>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Botão WhatsApp -->
-                <Button label="Enviar via WhatsApp" icon="pi pi-phone" class="w-full text-base font-semibold text-white" :style="{ backgroundColor: '#25d366' }" @click="enviarViaWhatsApp" :disabled="!paciente?.whatsapp" />
+                <!-- <Button label="Enviar via WhatsApp" icon="pi pi-phone" class="w-full text-base font-semibold text-white" :style="{ backgroundColor: '#25d366' }" @click="enviarViaWhatsApp" :disabled="!paciente?.whatsapp" /> -->
 
                 <!-- Aviso de Email não disponível -->
                 <div v-if="!paciente?.email" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
@@ -86,7 +81,7 @@
                 </div>
 
                 <!-- Botão Email -->
-                <Button label="Enviar via Email" icon="pi pi-envelope" class="w-full text-base font-semibold text-white bg-blue-600 hover:bg-blue-700" @click="enviarViaEmail" :disabled="!paciente?.email" />
+                <Button label="Enviar via Email" icon="pi pi-envelope" class="w-full text-base font-semibold text-white bg-blue-600 hover:bg-blue-700" @click="enviarViaEmail" :disabled="!paciente?.email || enviandoEmail" :loading="enviandoEmail" />
             </div>
         </div>
 
@@ -100,12 +95,13 @@
 </template>
 
 <script setup>
+import PlanoAlimentarService from '@/service/PlanoAlimentarService';
 import { traduzirObjetivo } from '@/utils/traducoes';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
-import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import { computed, ref } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import { computed, ref, watch } from 'vue';
 
 // Props
 const props = defineProps({
@@ -123,10 +119,14 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:visible', 'fechar']);
 
+// Toast
+const toast = useToast();
+
 // State
 const mensagemPersonalizada = ref('');
 const copiado = ref(false);
 const timeoutCopiar = ref(null);
+const enviandoEmail = ref(false);
 
 // Computed
 const linkCompleto = computed(() => {
@@ -136,6 +136,19 @@ const linkCompleto = computed(() => {
     const baseUrl = isDev ? 'http://localhost:5173' : 'https://www.nutno.com.br';
     return `${baseUrl}/plano/${token}`;
 });
+
+// Watch para resetar estado quando modal fecha
+watch(
+    () => props.visible,
+    (newVal) => {
+        if (!newVal) {
+            // Resetar estados quando modal fecha
+            mensagemPersonalizada.value = '';
+            copiado.value = false;
+            enviandoEmail.value = false;
+        }
+    }
+);
 
 const labelBotaoCopiar = computed(() => (copiado.value ? 'Copiado!' : 'Copiar'));
 const iconBotaoCopiar = computed(() => (copiado.value ? 'pi pi-check' : 'pi pi-copy'));
@@ -200,14 +213,42 @@ const enviarViaWhatsApp = () => {
     window.open(urlWhatsApp, '_blank');
 };
 
-const enviarViaEmail = () => {
+const enviarViaEmail = async () => {
     if (!props.paciente?.email) return;
+    if (!props.plano?.id) return;
 
-    const assunto = encodeURIComponent(`Seu Plano Alimentar: ${props.plano?.nome}`);
-    const corpo = encodeURIComponent(mensagemParaEnviar.value);
-    const urlEmail = `mailto:${props.paciente.email}?subject=${assunto}&body=${corpo}`;
+    try {
+        enviandoEmail.value = true;
 
-    window.location.href = urlEmail;
+        // Fazer requisição para a API
+        await PlanoAlimentarService.enviar(props.paciente.id, props.plano.id, {
+            email: props.paciente.email,
+            mensagem: mensagemParaEnviar.value
+        });
+
+        // Sucesso
+        toast.add({
+            severity: 'success',
+            summary: 'Sucesso!',
+            detail: 'Plano alimentar enviado via email com sucesso',
+            life: 3000
+        });
+
+        // Fechar modal
+        setTimeout(() => {
+            handleFechar();
+        }, 1500);
+    } catch (error) {
+        console.error('Erro ao enviar plano por email:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: error.response?.data?.mensagem || 'Erro ao enviar plano por email',
+            life: 3000
+        });
+    } finally {
+        enviandoEmail.value = false;
+    }
 };
 </script>
 
