@@ -1,13 +1,13 @@
 const getLeadsUrl = () => {
     if (import.meta.env.MODE === 'production') {
-        return 'https://nutno.com.br/leads';
+        return 'https://www.nutno.com.br/leads';
     }
     return 'http://localhost:3000/leads';
 };
 
 const getLeadUrl = () => {
     if (import.meta.env.MODE === 'production') {
-        return 'https://nutno.com.br/leads';
+        return 'https://www.nutno.com.br/leads';
     }
     return 'http://localhost:3000/leads';
 };

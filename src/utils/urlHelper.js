@@ -9,7 +9,7 @@ const isDevelopment = import.meta.env.DEV;
  * @returns {string} URL base (ex: http://localhost:3000 ou https://nutno.com.br)
  */
 export const getBaseUrl = () => {
-    return isDevelopment ? 'http://localhost:3000' : 'https://nutno.com.br';
+    return isDevelopment ? 'http://localhost:3000' : 'https://www.nutno.com.br';
 };
 
 /**
