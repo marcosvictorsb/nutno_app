@@ -3,7 +3,7 @@ import AuthService from './AuthService';
 
 const isDevelopment = import.meta.env.DEV;
 
-const apiUrl = isDevelopment ? 'http://localhost:3000' : 'https://nutno.com.br';
+const apiUrl = isDevelopment ? 'http://localhost:3000' : 'https://www.nutno.com.br';
 
 let router = null;
 let toast = null;
