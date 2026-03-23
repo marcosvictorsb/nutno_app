@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const isDevelopment = import.meta.env.DEV;
 
-const apiUrl = isDevelopment ? 'http://localhost:3000' : 'https://www.nutno.com.br';
+const apiUrl = isDevelopment ? 'http://localhost:3000/api' : 'https://www.nutno.com.br/api';
 
 const apiClient = axios.create({
     baseURL: apiUrl
