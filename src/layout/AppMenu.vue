@@ -33,11 +33,6 @@ const model = ref([
                 label: 'Alimentos',
                 icon: 'pi pi-fw pi-apple',
                 to: '/alimentos'
-            },
-            {
-                label: 'Configuração',
-                icon: 'pi pi-fw pi-sliders-v',
-                to: '/configuracao'
             }
         ]
     },

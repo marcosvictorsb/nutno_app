@@ -46,14 +46,6 @@ const router = createRouter({
                     component: () => import('@/Alimentos/views/Alimentos.vue')
                 },
                 {
-                    path: '/configuracao',
-                    name: 'configuracao',
-                    meta: {
-                        breadcrumb: ['Configuração']
-                    },
-                    component: () => import('@/views/utilities/Blocks.vue')
-                },
-                {
                     path: '/perfil',
                     name: 'perfil',
                     meta: {

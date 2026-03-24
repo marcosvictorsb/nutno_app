@@ -168,7 +168,7 @@
 
                         <div class="flex items-start gap-3">
                             <input v-model="aceitoTermos" type="checkbox" id="termos" class="mt-1" />
-                            <label for="termos" class="text-sm text-gray-700"> Aceito os <span class="font-semibold cursor-pointer text-green-600 hover:underline">Termos de Uso</span> </label>
+                            <label for="termos" class="text-sm text-gray-700"> Aceito os <span class="font-semibold cursor-pointer text-green-600 hover:underline" @click="abrirTermos">Termos de Uso</span> </label>
                         </div>
 
                         <button
@@ -197,14 +197,19 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Termos de Uso -->
+    <TermosDeUso ref="termosRef" />
 </template>
 
 <script setup>
+import TermosDeUso from '@/components/TermosDeUso.vue';
 import AuthService from '@/service/AuthService.js';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+const termosRef = ref(null);
 
 const tabAtivo = ref('criar');
 const nomeCompleto = ref('');
@@ -236,6 +241,10 @@ const senhaValida = computed(() => {
 const formularioValido = computed(() => {
     return nomeCompleto.value.trim() !== '' && email.value.trim() !== '' && senhaValida.value && senhasCorrespondem.value && aceitoTermos.value;
 });
+
+const abrirTermos = () => {
+    termosRef.value?.abrir();
+};
 
 const handleSubmit = async (e) => {
     e.preventDefault();
