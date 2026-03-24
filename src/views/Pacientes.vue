@@ -406,6 +406,11 @@ const carregarPacientes = async () => {
             params.busca = searchValue.value.trim();
         }
 
+        // Adicionar status se não for 'todos'
+        if (filtroStatus.value !== 'todos') {
+            params.status = filtroStatus.value;
+        }
+
         const response = await PacienteService.listarPacientes(params);
         if (response.data && response.data.data && Array.isArray(response.data.data)) {
             pacientes.value = response.data.data.map((paciente) => ({
@@ -664,8 +669,28 @@ const verPerfil = (paciente) => {
     router.push(`/pacientes/${paciente.id}`);
 };
 
-const criarPlano = (paciente) => {
-    console.log('Criar plano para:', paciente.nome);
+const criarPlano = async (paciente) => {
+    try {
+        await PacienteService.ativarPaciente(paciente.id);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: `Paciente "${paciente.nome}" foi ativado com sucesso`,
+            life: 3000
+        });
+
+        await carregarPacientes();
+    } catch (error) {
+        console.error('Erro ao ativar paciente:', error);
+        const mensagemErro = extrairMensagemErro(error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro ao ativar paciente',
+            detail: mensagemErro,
+            life: 5000
+        });
+    }
 };
 
 const novoPlano = async (paciente) => {

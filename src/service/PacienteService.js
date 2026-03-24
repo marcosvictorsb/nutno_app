@@ -47,6 +47,11 @@ export default {
         return apiClient.patch(`/pacientes/${id}/arquivar`);
     },
 
+    // Ativar paciente
+    ativarPaciente(id) {
+        return apiClient.patch(`/pacientes/${id}/ativar`);
+    },
+
     // Desarquivar paciente
     desarquivarPaciente(id) {
         return apiClient.patch(`/pacientes/${id}/desarquivar`);
