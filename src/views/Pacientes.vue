@@ -87,7 +87,7 @@
                     <!-- Card Footer with Buttons -->
                     <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-2">
                         <Button label="Ver perfil" icon="pi pi-eye" severity="success" text @click="verPerfil(paciente)" class="flex-1 text-xs font-medium" />
-                        <Button v-if="paciente.status === 'ativo'" label="Novo plano" icon="pi pi-plus" severity="secondary" text @click="novoPlano(paciente)" class="flex-1 text-xs font-medium" />
+                        <Button v-if="paciente.status === 'ativo'" label="Arquivar" icon="pi pi-lock" severity="warning" text @click="novoPlano(paciente)" class="flex-1 text-xs font-medium" />
                         <Button v-else label="Reativar" icon="pi pi-check" severity="warning" text @click="criarPlano(paciente)" class="flex-1 text-xs font-medium" />
                     </div>
                 </div>
@@ -668,8 +668,28 @@ const criarPlano = (paciente) => {
     console.log('Criar plano para:', paciente.nome);
 };
 
-const novoPlano = (paciente) => {
-    console.log('Novo plano para:', paciente.nome);
+const novoPlano = async (paciente) => {
+    try {
+        await PacienteService.arquivarPaciente(paciente.id);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Sucesso',
+            detail: `Paciente "${paciente.nome}" foi arquivado com sucesso`,
+            life: 3000
+        });
+
+        await carregarPacientes();
+    } catch (error) {
+        console.error('Erro ao arquivar paciente:', error);
+        const mensagemErro = extrairMensagemErro(error);
+        toast.add({
+            severity: 'error',
+            summary: 'Erro ao arquivar paciente',
+            detail: mensagemErro,
+            life: 5000
+        });
+    }
 };
 
 // Watchers para remover erros quando o usuário edita os campos
