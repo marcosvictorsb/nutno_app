@@ -32,7 +32,7 @@
                 :anamnese="anamnese"
                 @criar-anamnese="abrirCriacaoAnamnese"
                 @editar-anamnese="abrirEdicaoAnamnese"
-                @enviar-formulario="() => toast.add({ severity: 'info', summary: 'Email sera enviado', detail: 'Funcionalidade em desenvolvimento' })"
+                @enviar-formulario="enviarFormularioAnamnese"
             />
 
             <AbaMedidas
@@ -882,6 +882,34 @@ const deletarPlano = async (idPlano) => {
             severity: 'error',
             summary: 'Erro',
             detail: 'Erro ao deletar o plano',
+            life: 3000
+        });
+    }
+};
+
+const enviarFormularioAnamnese = async () => {
+    try {
+        if (paciente.value && paciente.value.email && paciente.value.nome && paciente.value.id && paciente.value.sexo) {
+            await AnamneseService.enviarFormulario({ email: paciente.value.email, nome: paciente.value.nome, paciente_id: paciente.value.id });
+            toast.add({
+                severity: 'success',
+                summary: 'Sucesso',
+                detail: 'Paciente cadastrado e formulário de anamnese enviado',
+                life: 3000
+            });
+        } else {
+            toast.add({
+                severity: 'error',
+                summary: 'Erro',
+                detail: 'Paciente precisa ter nome, email, sexo para enviar o formulário de anamnese',
+                life: 3000
+            });
+        }
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Erro',
+            detail: 'Erro ao enviar o formulário de anamnese',
             life: 3000
         });
     }

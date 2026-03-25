@@ -237,7 +237,7 @@
 
                             <!-- Qual acompanhamento -->
                             <div v-if="form.fez_acompanhamento_antes" class="md:col-span-2 animate-fade-in">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Qual foi o acompanhamento?</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Como foi seu último acompanhamento nutricional? (tipo, duração e resultado)</label>
                                 <input
                                     v-model="form.qual_acompanhamento"
                                     type="text"
