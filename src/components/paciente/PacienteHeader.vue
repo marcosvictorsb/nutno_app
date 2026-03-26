@@ -101,6 +101,7 @@ const selecionarFoto = () => {
 const tabs = [
     { key: 'anamnese', label: 'Anamnese' },
     { key: 'medidas', label: 'Medidas' },
-    { key: 'planos', label: 'Planos Alimentares' }
+    { key: 'planos', label: 'Planos Alimentares' },
+    { key: 'adesao', label: 'Adesão' }
 ];
 </script>

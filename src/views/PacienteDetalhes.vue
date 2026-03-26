@@ -58,7 +58,7 @@
                 @ativar-plano="handleAtivarPlano"
             />
 
-            <!-- <AbaAdesao v-else-if="activeTab === 'adesao'" /> -->
+            <AbaAdesao v-else-if="activeTab === 'adesao'" :paciente="paciente" :planos="planos" @update:activeTab="activeTab = $event" />
 
             <div v-else class="max-w-7xl mx-auto bg-white rounded-2xl shadow-sm border border-emerald-50 p-12 text-center">
                 <i class="pi pi-home text-4xl text-slate-300 mb-4"></i>
@@ -149,6 +149,7 @@ import ModalEdicaoAnamnese from '@/components/ModalEdicaoAnamnese.vue';
 import ModalEdicaoPaciente from '@/components/ModalEdicaoPaciente.vue';
 import ModalEditarMedida from '@/components/ModalEditarMedida.vue';
 import ModalEnviarPlano from '@/components/ModalEnviarPlano.vue';
+import AbaAdesao from '@/components/paciente/AbaAdesao.vue';
 import AbaAnamnese from '@/components/paciente/AbaAnamnese.vue';
 import AbaMedidas from '@/components/paciente/AbaMedidas.vue';
 import AbaPlanos from '@/components/paciente/AbaPlanos.vue';

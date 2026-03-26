@@ -102,6 +102,11 @@ const router = createRouter({
             component: () => import('@/views/FormularioAnamnese.vue')
         },
         {
+            path: '/paciente/plano/:token',
+            name: 'pacientePlanoPaginaPublica',
+            component: () => import('@/views/PacientePlanoPaginaPublica.vue')
+        },
+        {
             path: '/:pathMatch(.*)*',
             name: 'notFound',
             component: () => import('@/views/pages/NotFound.vue')
