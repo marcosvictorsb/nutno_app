@@ -58,7 +58,7 @@
             </div>
 
             <!-- SEÇÃO 2: Cards de resumo -->
-            <div v-else-if="resumo" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div v-else-if="resumo && resumo.geral" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- Card 1: Adesão Geral -->
                 <div class="bg-white rounded-lg border border-gray-100 p-6 shadow-sm">
                     <div class="flex items-center justify-between mb-4">
@@ -131,22 +131,22 @@
                 </p>
 
                 <div class="flex flex-wrap gap-2 bg-gray-50 p-4 rounded-lg">
-                    <Tooltip v-for="dia in diasDoMes" :key="dia.data" :text="getTooltipDia(dia)" position="top">
-                        <button
-                            @click="selecionarDia(dia)"
-                            :style="{
-                                backgroundColor: getCorDia(dia),
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '4px',
-                                border: dia.data === diaSelecionado ? '2px solid #16a34a' : '1px solid #e5e7eb',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }"
-                            class="hover:shadow-md hover:scale-110"
-                            :title="dia.data"
-                        />
-                    </Tooltip>
+                    <button
+                        v-for="dia in diasDoMes"
+                        :key="dia.data"
+                        @click="selecionarDia(dia)"
+                        :style="{
+                            backgroundColor: getCorDia(dia),
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '4px',
+                            border: dia.data === diaSelecionado ? '2px solid #16a34a' : '1px solid #e5e7eb',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }"
+                        class="hover:shadow-md hover:scale-110"
+                        :title="formatarDataPT(dia.data)"
+                    />
                 </div>
 
                 <!-- Detalhe do dia selecionado -->
@@ -206,7 +206,6 @@ import DataTable from 'primevue/datatable';
 import Dropdown from 'primevue/dropdown';
 import ProgressBar from 'primevue/progressbar';
 import Skeleton from 'primevue/skeleton';
-import Tooltip from 'primevue/tooltip';
 import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -230,6 +229,7 @@ const erro = ref(null);
 const periodoSelecionado = ref('30d');
 const planoSelecionado = ref(null);
 const diaSelecionado = ref(null);
+const contadorChamadas = ref(0);
 
 // Opções de período
 const periodos = [
@@ -245,7 +245,7 @@ const planosDisponiveis = computed(() => {
 
 // Computed: Tem plano ativo
 const temPlanoAtivo = computed(() => {
-    return planosDisponiveis.value.length === 0;
+    return planosDisponiveis.value.length > 0;
 });
 
 // Computed: Data início baseado no período
@@ -332,6 +332,7 @@ const getCorDia = (dia) => {
 };
 
 const getCorProgressoGeral = () => {
+    if (!resumo.value || !resumo.value.geral) return 'from-gray-500 to-gray-600';
     const valor = resumo.value.geral.percentual_adesao;
     if (valor >= 80) return 'from-emerald-500 to-emerald-600';
     if (valor >= 50) return 'from-yellow-500 to-yellow-600';
@@ -378,6 +379,11 @@ const irParaPlanos = () => {
 
 // Carregar dados
 const carregarDados = async () => {
+    // Evita chamadas simultâneas
+    if (loading.value) {
+        return;
+    }
+
     loading.value = true;
     erro.value = null;
 
@@ -393,11 +399,54 @@ const carregarDados = async () => {
 
         const [resAdesoes, resResumo] = await Promise.all([AdesaoService.listar(props.paciente.id, params), AdesaoService.resumo(props.paciente.id, params)]);
 
-        adesoes.value = resAdesoes.data.data || [];
-        resumo.value = resResumo.data.data || null;
+        // Transformar adesões: aplacar o array de adesões por dia
+        const adesoesFlatted = [];
+        (resAdesoes.data.data || []).forEach((dia) => {
+            (dia.adesoes || []).forEach((adesao) => {
+                adesoesFlatted.push({
+                    data: dia.data,
+                    refeicao_id: adesao.refeicao_id,
+                    refeicao_nome: adesao.refeicao_nome,
+                    status: adesao.status,
+                    observacao: adesao.observacao
+                });
+            });
+        });
+        adesoes.value = adesoesFlatted;
+
+        // Transformar resumo - acessa resResumo.data (não resResumo.data.data)
+        const resumoData = resResumo.data || {};
+
+        // Garantir que tem a estrutura esperada
+        if (!resumoData.geral) {
+            resumoData.geral = {
+                total_registros: 0,
+                seguiu: 0,
+                parcial: 0,
+                pulou: 0,
+                percentual_adesao: 0
+            };
+        }
+
+        if (resumoData.por_refeicao && Array.isArray(resumoData.por_refeicao)) {
+            resumoData.por_refeicao = resumoData.por_refeicao.map((r) => ({
+                nome: r.nome_refeicao,
+                percentual: r.percentual_adesao,
+                seguiu: r.seguiu,
+                parcial: r.parcial,
+                pulou: r.pulou
+            }));
+        } else {
+            resumoData.por_refeicao = [];
+        }
+
+        resumo.value = resumoData;
     } catch (error) {
         console.error('Erro ao carregar adesão:', error);
         erro.value = error.response?.data?.message || 'Erro ao carregar dados de adesão';
+        // Limpar dados em caso de erro
+        adesoes.value = [];
+        resumo.value = null;
     } finally {
         loading.value = false;
     }
@@ -412,9 +461,19 @@ watch(
     }
 );
 
+// Watcher: Detecta quando os planos ficam disponíveis (para primeira renderização)
+watch(
+    () => temPlanoAtivo.value,
+    (temPlano) => {
+        if (temPlano && !loading.value && !resumo.value && !adesoes.value.length) {
+            carregarDados();
+        }
+    }
+);
+
 // Lifecycle
 onMounted(() => {
-    if (!temPlanoAtivo.value) {
+    if (temPlanoAtivo.value) {
         carregarDados();
     } else {
         console.log('Paciente sem plano ativo, pulando carregamento de adesão');
