@@ -68,7 +68,7 @@
                             </p>
 
                             <!-- Última adesão registrada -->
-                            <div v-if="ultimasAdesoes[refeicao.id]" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <!-- <div v-if="ultimasAdesoes[refeicao.id]" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                 <p class="text-xs text-blue-600 font-medium">
                                     Último registro: {{ formatarData(ultimasAdesoes[refeicao.id].data) }}
                                     -
@@ -82,10 +82,18 @@
                                         {{ getStatusLabel(ultimasAdesoes[refeicao.id].status) }}
                                     </span>
                                 </p>
+                            </div> -->
+
+                            <!-- Aviso se já foi registrada hoje -->
+                            <div v-if="refeicoesRegistradasHoje.has(refeicao.id)" class="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                                <p class="text-xs text-emerald-600 font-medium">
+                                    <i class="pi pi-check-circle mr-1"></i>
+                                    Já registrada hoje
+                                </p>
                             </div>
                         </div>
 
-                        <Button label="Registrar" icon="pi pi-plus" severity="success" @click="abrirFormulario(refeicao)" class="ml-4" />
+                        <Button v-if="!refeicoesRegistradasHoje.has(refeicao.id)" label="Registrar" icon="pi pi-plus" severity="success" @click="abrirFormulario(refeicao)" class="ml-4" />
                     </div>
                 </div>
             </div>
@@ -117,6 +125,7 @@ const erro = ref(null);
 const plano = ref(null);
 const refeicoes = ref([]);
 const ultimasAdesoes = ref({});
+const refeicoesRegistradasHoje = ref(new Set());
 const pacienteNome = ref('Paciente');
 const dataAtual = ref(null);
 const refeicaoSelecionada = ref(null);
@@ -188,9 +197,28 @@ const carregarDados = async () => {
             });
 
             if (resAdesoes.data.data) {
-                resAdesoes.data.data.forEach((adesao) => {
-                    ultimasAdesoes.value[adesao.refeicao_id] = adesao;
+                const hoje = new Date().toISOString().split('T')[0];
+                const refeicoesRegistradas = new Set();
+
+                // Iterar sobre os dias
+                resAdesoes.data.data.forEach((dia) => {
+                    // Se for hoje, marcar quais refeições já foram registradas
+                    if (dia.data === hoje) {
+                        (dia.adesoes || []).forEach((adesao) => {
+                            refeicoesRegistradas.add(adesao.refeicao_id);
+                            ultimasAdesoes.value[adesao.refeicao_id] = adesao;
+                        });
+                    } else {
+                        // Para outros dias, só armazenar a última adesão
+                        (dia.adesoes || []).forEach((adesao) => {
+                            if (!ultimasAdesoes.value[adesao.refeicao_id]) {
+                                ultimasAdesoes.value[adesao.refeicao_id] = adesao;
+                            }
+                        });
+                    }
                 });
+
+                refeicoesRegistradasHoje.value = refeicoesRegistradas;
             }
         } catch (e) {
             // Adesões não carregadas, mas não é erro fatal
