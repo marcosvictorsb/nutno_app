@@ -131,25 +131,6 @@ const dataAtual = ref(null);
 const refeicaoSelecionada = ref(null);
 const modalRegistro = ref(null);
 
-// Funções helper
-const formatarData = (dataStr) => {
-    const data = new Date(dataStr + 'T00:00:00');
-    return data.toLocaleDateString('pt-BR', {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short'
-    });
-};
-
-const getStatusLabel = (status) => {
-    const labels = {
-        seguiu: 'Seguiu',
-        parcial: 'Parcial',
-        pulou: 'Pulou'
-    };
-    return labels[status] || status;
-};
-
 const voltar = () => {
     router.push('/');
 };
@@ -160,10 +141,8 @@ const abrirFormulario = (refeicao) => {
 };
 
 const handleAdesaoRegistrada = async (dados) => {
-    // Atualizar última adesão da refeição
     ultimasAdesoes.value[dados.refeicao_id] = dados;
 
-    // Mostrar notificação com Toast
     toast.add({
         severity: 'success',
         summary: 'Sucesso!',
@@ -171,7 +150,6 @@ const handleAdesaoRegistrada = async (dados) => {
         life: 3000
     });
 
-    // Fechar modal
     modalRegistro.value?.fechar();
 };
 

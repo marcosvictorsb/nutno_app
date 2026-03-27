@@ -276,7 +276,7 @@ const props = defineProps({
     },
     medida: {
         type: Object,
-        required: true
+        default: null
     },
     paciente: {
         type: Object,
@@ -350,7 +350,7 @@ const handleVisibilityUpdate = (value) => {
 watch(
     () => props.visible,
     (visible) => {
-        if (visible) {
+        if (visible && props.medida) {
             // Copiar valores mantendo Date objects
             formularioLocal.value = {
                 ...props.medida

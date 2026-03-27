@@ -1,6 +1,6 @@
 <template>
     <!-- Toast Notification -->
-    <Toast ref="toast" position="top-right" />
+    <Toast position="top-right" />
 
     <Dialog v-model:visible="isVisible" :header="`Registrar adesão - ${refeicao?.nome || 'Refeição'}`" :modal="true" :style="{ width: '90vw', maxWidth: '1200px' }" @hide="fechar">
         <div class="space-y-6">
