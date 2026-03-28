@@ -2,7 +2,8 @@ import apiClient from './ApiClient';
 
 export default {
     // Buscar plano pelo token de visualização (pública)
-    obterPorToken(token) {
-        return apiClient.get(`/adesao/${token}`);
+    obterPorToken(token, data = null) {
+        const params = data ? { data } : {};
+        return apiClient.get(`/adesao/${token}`, { params });
     }
 };

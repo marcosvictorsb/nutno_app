@@ -64,7 +64,7 @@
 
             <!-- Status do formulário -->
             <div v-if="erroGeral" class="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p class="text-sm font-semibold text-red-900">Erro: {{ erroGeral }}</p>
+                <p class="text-sm font-semibold text-red-900">{{ erroGeral }}</p>
             </div>
         </div>
 
@@ -95,6 +95,10 @@ const props = defineProps({
     token: {
         type: String,
         required: true
+    },
+    dataSelecionada: {
+        type: String,
+        default: null
     }
 });
 
@@ -144,10 +148,16 @@ const fechar = () => {
 };
 
 const resetarFormulario = () => {
+    // Se houver data selecionada, converter para Date
+    let dataInicial = new Date();
+    if (props.dataSelecionada) {
+        dataInicial = new Date(props.dataSelecionada + 'T00:00:00');
+    }
+
     formulario.value = {
         status: null,
         observacao: '',
-        data: new Date()
+        data: dataInicial
     };
     erroData.value = null;
     erroGeral.value = null;

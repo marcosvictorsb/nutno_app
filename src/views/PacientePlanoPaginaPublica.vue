@@ -151,7 +151,7 @@
         </div>
 
         <!-- Modal de registro -->
-        <ModalRegistroAdesao ref="modalRegistro" :refeicao="refeicaoSelecionada" :token="token" @adesao-registrada="handleAdesaoRegistrada" />
+        <ModalRegistroAdesao ref="modalRegistro" :refeicao="refeicaoSelecionada" :token="token" :dataSelecionada="dataSelecionada" @adesao-registrada="handleAdesaoRegistrada" />
     </main>
 </template>
 
@@ -319,7 +319,8 @@ const selecionarData = (data) => {
         return;
     }
     dataSelecionada.value = data;
-    // Aqui você pode adicionar lógica para filtrar refeições pela data
+    // Carregar dados com a data selecionada
+    carregarDados(data);
 };
 
 const voltar = () => {
@@ -341,8 +342,8 @@ const handleAdesaoRegistrada = async (dados) => {
 
     modalRegistro.value?.fechar();
 
-    // Recarregar dados para atualizar a UI
-    await carregarDados();
+    // Recarregar dados mantendo a data selecionada
+    await carregarDados(dataSelecionada.value);
 };
 
 /**
@@ -370,23 +371,26 @@ const getCorStatusAdesao = (status) => {
 };
 
 // Carregar dados
-const carregarDados = async () => {
+const carregarDados = async (dataFiltro = null) => {
     loading.value = true;
     erro.value = null;
 
     try {
-        // Buscar plano pelo token
-        const resPlano = await PlanoPublicoService.obterPorToken(token.value);
+        // Buscar plano pelo token, passando a data selecionada
+        const resPlano = await PlanoPublicoService.obterPorToken(token.value, dataFiltro);
         plano.value = resPlano.data.data;
         pacienteNome.value = plano.value.paciente_nome || 'Paciente';
         dataAtual.value = plano.value.data_atual;
         dataPlanoAlimentarCriadoEm.value = plano.value.plano_alimentar_criado_em;
         refeicoes.value = plano.value.refeicoes || [];
 
-        // Inicializar data selecionada com a data atual
-        if (dataAtual.value) {
-            dataSelecionada.value = dataAtual.value;
-            semanaBase.value = new Date(dataAtual.value + 'T00:00:00');
+        // Inicializar data selecionada e semana se foi fornecida
+        if (dataFiltro) {
+            dataSelecionada.value = dataFiltro;
+            semanaBase.value = new Date(dataFiltro + 'T00:00:00');
+        } else if (plano.value.data_atual) {
+            dataSelecionada.value = plano.value.data_atual;
+            semanaBase.value = new Date(plano.value.data_atual + 'T00:00:00');
         }
 
         // Buscar últimas adesões
@@ -399,7 +403,10 @@ const carregarDados = async () => {
 };
 
 onMounted(() => {
-    carregarDados();
+    // Obter data de hoje no formato YYYY-MM-DD
+    const hoje = new Date();
+    const dataHoje = hoje.toISOString().split('T')[0];
+    carregarDados(dataHoje);
 });
 </script>
 
