@@ -414,8 +414,8 @@ const carregarDados = async () => {
         });
         adesoes.value = adesoesFlatted;
 
-        // Transformar resumo - acessa resResumo.data (não resResumo.data.data)
-        const resumoData = resResumo.data || {};
+        // Transformar resumo - acessa resResumo.data.data
+        const resumoData = resResumo.data.data || {};
 
         // Garantir que tem a estrutura esperada
         if (!resumoData.geral) {
@@ -473,12 +473,22 @@ watch(
 
 // Lifecycle
 onMounted(() => {
+    console.log('------------------------------------------------------>');
+    console.log('abriu AbaAdesao, temPlanoAtivo:', temPlanoAtivo.value);
+    console.log('------------------------------------------------------>');
     if (temPlanoAtivo.value) {
         carregarDados();
     } else {
         console.log('Paciente sem plano ativo, pulando carregamento de adesão');
     }
 });
+
+// const init = () => {
+//     console.log('AbaAdesao inicializada');
+//     carregarDados();
+// };
+
+// init();
 </script>
 
 <style scoped>

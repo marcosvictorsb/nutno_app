@@ -741,6 +741,12 @@ watch(
                 carregarMedidas();
             }
         }
+        // Carregar dados para a aba adesão
+        if (novaTab === 'adesao') {
+            if (!planosCarregada.value) {
+                carregarPlanos();
+            }
+        }
         // Carregar dados para a aba resumo
         if (novaTab === 'resumo') {
             if (!anamneseCarregada.value) {
