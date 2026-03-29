@@ -297,7 +297,7 @@
                                 <span class="text-slate-700 dark:text-slate-300">Suporte por e-mail</span>
                             </li>
                         </ul>
-                        <button @click="irParaCadastroGratis()" class="w-full bg-primary text-white font-bold px-6 py-3 rounded-lg hover:bg-primary-dark transition-all">Assinar Pro</button>
+                        <button @click="handleAssinarPro()" class="w-full bg-primary text-white font-bold px-6 py-3 rounded-lg hover:bg-primary-dark transition-all">Assinar Pro</button>
                     </div>
                 </div>
                 <div class="text-center mt-12">
@@ -360,6 +360,30 @@
                 </div>
             </div>
         </section>
+
+        <!-- Payment Modal -->
+        <div v-if="showPaymentModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 max-w-md w-11/12 shadow-2xl text-center">
+                <!-- Spinner Animation -->
+                <div class="mb-6 flex justify-center">
+                    <div class="w-16 h-16 border-4 border-slate-200 dark:border-slate-700 border-t-primary rounded-full animate-spin"></div>
+                </div>
+
+                <!-- Message -->
+                <h3 class="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Redirecionando...</h3>
+                <p class="text-slate-600 dark:text-slate-400 mb-6">Você está sendo redirecionado para a tela de pagamento seguro.</p>
+
+                <!-- Loading Progress -->
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1 mb-6 overflow-hidden">
+                    <div class="bg-primary h-full animate-pulse" style="width: 100%"></div>
+                </div>
+
+                <!-- Button to Continue Immediately -->
+                <button @click="window.location.href = 'https://pay.kirvano.com/c1476e1a-e47b-4c39-9d3d-f0ffb1743064'" class="w-full bg-primary text-white font-bold px-6 py-3 rounded-lg hover:bg-primary-dark transition-all">Continuar agora</button>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-4">Se não redirecionou automaticamente, clique no botão acima</p>
+            </div>
+        </div>
+
         <!-- Footer -->
         <footer class="py-12 bg-slate-900 text-slate-400 border-t border-slate-800">
             <div class="max-w-7xl mx-auto px-4">
@@ -388,6 +412,7 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const mobileMenuOpen = ref(false);
+const showPaymentModal = ref(false);
 
 const irParaCadastro = () => {
     router.push('/criar-conta-gratis');
@@ -406,6 +431,13 @@ const handleLoginMobile = () => {
 const handleSignupMobile = () => {
     mobileMenuOpen.value = false;
     router.push('/criar-conta-gratis');
+};
+
+const handleAssinarPro = () => {
+    showPaymentModal.value = true;
+    setTimeout(() => {
+        window.location.href = 'https://pay.kirvano.com/c1476e1a-e47b-4c39-9d3d-f0ffb1743064';
+    }, 2000);
 };
 
 const scrollToPrecos = () => {
@@ -449,5 +481,33 @@ nav {
     h2 {
         font-size: 1.5rem;
     }
+}
+
+/* Payment Modal Animations */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>
