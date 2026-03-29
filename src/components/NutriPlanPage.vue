@@ -8,6 +8,7 @@
                         <span class="material-symbols-outlined text-3xl">eco</span>
                         <span>Nutno</span>
                     </div>
+                    <!-- Desktop Navigation -->
                     <nav class="hidden md:flex gap-8 items-center text-sm font-medium text-slate-600 dark:text-slate-300">
                         <a class="hover:text-primary transition-colors" href="#problema">O Problema</a>
                         <a class="hover:text-primary transition-colors" href="#como-funciona">Como Funciona</a>
@@ -16,13 +17,26 @@
                         <button @click="router.push('/auth/login')" class="border border-primary text-primary px-5 py-2 rounded-lg font-bold hover:bg-primary/10 transition-all">Entrar</button>
                         <button @click="irParaCadastroGratis()" class="bg-primary text-white px-5 py-2 rounded-lg font-bold hover:bg-primary-dark transition-all">Começar grátis</button>
                     </nav>
+                    <!-- Mobile Menu Button -->
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                        <span class="material-symbols-outlined text-2xl">menu</span>
+                    </button>
                 </div>
+                <!-- Mobile Navigation -->
+                <nav v-if="mobileMenuOpen" class="md:hidden pb-4 flex flex-col gap-3">
+                    <a class="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300 transition-colors" href="#problema" @click="mobileMenuOpen = false">O Problema</a>
+                    <a class="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300 transition-colors" href="#como-funciona" @click="mobileMenuOpen = false">Como Funciona</a>
+                    <a class="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300 transition-colors" href="#beneficios" @click="mobileMenuOpen = false">Benefícios</a>
+                    <a class="block px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300 transition-colors" href="#precos" @click="mobileMenuOpen = false">Preços</a>
+                    <button @click="handleLoginMobile()" class="w-full text-left px-4 py-2 border border-primary text-primary rounded-lg font-bold hover:bg-primary/10 transition-all">Entrar</button>
+                    <button @click="handleSignupMobile()" class="w-full text-left px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-dark transition-all">Começar grátis</button>
+                </nav>
             </div>
         </header>
         <!-- Hero Section -->
         <section class="relative pt-16 pb-24 overflow-hidden">
             <div class="max-w-4xl mx-auto px-4 text-center">
-                <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">Monte a dieta do seu paciente em minutos e envie direto pelo celular</h1>
+                <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-6 leading-tight">Monte a dieta do seu paciente em minutos e envie direto pelo email</h1>
                 <p class="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto">Chega de planilhas e Word. Com o Nutno você cria, organiza e envia planos alimentares profissionais de forma simples e rápida.</p>
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
@@ -46,10 +60,10 @@
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 text-center">
                         <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <span class="material-symbols-outlined text-3xl">chat</span>
+                            <span class="material-symbols-outlined text-3xl">mail</span>
                         </div>
-                        <h3 class="font-bold text-xl mb-3">PDF via WhatsApp</h3>
-                        <p class="text-slate-600 dark:text-slate-400">Pacientes perdendo o arquivo na conversa e você tendo que re-enviar constantemente.</p>
+                        <h3 class="font-bold text-xl mb-3">Envio por Email</h3>
+                        <p class="text-slate-600 dark:text-slate-400">Seus pacientes recebem a dieta organizadamente no email, sem perder em conversas.</p>
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 text-center">
                         <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -84,7 +98,7 @@
                     <div class="flex flex-col items-center text-center">
                         <div class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center font-bold text-xl mb-6">3</div>
                         <h3 class="font-bold text-lg mb-2">Envio Instantâneo</h3>
-                        <p class="text-slate-600 dark:text-slate-400">Gere um link exclusivo ou envie diretamente pelo WhatsApp do seu paciente.</p>
+                        <p class="text-slate-600 dark:text-slate-400">Gere um link exclusivo ou envie por email para seu paciente.</p>
                     </div>
                 </div>
             </div>
@@ -153,9 +167,9 @@
                         <p class="text-slate-600 text-sm">Layouts modernos que facilitam a leitura do paciente.</p>
                     </div>
                     <div class="p-6 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/50 transition-colors">
-                        <span class="material-symbols-outlined text-primary mb-4">send_and_archive</span>
-                        <h3 class="font-bold text-lg mb-2 mt-0">WhatsApp/Email</h3>
-                        <p class="text-slate-600 text-sm">Envie o plano com um clique sem precisar baixar PDFs.</p>
+                        <span class="material-symbols-outlined text-primary mb-4">mail</span>
+                        <h3 class="font-bold text-lg mb-2 mt-0">Envio por Email</h3>
+                        <p class="text-slate-600 text-sm">Envie o plano por email com um clique sem precisar baixar PDFs.</p>
                     </div>
                     <div class="p-6 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-primary/50 transition-colors">
                         <span class="material-symbols-outlined text-primary mb-4">bar_chart</span>
@@ -256,7 +270,7 @@
                             </li>
                             <li class="flex items-start gap-3">
                                 <span class="text-primary font-bold text-xl">✓</span>
-                                <span class="text-slate-700 dark:text-slate-300">Envio por WhatsApp e e-mail</span>
+                                <span class="text-slate-700 dark:text-slate-300">Envio por email</span>
                             </li>
                             <li class="flex items-start gap-3">
                                 <span class="text-primary font-bold text-xl">✓</span>
@@ -369,15 +383,28 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+const mobileMenuOpen = ref(false);
 
 const irParaCadastro = () => {
     router.push('/criar-conta-gratis');
 };
 
 const irParaCadastroGratis = () => {
+    mobileMenuOpen.value = false;
+    router.push('/criar-conta-gratis');
+};
+
+const handleLoginMobile = () => {
+    mobileMenuOpen.value = false;
+    router.push('/auth/login');
+};
+
+const handleSignupMobile = () => {
+    mobileMenuOpen.value = false;
     router.push('/criar-conta-gratis');
 };
 
@@ -389,4 +416,38 @@ const scrollToPrecos = () => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+/* Smooth transitions for mobile menu */
+nav {
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ensure buttons are accessible on mobile */
+@media (max-width: 640px) {
+    button {
+        touch-action: manipulation;
+    }
+}
+
+/* Improve text spacing for mobile */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.875rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+}
+</style>
