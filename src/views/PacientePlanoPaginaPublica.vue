@@ -19,74 +19,76 @@
     </div>
 
     <!-- Main Content -->
-    <main v-else-if="plano && refeicoes" class="min-h-screen bg-linear-to-br from-emerald-50 to-teal-50 p-6">
+    <main v-else-if="plano && refeicoes" class="min-h-screen bg-linear-to-br from-emerald-50 to-teal-50 p-3 sm:p-6">
         <!-- Header -->
-        <div class="max-w-4xl mx-auto mb-8">
-            <div class="bg-white rounded-2xl shadow-lg border border-emerald-100 p-8">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                            <span class="text-2xl">🥗</span>
+        <div class="max-w-4xl mx-auto mb-6 sm:mb-8">
+            <div class="bg-white rounded-lg sm:rounded-2xl shadow-lg border border-emerald-100 p-4 sm:p-8">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-3 mb-4">
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span class="text-lg sm:text-2xl">🥗</span>
                         </div>
-                        <div>
-                            <h1 class="text-3xl font-bold text-emerald-900 -mb-1">{{ plano.nome }}</h1>
-                            <p class="text-emerald-700">Seu plano alimentar personalizado</p>
+                        <div class="min-w-0">
+                            <h1 class="text-xl sm:text-3xl font-bold text-emerald-900 -mb-1 break-words">{{ plano.nome }}</h1>
+                            <p class="text-xs sm:text-base text-emerald-700">Seu plano alimentar personalizado</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Informações do Plano -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-6 border-t border-gray-200">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200">
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Paciente</p>
-                        <p class="text-lg font-semibold text-gray-900">{{ pacienteNome }}</p>
+                        <p class="text-xs sm:text-sm text-gray-500 mb-1">Paciente</p>
+                        <p class="text-base sm:text-lg font-semibold text-gray-900 break-words">{{ pacienteNome }}</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-500 mb-1">Data Atual</p>
-                        <p class="text-lg font-semibold text-emerald-700">{{ dataAtual ? new Date(dataAtual + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : '-' }}</p>
+                        <p class="text-xs sm:text-sm text-gray-500 mb-1">Data Atual</p>
+                        <p class="text-base sm:text-lg font-semibold text-emerald-700">{{ formatarDataSaoPaulo(dataSelecionada) }}</p>
                     </div>
-                    <!-- <div>
-                        <p class="text-sm text-gray-500 mb-1">Status do Plano</p>
-                        <Tag :value="plano.status === 'ativo' ? 'Ativo' : 'Inativo'" :severity="plano.status === 'ativo' ? 'success' : 'secondary'" />
-                    </div> -->
                 </div>
             </div>
         </div>
 
         <!-- Data Selector Section -->
-        <div class="max-w-4xl mx-auto mb-10">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-gray-800">Data para consulta</h2>
-                <div class="flex gap-2">
+        <div class="max-w-4xl mx-auto mb-8 sm:mb-10">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
+                <h2 class="text-lg sm:text-xl font-bold text-gray-800">Data para consulta</h2>
+                <div class="flex gap-1 sm:gap-2">
                     <button
                         @click="semanaAnterior"
                         :disabled="!podeVoltarSemana"
-                        :class="['p-2 rounded-full transition-colors border border-gray-200', podeVoltarSemana ? 'hover:bg-gray-200 text-gray-600 bg-white' : 'text-gray-300 bg-gray-50 cursor-not-allowed']"
+                        :class="['p-1.5 sm:p-2 rounded-full transition-colors border border-gray-200', podeVoltarSemana ? 'hover:bg-gray-200 text-gray-600 bg-white' : 'text-gray-300 bg-gray-50 cursor-not-allowed']"
                         title="Semana Anterior"
                     >
-                        <i class="pi pi-chevron-left text-lg"></i>
+                        <i class="pi pi-chevron-left text-sm sm:text-lg"></i>
                     </button>
-                    <button @click="irParaHoje" class="px-3 py-2 rounded-full hover:bg-emerald-100 transition-colors text-emerald-600 border border-emerald-200 bg-white font-medium text-sm" title="Ir para hoje">Hoje</button>
+                    <button
+                        @click="irParaHoje"
+                        class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-full hover:bg-emerald-100 transition-colors text-emerald-600 border border-emerald-200 bg-white font-medium text-xs sm:text-sm whitespace-nowrap"
+                        title="Ir para hoje"
+                    >
+                        Hoje
+                    </button>
                     <button
                         @click="proximaSemana"
                         :disabled="!podeAvancarSemana"
-                        :class="['p-2 rounded-full transition-colors border border-gray-200', podeAvancarSemana ? 'hover:bg-gray-200 text-gray-600 bg-white' : 'text-gray-300 bg-gray-50 cursor-not-allowed']"
+                        :class="['p-1.5 sm:p-2 rounded-full transition-colors border border-gray-200', podeAvancarSemana ? 'hover:bg-gray-200 text-gray-600 bg-white' : 'text-gray-300 bg-gray-50 cursor-not-allowed']"
                         title="Próxima Semana"
                     >
-                        <i class="pi pi-chevron-right text-lg"></i>
+                        <i class="pi pi-chevron-right text-sm sm:text-lg"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Horizontal Date Picker -->
-            <div class="flex justify-between items-center gap-2 overflow-x-auto pb-2">
+            <div class="flex justify-between items-center gap-1 sm:gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 <button
                     v-for="dia in diasDaSemana"
                     :key="dia.data"
                     @click="selecionarData(dia.data)"
                     :disabled="!podeSelecionar(dia.data)"
                     :class="[
-                        'flex-1 min-w-[80px] flex flex-col items-center py-3 px-2 rounded-xl transition-all',
+                        'flex-1 min-w-[60px] sm:min-w-[80px] flex flex-col items-center py-2 sm:py-3 px-1 sm:px-2 rounded-lg sm:rounded-xl transition-all',
                         !podeSelecionar(dia.data)
                             ? 'bg-gray-100 border border-gray-200 text-gray-300 cursor-not-allowed'
                             : dataSelecionada === dia.data
@@ -97,7 +99,7 @@
                     <span :class="['text-xs font-medium uppercase', !podeSelecionar(dia.data) ? 'text-gray-300' : dataSelecionada === dia.data ? 'text-emerald-50' : 'text-gray-400']">
                         {{ dia.dia }}
                     </span>
-                    <span :class="['text-lg font-bold mt-1', !podeSelecionar(dia.data) ? 'text-gray-300' : dataSelecionada === dia.data ? 'text-white' : 'text-gray-700']">
+                    <span :class="['font-bold mt-0.5 sm:mt-1', !podeSelecionar(dia.data) ? 'text-gray-300 text-base sm:text-lg' : dataSelecionada === dia.data ? 'text-white text-base sm:text-lg' : 'text-gray-700 text-base sm:text-lg']">
                         {{ dia.dia_numero }}
                     </span>
                 </button>
@@ -106,45 +108,43 @@
 
         <!-- Refeições -->
         <div class="max-w-4xl mx-auto">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Registre sua adesão ao plano</h2>
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Registre sua adesão ao plano</h2>
 
-            <div class="space-y-4">
-                <div v-for="refeicao in refeicoes" :key="refeicao.id" class="bg-white rounded-xl shadow-md border border-gray-100 p-6 hover:shadow-lg transition-shadow">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-gray-900 mb-1">{{ refeicao.nome }}</h3>
-                            <p class="text-sm text-gray-500 flex items-center gap-2">
-                                <i class="pi pi-clock text-sm"></i>
-                                {{ refeicao.horario_sugerido || 'Horário não definido' }}
+            <div class="space-y-3 sm:space-y-4">
+                <div v-for="refeicao in refeicoes" :key="refeicao.id" class="bg-white rounded-lg sm:rounded-xl shadow-md border border-gray-100 p-4 sm:p-6 hover:shadow-lg transition-shadow">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-1 break-words">{{ refeicao.nome }}</h3>
+                            <p class="text-xs sm:text-sm text-gray-500 flex items-center gap-1 sm:gap-2">
+                                <i class="pi pi-clock text-xs sm:text-sm flex-shrink-0"></i>
+                                <span class="truncate">{{ refeicao.horario_sugerido || 'Horário não definido' }}</span>
                             </p>
 
                             <!-- Adesão registrada -->
-                            <div v-if="refeicao.adesao" class="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <p class="text-xs text-emerald-600 font-medium mb-2">
-                                            <i class="pi pi-check-circle mr-1"></i>
-                                            Adesão Registrada
-                                        </p>
-                                        <div class="space-y-2">
-                                            <div>
-                                                <span class="text-xs font-semibold text-gray-700">Status: </span>
-                                                <Tag :value="formatarStatusAdesao(refeicao.adesao.status)" :severity="getCorStatusAdesao(refeicao.adesao.status)" class="text-xs" />
-                                            </div>
-                                            <div v-if="refeicao.adesao.observacao && refeicao.adesao.observacao.trim()">
-                                                <p class="text-xs text-gray-700">
-                                                    <span class="font-semibold">Observação:</span>
-                                                    <br />
-                                                    {{ refeicao.adesao.observacao.trim() }}
-                                                </p>
-                                            </div>
+                            <div v-if="refeicao.adesao" class="mt-2 sm:mt-3 p-2 sm:p-3 bg-emerald-50 rounded border sm:rounded-lg border-emerald-200">
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-xs text-emerald-600 font-medium">
+                                        <i class="pi pi-check-circle mr-1"></i>
+                                        Adesão Registrada
+                                    </p>
+                                    <div class="space-y-1 sm:space-y-2">
+                                        <div>
+                                            <span class="text-xs font-semibold text-gray-700">Status: </span>
+                                            <Tag :value="formatarStatusAdesao(refeicao.adesao.status)" :severity="getCorStatusAdesao(refeicao.adesao.status)" class="text-xs" />
+                                        </div>
+                                        <div v-if="refeicao.adesao.observacao && refeicao.adesao.observacao.trim()">
+                                            <p class="text-xs text-gray-700">
+                                                <span class="font-semibold">Observação:</span>
+                                                <br />
+                                                {{ refeicao.adesao.observacao.trim() }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <Button v-if="!refeicao.adesao" label="Registrar" icon="pi pi-plus" severity="success" @click="abrirFormulario(refeicao)" class="ml-4" />
+                        <Button v-if="!refeicao.adesao" label="Registrar" icon="pi pi-plus" severity="success" @click="abrirFormulario(refeicao)" class="w-full sm:w-auto sm:ml-4 text-xs sm:text-sm" />
                     </div>
                 </div>
             </div>
@@ -158,6 +158,7 @@
 <script setup>
 import ModalRegistroAdesao from '@/components/ModalRegistroAdesao.vue';
 import PlanoPublicoService from '@/service/PlanoPublicoService';
+import { formatarDataSaoPaulo } from '@/utils/dateHelper';
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import Toast from 'primevue/toast';
@@ -413,5 +414,14 @@ onMounted(() => {
 <style scoped>
 :deep(.p-tag) {
     font-size: 0.85rem;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
 }
 </style>
