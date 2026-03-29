@@ -52,6 +52,14 @@ const router = createRouter({
                         breadcrumb: ['Perfil']
                     },
                     component: () => import('@/views/PerfilNutricionista.vue')
+                },
+                {
+                    path: '/suporte',
+                    name: 'suporte',
+                    meta: {
+                        breadcrumb: ['Suporte']
+                    },
+                    component: () => import('@/views/Suporte.vue')
                 }
             ]
         },

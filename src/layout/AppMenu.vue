@@ -45,6 +45,11 @@ const model = ref([
                 to: '/perfil'
             },
             {
+                label: 'Suporte',
+                icon: 'pi pi-fw pi-question-circle',
+                to: '/suporte'
+            },
+            {
                 label: 'Logout',
                 icon: 'pi pi-fw pi-sign-out',
                 command: handleLogout
