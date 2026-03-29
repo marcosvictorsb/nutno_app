@@ -195,9 +195,9 @@
                 <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                     <!-- Free Plan Card -->
                     <div class="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-800 p-8 flex flex-col">
-                        <div class="inline-block w-fit mb-4 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+                        <!-- <div class="inline-block w-fit mb-4 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full">
                             <span class="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Grátis para sempre</span>
-                        </div>
+                        </div> -->
                         <h3 class="text-2xl font-bold mb-2 text-slate-900 dark:text-white">Free</h3>
                         <div class="mb-6">
                             <span class="text-4xl font-bold text-slate-900 dark:text-white">R$ 0</span>
@@ -288,10 +288,10 @@
                                 <span class="text-primary font-bold text-xl">✓</span>
                                 <span class="text-slate-700 dark:text-slate-300">Relatórios de evolução do paciente</span>
                             </li>
-                            <li class="flex items-start gap-3">
+                            <!-- <li class="flex items-start gap-3">
                                 <span class="text-primary font-bold text-xl">✓</span>
                                 <span class="text-slate-700 dark:text-slate-300">Personalização de logo nos planos</span>
-                            </li>
+                            </li> -->
                             <li class="flex items-start gap-3">
                                 <span class="text-primary font-bold text-xl">✓</span>
                                 <span class="text-slate-700 dark:text-slate-300">Suporte por e-mail</span>
