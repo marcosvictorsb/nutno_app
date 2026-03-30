@@ -20,7 +20,7 @@
                     <InputGroupAddon class="bg-white border-r border-gray-200">
                         <i class="pi pi-search text-emerald-600"></i>
                     </InputGroupAddon>
-                    <InputText v-model="searchValue" type="text" placeholder="Buscar por nome, email ou telefone..." class="w-full border-gray-200 text-sm" />
+                    <InputText v-model="searchValue" type="text" placeholder="Buscar por nome..." class="w-full border-gray-200 text-sm" />
                 </InputGroup>
             </div>
 
