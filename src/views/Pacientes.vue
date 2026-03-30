@@ -209,8 +209,9 @@
                         <InputText v-model="formNovoPaciente.apelido" type="text" placeholder="Como ele prefere ser chamado" class="w-full text-sm" autocomplete="off" />
                     </div>
                     <div>
-                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Data de nascimento</label>
-                        <DatePicker v-model="formNovoPaciente.data_nascimento" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Data de nascimento <span class="text-red-500">*</span></label>
+                        <DatePicker v-model="formNovoPaciente.data_nascimento" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" :invalid="!!formErrors.data_nascimento" />
+                        <small v-if="formErrors.data_nascimento" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.data_nascimento }}</small>
                     </div>
                 </div>
 
@@ -575,18 +576,25 @@ const abrirNovoPaciente = () => {
 const validarFormulario = () => {
     formErrors.value = {};
 
-    if (!formNovoPaciente.value.nome) {
+    if (!formNovoPaciente.value.nome || formNovoPaciente.value.nome.trim() === '') {
         formErrors.value.nome = 'Nome completo é obrigatório';
     }
 
-    if (!formNovoPaciente.value.email) {
+    if (!formNovoPaciente.value.email || formNovoPaciente.value.email.trim() === '') {
         formErrors.value.email = 'Email é obrigatório';
     }
 
-    if (!formNovoPaciente.value.sexo) {
+    // Validação mais robusta para data de nascimento
+    const dataNascimento = formNovoPaciente.value.data_nascimento;
+    if (!dataNascimento || (typeof dataNascimento === 'string' && dataNascimento.trim() === '')) {
+        formErrors.value.data_nascimento = 'Data de nascimento é obrigatória';
+    }
+
+    if (!formNovoPaciente.value.sexo || formNovoPaciente.value.sexo.trim() === '') {
         formErrors.value.sexo = 'Sexo é obrigatório';
     }
 
+    console.log('Erros de validação:', formErrors.value);
     return Object.keys(formErrors.value).length === 0;
 };
 
@@ -755,6 +763,15 @@ watch(
     () => {
         if (formErrors.value.email) {
             delete formErrors.value.email;
+        }
+    }
+);
+
+watch(
+    () => formNovoPaciente.value.data_nascimento,
+    () => {
+        if (formErrors.value.data_nascimento) {
+            delete formErrors.value.data_nascimento;
         }
     }
 );

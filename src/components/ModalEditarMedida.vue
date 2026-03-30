@@ -1,15 +1,24 @@
 <template>
     <Dialog :visible="visible" header="Editar Medida" :modal="true" :style="{ width: '90vw', maxHeight: '90vh' }" :breakpoints="{ '1199px': '95vw', '575px': '100vw' }" @hide="handleClose" @update:visible="handleVisibilityUpdate">
         <div class="space-y-4 max-h-[calc(90vh-250px)] overflow-y-auto pr-4">
-            <!-- Data da Avaliação -->
+            <!-- Data da Avaliação e Data de Nascimento (se necessário) -->
             <section class="bg-white rounded-xl border-2 border-emerald-100 p-4">
                 <div class="flex items-center gap-2 mb-3">
                     <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-base">📅</div>
                     <h3 class="text-base font-bold text-gray-900">Data da Avaliação</h3>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Data</label>
-                    <DatePicker v-model="formularioLocal.data_avaliacao" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Data</label>
+                        <DatePicker v-model="formularioLocal.data_avaliacao" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
+                    </div>
+                    <!-- Data de Nascimento (aparece apenas se paciente não tiver) -->
+
+                    <div v-if="!paciente?.data_nascimento" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <label class="block text-xs font-semibold text-yellow-800 uppercase tracking-wider mb-2">Data de Nascimento <span class="text-red-500">*</span></label>
+                        <DatePicker v-model="formularioLocal.data_nascimento_temporaria" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
+                        <p class="text-xs text-yellow-700 italic mt-2">Obrigatória para calcular TMB quando não registrada no cadastro do paciente</p>
+                    </div>
                 </div>
             </section>
 
@@ -103,7 +112,7 @@
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">TMB (kcal/dia)</label>
                             <div class="flex gap-2">
                                 <InputNumber v-model="formularioLocal.tmb" :maxFractionDigits="0" placeholder="0000" class="flex-1" />
-                                <Button icon="pi pi-calculator" @click="calcularTMBParam" severity="secondary" class="px-3" title="Calcular usando Harris-Benedict" />
+                                <Button icon="pi pi-calculator" @click="calcularTMBLocal" severity="secondary" class="px-3" title="Calcular usando Harris-Benedict" />
                             </div>
                             <p class="text-xs text-gray-400 italic mt-1">Taxa Metabólica Basal — energia mínima em repouso. Clique em 🧮 para calcular automaticamente usando Harris-Benedict.</p>
                         </div>
@@ -265,9 +274,11 @@ import Dialog from 'primevue/dialog';
 import InputMask from 'primevue/inputmask';
 import InputNumber from 'primevue/inputnumber';
 import Tag from 'primevue/tag';
+import { useToast } from 'primevue/usetoast';
 
 import MedidaService from '@/service/MedidaService';
-import { calcularGET, calcularIMCComClassificacao, calcularRCQComClassificacao } from '@/utils/nutricionais';
+import { calcularIdade } from '@/utils/dateHelper';
+import { calcularGET, calcularIMCComClassificacao, calcularRCQComClassificacao, calcularTMB } from '@/utils/nutricionais';
 
 const props = defineProps({
     visible: {
@@ -293,6 +304,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:visible', 'fechar', 'salvar-edicao-medida']);
+
+const toast = useToast();
 
 const formularioLocal = ref({});
 const pressaoLocal = ref('');
@@ -341,6 +354,52 @@ const rcqExibicao = computed(() => calcularRCQComClassificacao(formularioLocal.v
 const getExibicao = computed(() => {
     return calcularGET(formularioLocal.value.tmb, formularioLocal.value.nivel_atividade);
 });
+
+// Função para calcular TMB considerando data de nascimento temporária
+const calcularTMBLocal = () => {
+    const peso = formularioLocal.value.peso;
+    const altura = formularioLocal.value.altura;
+
+    // Validar peso e altura
+    if (!peso || !altura) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Dados incompletos',
+            detail: 'Preencha peso e altura para calcular TMB',
+            life: 3000
+        });
+        return;
+    }
+
+    // Usar data de nascimento do paciente ou a temporária
+    let dataNascimento = props.paciente?.data_nascimento;
+    if (!dataNascimento && formularioLocal.value.data_nascimento_temporaria) {
+        dataNascimento = formularioLocal.value.data_nascimento_temporaria;
+    }
+
+    if (!dataNascimento) {
+        toast.add({
+            severity: 'warn',
+            summary: 'Data de nascimento ausente',
+            detail: 'Preencha a data de nascimento para calcular TMB',
+            life: 3000
+        });
+        return;
+    }
+
+    const idade = calcularIdade(dataNascimento);
+    const tmb = calcularTMB(peso, altura, idade, props.paciente?.sexo);
+
+    if (tmb) {
+        formularioLocal.value.tmb = tmb;
+        toast.add({
+            severity: 'success',
+            summary: 'TMB calculado',
+            detail: `TMB: ${tmb} kcal/dia${!props.paciente?.sexo ? ' (referência masculina)' : ''}`,
+            life: 3000
+        });
+    }
+};
 
 // Update handlers for v-model
 const handleVisibilityUpdate = (value) => {
