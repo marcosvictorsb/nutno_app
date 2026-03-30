@@ -1,34 +1,34 @@
 <template>
-    <div class="space-y-8">
+    <div class="space-y-4 sm:space-y-8">
         <!-- Header Section -->
-        <div class="bg-linear-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
-            <div class="flex items-center justify-between">
+        <div class="bg-linear-to-r from-emerald-50 to-teal-50 rounded-lg sm:rounded-2xl border border-emerald-100 p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-4xl font-bold text-emerald-900 mb-2">Pacientes</h1>
-                    <p class="text-emerald-700">Gerencie e acompanhe todos os seus pacientes</p>
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-emerald-900 mb-1 sm:mb-2">Pacientes</h1>
+                    <p class="text-sm sm:text-base text-emerald-700">Gerencie e acompanhe todos os seus pacientes</p>
                 </div>
-                <Button icon="pi pi-plus" label="Novo paciente" severity="success" @click="abrirNovoPaciente" class="shadow-lg transform hover:scale-105 transition-transform" size="small" />
+                <Button icon="pi pi-plus" label="Novo paciente" severity="success" @click="abrirNovoPaciente" class="shadow-lg transform hover:scale-105 transition-transform w-full sm:w-auto" size="small" />
             </div>
         </div>
 
         <!-- Search and Filters Section -->
-        <div class="space-y-4">
+        <div class="space-y-3 sm:space-y-4">
             <!-- Busca -->
             <div class="flex flex-col gap-2">
-                <label class="text-sm font-semibold text-gray-700">Buscar pacientes</label>
+                <label class="text-xs sm:text-sm font-semibold text-gray-700">Buscar pacientes</label>
                 <InputGroup>
                     <InputGroupAddon class="bg-white border-r border-gray-200">
                         <i class="pi pi-search text-emerald-600"></i>
                     </InputGroupAddon>
-                    <InputText v-model="searchValue" type="text" placeholder="Buscar por nome, email ou telefone..." class="w-full border-gray-200" />
+                    <InputText v-model="searchValue" type="text" placeholder="Buscar por nome, email ou telefone..." class="w-full border-gray-200 text-sm" />
                 </InputGroup>
             </div>
 
             <!-- Filtros Pills -->
-            <div class="flex flex-wrap gap-3 pt-2">
-                <Button :label="`Todos (${paginacao.total})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full" />
-                <Button label="Ativos" icon="pi pi-check-circle" :severity="filtroStatus === 'ativo' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'ativo'" @click="filtroStatus = 'ativo'" size="small" class="rounded-full" />
-                <Button label="Arquivados" icon="pi pi-lock" :severity="filtroStatus === 'arquivado' ? 'secondary' : 'secondary'" :outlined="filtroStatus !== 'arquivado'" @click="filtroStatus = 'arquivado'" size="small" class="rounded-full" />
+            <div class="flex flex-wrap gap-2 pt-2">
+                <Button :label="`Todos (${paginacao.total})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full text-xs" />
+                <Button label="Ativos" icon="pi pi-check-circle" :severity="filtroStatus === 'ativo' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'ativo'" @click="filtroStatus = 'ativo'" size="small" class="rounded-full text-xs" />
+                <Button label="Arquivados" icon="pi pi-lock" :severity="filtroStatus === 'arquivado' ? 'secondary' : 'secondary'" :outlined="filtroStatus !== 'arquivado'" @click="filtroStatus = 'arquivado'" size="small" class="rounded-full text-xs" />
             </div>
         </div>
 
@@ -47,45 +47,45 @@
         <div v-else class="space-y-6">
             <!-- Grid com VirtualScroller -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="paciente in pacientesPaginados" :key="paciente.id" class="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100 flex flex-col">
+                <div v-for="paciente in pacientesPaginados" :key="paciente.id" class="bg-white rounded-lg sm:rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 border border-gray-100 flex flex-col">
                     <!-- Card Header with Gradient -->
-                    <div class="bg-linear-to-r from-emerald-500 to-teal-500 p-6">
-                        <div class="flex items-center gap-4">
+                    <div class="bg-linear-to-r from-emerald-500 to-teal-500 p-4 sm:p-6">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                             <Avatar v-if="paciente.foto_perfil" :image="obterUrlFotoPaciente(paciente.foto_perfil)" shape="circle" size="large" class="ring-4 ring-white" />
                             <Avatar v-else :label="paciente.iniciais" shape="circle" size="large" :class="`${getAvatarBgColor(paciente.iniciais)} font-bold text-lg ring-4 ring-white`" />
-                            <div class="flex-1 leading-tight">
-                                <h3 class="font-bold text-lg -mb-1">{{ paciente.nome }}</h3>
-                                <p class="font-semibold text-sm">{{ paciente.data_nascimento ? `${paciente.idade} anos` : 'Idade não informada' }}</p>
+                            <div class="flex-1 leading-tight min-w-0">
+                                <h3 class="font-bold text-base sm:text-lg -mb-1 truncate">{{ paciente.nome }}</h3>
+                                <p class="font-semibold text-xs sm:text-sm">{{ paciente.data_nascimento ? `${paciente.idade} anos` : 'Idade não informada' }}</p>
                             </div>
-                            <Tag :value="getStatusLabel(paciente.status)" :severity="getStatusSeverity(paciente.status)" class="ml-auto" />
+                            <Tag :value="getStatusLabel(paciente.status)" :severity="getStatusSeverity(paciente.status)" class="whitespace-nowrap" />
                         </div>
                     </div>
 
                     <!-- Card Body -->
-                    <div class="flex-1 p-6 space-y-4">
+                    <div class="flex-1 p-4 sm:p-6 space-y-3 sm:space-y-4">
                         <!-- Informações -->
-                        <div class="space-y-3 border-b border-gray-100 pb-4">
-                            <div class="flex items-center gap-3 text-sm">
+                        <div class="space-y-2 sm:space-y-3 border-b border-gray-100 pb-3 sm:pb-4">
+                            <div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm overflow-hidden">
                                 <i class="pi pi-envelope text-emerald-600 text-lg shrink-0"></i>
-                                <span class="text-gray-500 font-semibold uppercase text-xs tracking-wide w-20">Email:</span>
+                                <span class="text-gray-500 font-semibold uppercase tracking-wide hidden sm:inline text-xs w-14">Email:</span>
                                 <span class="text-gray-800 font-medium truncate">{{ paciente.email }}</span>
                             </div>
-                            <div class="flex items-center gap-3 text-sm">
+                            <div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm overflow-hidden">
                                 <i class="pi pi-calendar text-emerald-600 text-lg shrink-0"></i>
-                                <span class="text-gray-500 font-semibold uppercase text-xs tracking-wide w-20">Última:</span>
-                                <span class="text-gray-800 font-medium">{{ paciente.ultimaConsulta }}</span>
+                                <span class="text-gray-500 font-semibold uppercase tracking-wide hidden sm:inline text-xs w-14">Última:</span>
+                                <span class="text-gray-800 font-medium truncate">{{ paciente.ultimaConsulta }}</span>
                             </div>
                         </div>
 
                         <!-- Telefone -->
-                        <div class="flex items-center gap-3">
-                            <i class="pi pi-phone text-emerald-600"></i>
-                            <p class="text-gray-700 text-sm">{{ paciente.telefone || paciente.whatsapp || 'Telefone não informado' }}</p>
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <i class="pi pi-phone text-emerald-600 shrink-0"></i>
+                            <p class="text-gray-700 text-xs sm:text-sm truncate">{{ paciente.telefone || paciente.whatsapp || 'Telefone não informado' }}</p>
                         </div>
                     </div>
 
                     <!-- Card Footer with Buttons -->
-                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-2">
+                    <div class="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-100 flex gap-1 sm:gap-2">
                         <Button label="Ver perfil" icon="pi pi-eye" severity="success" text @click="verPerfil(paciente)" class="flex-1 text-xs font-medium" />
                         <Button v-if="paciente.status === 'ativo'" label="Arquivar" icon="pi pi-lock" severity="warning" text @click="novoPlano(paciente)" class="flex-1 text-xs font-medium" />
                         <Button v-else label="Reativar" icon="pi pi-check" severity="warning" text @click="criarPlano(paciente)" class="flex-1 text-xs font-medium" />
@@ -94,53 +94,56 @@
             </div>
 
             <!-- Pagination Controls -->
-            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 p-6 bg-linear-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+            <div class="flex flex-col gap-3 sm:gap-4 mt-6 sm:mt-8 p-4 sm:p-6 bg-linear-to-r from-gray-50 to-gray-100 rounded-lg sm:rounded-xl border border-gray-200">
                 <!-- Previous Button -->
-                <Button icon="pi pi-chevron-left" @click="irParaPagina(paginaAtual - 1)" :disabled="paginaAtual === 1" rounded text severity="secondary" class="w-full sm:w-auto" />
+                <div class="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap order-2 sm:order-1">
+                    <Button icon="pi pi-chevron-left" @click="irParaPagina(paginaAtual - 1)" :disabled="paginaAtual === 1" rounded text severity="secondary" class="w-full sm:w-auto" />
 
-                <!-- Page Numbers -->
-                <div class="flex items-center gap-2 flex-wrap justify-center">
-                    <!-- First page button if not on first page -->
-                    <Button v-if="paginaAtual > 2" label="1" @click="irParaPagina(1)" rounded :severity="paginaAtual === 1 ? 'success' : 'secondary'" :outlined="paginaAtual !== 1" size="small" />
+                    <!-- Page Numbers -->
+                    <div class="flex items-center gap-1 sm:gap-2 flex-wrap justify-center order-3 sm:order-2 w-full sm:w-auto">
+                        <!-- First page button if not on first page -->
+                        <Button v-if="paginaAtual > 2" label="1" @click="irParaPagina(1)" rounded :severity="paginaAtual === 1 ? 'success' : 'secondary'" :outlined="paginaAtual !== 1" size="small" class="text-xs" />
 
-                    <!-- Ellipsis if gap exists -->
-                    <span v-if="paginaAtual > 3" class="text-gray-400 px-2">...</span>
+                        <!-- Ellipsis if gap exists -->
+                        <span v-if="paginaAtual > 3" class="text-gray-400 px-1 sm:px-2 text-sm">...</span>
 
-                    <!-- Pages around current page -->
-                    <Button v-for="page in pageNumbers" :key="page" :label="String(page)" @click="irParaPagina(page)" rounded :severity="paginaAtual === page ? 'success' : 'secondary'" :outlined="paginaAtual !== page" size="small" />
+                        <!-- Pages around current page -->
+                        <Button v-for="page in pageNumbers" :key="page" :label="String(page)" @click="irParaPagina(page)" rounded :severity="paginaAtual === page ? 'success' : 'secondary'" :outlined="paginaAtual !== page" size="small" class="text-xs" />
 
-                    <!-- Ellipsis if gap exists -->
-                    <span v-if="paginaAtual < totalPaginas - 2" class="text-gray-400 px-2">...</span>
+                        <!-- Ellipsis if gap exists -->
+                        <span v-if="paginaAtual < totalPaginas - 2" class="text-gray-400 px-1 sm:px-2 text-sm">...</span>
 
-                    <!-- Last page button if not on last page -->
-                    <Button
-                        v-if="paginaAtual < totalPaginas - 1"
-                        :label="String(totalPaginas)"
-                        @click="irParaPagina(totalPaginas)"
-                        rounded
-                        :severity="paginaAtual === totalPaginas ? 'success' : 'secondary'"
-                        :outlined="paginaAtual !== totalPaginas"
-                        size="small"
-                    />
-                </div>
+                        <!-- Last page button if not on last page -->
+                        <Button
+                            v-if="paginaAtual < totalPaginas - 1"
+                            :label="String(totalPaginas)"
+                            @click="irParaPagina(totalPaginas)"
+                            rounded
+                            :severity="paginaAtual === totalPaginas ? 'success' : 'secondary'"
+                            :outlined="paginaAtual !== totalPaginas"
+                            size="small"
+                            class="text-xs"
+                        />
+                    </div>
 
-                <!-- Page Info and Next Button -->
-                <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-600 font-medium whitespace-nowrap">
-                        Página <strong class="text-emerald-600">{{ paginaAtual }}</strong> de <strong class="text-emerald-600">{{ totalPaginas }}</strong>
-                    </span>
-                    <Button icon="pi pi-chevron-right" @click="irParaPagina(paginaAtual + 1)" :disabled="paginaAtual === totalPaginas" rounded text severity="secondary" class="w-full sm:w-auto" />
+                    <!-- Page Info and Next Button -->
+                    <div class="flex items-center gap-2 sm:gap-4 justify-between w-full sm:w-auto order-1 sm:order-3">
+                        <span class="text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">
+                            <strong class="text-emerald-600">{{ paginaAtual }}</strong> de <strong class="text-emerald-600">{{ totalPaginas }}</strong>
+                        </span>
+                        <Button icon="pi pi-chevron-right" @click="irParaPagina(paginaAtual + 1)" :disabled="paginaAtual === totalPaginas" rounded text severity="secondary" class="w-full sm:w-auto" />
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Dialog Novo Paciente -->
-    <Dialog v-model:visible="showDialog" header="Novo Paciente" :modal="true" :style="{ width: '60vw' }" :breakpoints="{ '1199px': '75vw', '575px': '90vw' }" @hide="showDialog = false">
-        <div class="space-y-6">
+    <Dialog v-model:visible="showDialog" header="Novo Paciente" :modal="true" :style="{ width: '90vw' }" :breakpoints="{ '1024px': '75vw', '768px': '90vw', '575px': '95vw' }" @hide="showDialog = false">
+        <div class="space-y-4 sm:space-y-6">
             <!-- Seção: Dados Pessoais -->
             <div>
-                <h3 class="text-lg font-bold text-gray-900 mb-4">Dados pessoais</h3>
+                <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Dados pessoais</h3>
 
                 <!-- Foto de Perfil - Em desenvolvimento -->
                 <!-- <div class="mb-8 flex flex-col items-center">
@@ -175,29 +178,93 @@
                 </div> -->
 
                 <!-- Nome Completo -->
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Nome completo</label>
-                    <InputText v-model="formNovoPaciente.nome" type="text" placeholder="Ex.: João da Silva" class="w-full" autocomplete="off" :invalid="!!formErrors.nome" />
+                <div class="mb-3 sm:mb-4">
+                    <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Nome completo</label>
+                    <InputText v-model="formNovoPaciente.nome" type="text" placeholder="Ex.: João da Silva" class="w-full text-sm" autocomplete="off" :invalid="!!formErrors.nome" />
                     <small v-if="formErrors.nome" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.nome }}</small>
                 </div>
 
                 <!-- Apelido e Data de Nascimento -->
-                <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Apelido</label>
-                        <InputText v-model="formNovoPaciente.apelido" type="text" placeholder="Como ele prefere ser chamado" class="w-full" autocomplete="off" />
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Apelido</label>
+                        <InputText v-model="formNovoPaciente.apelido" type="text" placeholder="Como ele prefere ser chamado" class="w-full text-sm" autocomplete="off" />
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Data de nascimento</label>
-                        <DatePicker v-model="formNovoPaciente.data_nascimento" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" />
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Data de nascimento</label>
+                        <DatePicker v-model="formNovoPaciente.data_nascimento" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :showIcon="true" class="w-full" />
                     </div>
                 </div>
 
                 <!-- E-mail -->
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">E-mail</label>
-                    <InputText v-model="formNovoPaciente.email" type="email" placeholder="email@exemplo.com" class="w-full" autocomplete="off" :invalid="!!formErrors.email" />
+                <div class="mb-3 sm:mb-4">
+                    <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">E-mail</label>
+                    <InputText v-model="formNovoPaciente.email" type="email" placeholder="email@exemplo.com" class="w-full text-sm" autocomplete="off" :invalid="!!formErrors.email" />
                     <small v-if="formErrors.email" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.email }}</small>
+                </div>
+
+                <!-- WhatsApp e Sexo -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
+                        <InputMask v-model="formNovoPaciente.whatsapp" mask="(99) 99999-9999" placeholder="(00) 00000-0000" class="w-full text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Sexo</label>
+                        <div class="flex items-center gap-3 sm:gap-4 mb-2 flex-wrap">
+                            <div class="flex items-center">
+                                <RadioButton v-model="formNovoPaciente.sexo" value="M" inputId="masculino" :invalid="!!formErrors.sexo" />
+                                <label for="masculino" class="ml-2 text-xs sm:text-sm cursor-pointer">Masculino</label>
+                            </div>
+                            <div class="flex items-center">
+                                <RadioButton v-model="formNovoPaciente.sexo" value="F" inputId="feminino" :invalid="!!formErrors.sexo" />
+                                <label for="feminino" class="ml-2 text-xs sm:text-sm cursor-pointer">Feminino</label>
+                            </div>
+                            <div class="flex items-center">
+                                <RadioButton v-model="formNovoPaciente.sexo" value="Outro" inputId="outro" :invalid="!!formErrors.sexo" />
+                                <label for="outro" class="ml-2 text-xs sm:text-sm cursor-pointer">Outro</label>
+                            </div>
+                        </div>
+                        <small v-if="formErrors.sexo" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.sexo }}</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção: Boas-vindas -->
+            <!-- <div class="border-t border-gray-200 pt-6">
+                <h3 class="text-lg font-bold text-gray-900 mb-4">Boas-vindas</h3> -->
+
+            <!-- Link de Acesso -->
+            <!-- <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded mb-4 flex items-start gap-3">
+                    <i class="pi pi-link text-emerald-600 text-xl flex-shrink-0 mt-1"></i>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-emerald-900 mb-1">Link de acesso</h4>
+                        <p class="text-sm text-emerald-800">O paciente receberá automaticamente um link para acessar o portal do paciente e preencher a anamnese prévia.</p>
+                        <div class="mt-3 flex gap-2">
+                            <Button
+                                label="WHATSAPP"
+                                icon="pi pi-send"
+                                :severity="formNovoPaciente.canal === 'whatsapp' ? 'success' : 'secondary'"
+                                size="small"
+                                :text="formNovoPaciente.canal !== 'whatsapp'"
+                                @click="formNovoPaciente.canal = 'whatsapp'"
+                            />
+                            <Button label="E-MAIL" icon="pi pi-envelope" :severity="formNovoPaciente.canal === 'email' ? 'success' : 'secondary'" size="small" :text="formNovoPaciente.canal !== 'email'" @click="formNovoPaciente.canal = 'email'" />
+                        </div>
+                    </div>
+                    <Toggle v-model="formNovoPaciente.enviar_automatico" onLabel="Sim" offLabel="Não" class="flex-shrink-0" />
+                </div>
+            </div> -->
+        </div>
+
+        <template #footer>
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <Button label="Cancelar" severity="secondary" @click="showDialog = false" class="w-full sm:w-auto order-2 sm:order-1" />
+                <Button label="Salvar paciente" severity="success" icon="pi pi-check" @click="salvarNovoPaciente" class="w-full sm:w-auto order-1 sm:order-2" />
+                <Button label="Salvar e Enviar Anamnese" severity="info" icon="pi pi-send" @click="salvarPacienteEEnviarFormulario" :loading="loadingSalvarComAnamnese" :disabled="loadingSalvarComAnamnese" class="w-full sm:w-auto order-3" />
+            </div>
+        </template>
+    </Dialog>
                 </div>
 
                 <!-- WhatsApp e Sexo -->
