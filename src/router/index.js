@@ -105,6 +105,11 @@ const router = createRouter({
             component: () => import('@/views/pages/CriarContaGratis.vue')
         },
         {
+            path: '/criar-conta-lead',
+            name: 'criarContaLead',
+            component: () => import('@/views/pages/CriarContaLead.vue')
+        },
+        {
             path: '/formulario/:id',
             name: 'formularioAnamnese',
             component: () => import('@/views/FormularioAnamnese.vue')

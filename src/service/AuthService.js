@@ -13,7 +13,8 @@ export default {
         return apiClient.post('/auth/criar-conta-gratis', {
             nome: dadosUsuario.nome,
             email: dadosUsuario.email,
-            senha: dadosUsuario.senha
+            senha: dadosUsuario.senha,
+            isLead: dadosUsuario.isLead || false
         });
     },
 
