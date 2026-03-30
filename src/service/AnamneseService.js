@@ -93,7 +93,7 @@ export default {
     },
 
     criarAnamnesePaciente(idPaciente, dados) {
-        return apiClient.post(`/pacientes/${idPaciente}/anamnese`, dados);
+        return apiClient.put(`/pacientes/${idPaciente}/anamnese`, dados);
     },
 
     atualizarAnamnesePaciente(idPaciente, dados) {
