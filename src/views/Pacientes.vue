@@ -28,7 +28,15 @@
             <div class="flex flex-wrap gap-2 pt-2">
                 <Button :label="`Todos (${paginacao.total})`" :severity="filtroStatus === 'todos' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'todos'" @click="filtroStatus = 'todos'" size="small" class="rounded-full text-xs" />
                 <Button label="Ativos" icon="pi pi-check-circle" :severity="filtroStatus === 'ativo' ? 'success' : 'secondary'" :outlined="filtroStatus !== 'ativo'" @click="filtroStatus = 'ativo'" size="small" class="rounded-full text-xs" />
-                <Button label="Arquivados" icon="pi pi-lock" :severity="filtroStatus === 'arquivado' ? 'secondary' : 'secondary'" :outlined="filtroStatus !== 'arquivado'" @click="filtroStatus = 'arquivado'" size="small" class="rounded-full text-xs" />
+                <Button
+                    label="Arquivados"
+                    icon="pi pi-lock"
+                    :severity="filtroStatus === 'arquivado' ? 'secondary' : 'secondary'"
+                    :outlined="filtroStatus !== 'arquivado'"
+                    @click="filtroStatus = 'arquivado'"
+                    size="small"
+                    class="rounded-full text-xs"
+                />
             </div>
         </div>
 
@@ -108,7 +116,17 @@
                         <span v-if="paginaAtual > 3" class="text-gray-400 px-1 sm:px-2 text-sm">...</span>
 
                         <!-- Pages around current page -->
-                        <Button v-for="page in pageNumbers" :key="page" :label="String(page)" @click="irParaPagina(page)" rounded :severity="paginaAtual === page ? 'success' : 'secondary'" :outlined="paginaAtual !== page" size="small" class="text-xs" />
+                        <Button
+                            v-for="page in pageNumbers"
+                            :key="page"
+                            :label="String(page)"
+                            @click="irParaPagina(page)"
+                            rounded
+                            :severity="paginaAtual === page ? 'success' : 'secondary'"
+                            :outlined="paginaAtual !== page"
+                            size="small"
+                            class="text-xs"
+                        />
 
                         <!-- Ellipsis if gap exists -->
                         <span v-if="paginaAtual < totalPaginas - 2" class="text-gray-400 px-1 sm:px-2 text-sm">...</span>
@@ -263,68 +281,6 @@
                 <Button label="Salvar paciente" severity="success" icon="pi pi-check" @click="salvarNovoPaciente" class="w-full sm:w-auto order-1 sm:order-2" />
                 <Button label="Salvar e Enviar Anamnese" severity="info" icon="pi pi-send" @click="salvarPacienteEEnviarFormulario" :loading="loadingSalvarComAnamnese" :disabled="loadingSalvarComAnamnese" class="w-full sm:w-auto order-3" />
             </div>
-        </template>
-    </Dialog>
-                </div>
-
-                <!-- WhatsApp e Sexo -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">WhatsApp</label>
-                        <InputMask v-model="formNovoPaciente.whatsapp" mask="(99) 99999-9999" placeholder="(00) 00000-0000" class="w-full" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Sexo</label>
-                        <div class="flex items-center gap-4 mb-2">
-                            <div class="flex items-center">
-                                <RadioButton v-model="formNovoPaciente.sexo" value="M" inputId="masculino" :invalid="!!formErrors.sexo" />
-                                <label for="masculino" class="ml-2 text-sm cursor-pointer">Masculino</label>
-                            </div>
-                            <div class="flex items-center">
-                                <RadioButton v-model="formNovoPaciente.sexo" value="F" inputId="feminino" :invalid="!!formErrors.sexo" />
-                                <label for="feminino" class="ml-2 text-sm cursor-pointer">Feminino</label>
-                            </div>
-                            <div class="flex items-center">
-                                <RadioButton v-model="formNovoPaciente.sexo" value="Outro" inputId="outro" :invalid="!!formErrors.sexo" />
-                                <label for="outro" class="ml-2 text-sm cursor-pointer">Outro</label>
-                            </div>
-                        </div>
-                        <small v-if="formErrors.sexo" class="block text-red-500 text-xs font-semibold mt-1">{{ formErrors.sexo }}</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Seção: Boas-vindas -->
-            <!-- <div class="border-t border-gray-200 pt-6">
-                <h3 class="text-lg font-bold text-gray-900 mb-4">Boas-vindas</h3> -->
-
-            <!-- Link de Acesso -->
-            <!-- <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded mb-4 flex items-start gap-3">
-                    <i class="pi pi-link text-emerald-600 text-xl flex-shrink-0 mt-1"></i>
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-emerald-900 mb-1">Link de acesso</h4>
-                        <p class="text-sm text-emerald-800">O paciente receberá automaticamente um link para acessar o portal do paciente e preencher a anamnese prévia.</p>
-                        <div class="mt-3 flex gap-2">
-                            <Button
-                                label="WHATSAPP"
-                                icon="pi pi-send"
-                                :severity="formNovoPaciente.canal === 'whatsapp' ? 'success' : 'secondary'"
-                                size="small"
-                                :text="formNovoPaciente.canal !== 'whatsapp'"
-                                @click="formNovoPaciente.canal = 'whatsapp'"
-                            />
-                            <Button label="E-MAIL" icon="pi pi-envelope" :severity="formNovoPaciente.canal === 'email' ? 'success' : 'secondary'" size="small" :text="formNovoPaciente.canal !== 'email'" @click="formNovoPaciente.canal = 'email'" />
-                        </div>
-                    </div>
-                    <Toggle v-model="formNovoPaciente.enviar_automatico" onLabel="Sim" offLabel="Não" class="flex-shrink-0" />
-                </div>
-            </div> -->
-        </div>
-
-        <template #footer>
-            <Button label="Cancelar" severity="secondary" @click="showDialog = false" />
-            <Button label="Salvar paciente" severity="success" icon="pi pi-check" @click="salvarNovoPaciente" />
-            <Button label="Salvar e Enviar Anamnese" severity="info" icon="pi pi-send" @click="salvarPacienteEEnviarFormulario" :loading="loadingSalvarComAnamnese" :disabled="loadingSalvarComAnamnese" />
         </template>
     </Dialog>
 </template>
