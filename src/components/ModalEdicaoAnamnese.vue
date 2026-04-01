@@ -7,42 +7,67 @@
         :breakpoints="{ '1199px': '95vw', '575px': '100vw' }"
         @update:visible="$emit('update:visible', $event)"
     >
-        <div v-if="anamneseEditando" class="space-y-6 overflow-y-auto pr-4">
+        <div v-if="anamneseEditando" class="space-y-6 overflow-y-auto pr-4" ref="containerRef">
             <!-- Bloco 1: Identificação -->
-            <section class="bg-white rounded-xl border-2 border-emerald-100 p-6">
+            <section class="bg-white rounded-xl border-2 border-emerald-100 p-6" ref="bloco1Ref">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">👤</div>
                     <h3 class="text-lg font-bold text-gray-900">Identificação</h3>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Telefone</label>
-                        <InputText v-model="anamneseLocal.telefone" type="tel" placeholder="(11) 99999-9999" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Telefone <span class="text-red-500">*</span></label>
+                        <InputText
+                            v-model="anamneseLocal.telefone"
+                            type="tel"
+                            placeholder="(11) 99999-9999"
+                            :class="['w-full px-3 py-2 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2', erros.telefonWhatsapp ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-emerald-500']"
+                        />
+                        <p v-if="erros.telefonWhatsapp" class="text-xs text-red-500 mt-1">{{ erros.telefonWhatsapp }}</p>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">WhatsApp</label>
-                        <InputText v-model="anamneseLocal.whatsapp" type="tel" placeholder="(11) 99999-9999" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">WhatsApp <span class="text-red-500">*</span></label>
+                        <InputText
+                            v-model="anamneseLocal.whatsapp"
+                            type="tel"
+                            placeholder="(11) 99999-9999"
+                            :class="['w-full px-3 py-2 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2', erros.telefonWhatsapp ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-emerald-500']"
+                        />
                     </div>
                 </div>
             </section>
 
             <!-- Bloco 2: Corpo Atual -->
-            <section class="bg-white rounded-xl border-2 border-blue-100 p-6">
+            <section class="bg-white rounded-xl border-2 border-blue-100 p-6" ref="bloco2Ref">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">⚖️</div>
                     <h3 class="text-lg font-bold text-gray-900">Corpo Atual</h3>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Peso Atual (kg)</label>
-                        <InputText v-model.number="anamneseLocal.peso_atual" type="number" step="0.1" placeholder="00.0" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Peso Atual (kg) <span class="text-red-500">*</span></label>
+                        <InputText
+                            v-model.number="anamneseLocal.peso_atual"
+                            type="number"
+                            step="0.1"
+                            placeholder="00.0"
+                            :class="['w-full px-3 py-2 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2', erros.pesoAtual ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-emerald-500']"
+                        />
+                        <p v-if="erros.pesoAtual" class="text-xs text-red-500 mt-1">{{ erros.pesoAtual }}</p>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Altura (cm)</label>
-                        <InputText v-model.number="anamneseLocal.altura" type="number" step="0.1" placeholder="170" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Altura (cm) <span class="text-red-500">*</span></label>
+                        <InputText
+                            v-model.number="anamneseLocal.altura"
+                            type="number"
+                            step="0.1"
+                            placeholder="170"
+                            :class="['w-full px-3 py-2 bg-gray-50 border rounded-lg focus:outline-none focus:ring-2', erros.altura ? 'border-red-500 focus:ring-red-500' : 'border-gray-200 focus:ring-emerald-500']"
+                        />
+                        <p v-if="erros.altura" class="text-xs text-red-500 mt-1">{{ erros.altura }}</p>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Tempo Nesse Peso</label>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Tempo Nesse Peso <span class="text-red-500">*</span></label>
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="opcao in opcoesTempo"
@@ -53,6 +78,7 @@
                                 {{ opcao.label }}
                             </button>
                         </div>
+                        <p v-if="erros.tempoNessePeso" class="text-xs text-red-500 mt-2">{{ erros.tempoNessePeso }}</p>
                     </div>
                     <div class="flex items-center pt-2">
                         <input v-model="anamneseLocal.fez_acompanhamento_antes" type="checkbox" id="acompanhamento-edit" class="w-4 h-4 rounded border-gray-300 text-emerald-600 accent-emerald-600" />
@@ -66,14 +92,14 @@
             </section>
 
             <!-- Bloco 3: Objetivo -->
-            <section class="bg-white rounded-xl border-2 border-purple-100 p-6">
+            <section class="bg-white rounded-xl border-2 border-purple-100 p-6" ref="bloco3Ref">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">🎯</div>
                     <h3 class="text-lg font-bold text-gray-900">Objetivo</h3>
                 </div>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Objetivo Principal</label>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Objetivo Principal <span class="text-red-500">*</span></label>
                         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                             <button
                                 v-for="opcao in opcoesObjetivo"
@@ -90,6 +116,7 @@
                                 <span class="text-xs font-semibold text-gray-900">{{ opcao.label }}</span>
                             </button>
                         </div>
+                        <p v-if="erros.objetivo" class="text-xs text-red-500 mt-2">{{ erros.objetivo }}</p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Descrição do Objetivo</label>
@@ -113,7 +140,7 @@
             </section>
 
             <!-- Bloco 4: Rotina -->
-            <section class="bg-white rounded-xl border-2 border-amber-100 p-6">
+            <section class="bg-white rounded-xl border-2 border-amber-100 p-6" ref="bloco4Ref">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 text-lg">🕐</div>
                     <h3 class="text-lg font-bold text-gray-900">Rotina</h3>
@@ -148,7 +175,7 @@
                         <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Trabalho e Atividades</p>
                         <div class="space-y-3">
                             <div>
-                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Local de Trabalho</label>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Local de Trabalho <span class="text-red-500">*</span></label>
                                 <div class="flex gap-2">
                                     <button
                                         v-for="opcao in opcoesTrabalhoCasaOuFora"
@@ -159,9 +186,10 @@
                                         {{ opcao.label }}
                                     </button>
                                 </div>
+                                <p v-if="erros.localTrabalho" class="text-xs text-red-500 mt-1">{{ erros.localTrabalho }}</p>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tempo para Cozinhar</label>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Tempo para Cozinhar <span class="text-red-500">*</span></label>
                                 <div class="flex gap-2">
                                     <button
                                         v-for="opcao in opcoesTempoCozinhar"
@@ -172,6 +200,7 @@
                                         {{ opcao.label }}
                                     </button>
                                 </div>
+                                <p v-if="erros.tempoCozinhar" class="text-xs text-red-500 mt-1">{{ erros.tempoCozinhar }}</p>
                             </div>
                         </div>
                     </div>
@@ -202,7 +231,7 @@
             </section>
 
             <!-- Bloco 5: Alimentação -->
-            <section class="bg-white rounded-xl border-2 border-orange-100 p-6">
+            <section class="bg-white rounded-xl border-2 border-orange-100 p-6" ref="bloco5Ref">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-lg">🍽️</div>
                     <h3 class="text-lg font-bold text-gray-900">Alimentação</h3>
@@ -230,7 +259,7 @@
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Restrição Alimentar</label>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Restrição Alimentar <span class="text-red-500">*</span></label>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
                                 <button
                                     v-for="opcao in opcoesRestricao"
@@ -244,6 +273,7 @@
                                     {{ opcao.label }}
                                 </button>
                             </div>
+                            <p v-if="erros.restricaoAlimentar" class="text-xs text-red-500">{{ erros.restricaoAlimentar }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Copos de Água/Dia</label>
@@ -274,7 +304,7 @@
                         ></textarea>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Consumo de Álcool</label>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Consumo de Álcool <span class="text-red-500">*</span></label>
                         <div class="flex gap-2">
                             <button
                                 v-for="opcao in opcoesConsumoAlcool"
@@ -285,12 +315,13 @@
                                 {{ opcao.label }}
                             </button>
                         </div>
+                        <p v-if="erros.consumoAlcool" class="text-xs text-red-500 mt-1">{{ erros.consumoAlcool }}</p>
                     </div>
                 </div>
             </section>
 
             <!-- Bloco 6: Saúde -->
-            <section class="bg-white rounded-xl border-2 border-red-100 p-6">
+            <section class="bg-white rounded-xl border-2 border-red-100 p-6" ref="bloco6Ref">
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg">❤️</div>
                     <h3 class="text-lg font-bold text-gray-900">Saúde</h3>
@@ -324,7 +355,7 @@
                         ></textarea>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Qualidade do Sono</label>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Qualidade do Sono <span class="text-red-500">*</span></label>
                         <div class="flex gap-2 mb-4">
                             <button
                                 v-for="opcao in opcoesQualidadeSono"
@@ -335,6 +366,7 @@
                                 {{ opcao.label }}
                             </button>
                         </div>
+                        <p v-if="erros.qualidadeSono" class="text-xs text-red-500 mb-4">{{ erros.qualidadeSono }}</p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Nível de Estresse (1-5)</label>
@@ -367,7 +399,7 @@
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 
 const props = defineProps({
     visible: Boolean,
@@ -391,15 +423,206 @@ const emit = defineEmits(['update:visible', 'fechar', 'salvar']);
 // Estado local da anamnese
 const anamneseLocal = ref({});
 
+// Estado de erros de validação
+const erros = ref({});
+
+// Refs dos blocos para scroll
+const containerRef = ref(null);
+const bloco1Ref = ref(null);
+const bloco2Ref = ref(null);
+const bloco3Ref = ref(null);
+const bloco4Ref = ref(null);
+const bloco5Ref = ref(null);
+const bloco6Ref = ref(null);
+
+// Mapeamento de erros para blocos
+const erroToBlocoRef = {
+    telefonWhatsapp: bloco1Ref,
+    pesoAtual: bloco2Ref,
+    altura: bloco2Ref,
+    tempoNessePeso: bloco2Ref,
+    objetivo: bloco3Ref,
+    localTrabalho: bloco4Ref,
+    tempoCozinhar: bloco4Ref,
+    restricaoAlimentar: bloco5Ref,
+    consumoAlcool: bloco5Ref,
+    qualidadeSono: bloco6Ref
+};
+
 // Sincronizar anamneseLocal com props quando o modal abre
 watch(
     () => props.visible,
     (visible) => {
         if (visible && props.anamneseEditando) {
             anamneseLocal.value = { ...props.anamneseEditando };
+            erros.value = {}; // Limpar erros ao abrir
         }
     }
 );
+
+// Watchers para remover erro dinamicamente quando o campo for preenchido
+watch(
+    () => ({ telefone: anamneseLocal.value.telefone, whatsapp: anamneseLocal.value.whatsapp }),
+    ({ telefone, whatsapp }) => {
+        if (erros.value.telefonWhatsapp && (telefone?.trim() || whatsapp?.trim())) {
+            delete erros.value.telefonWhatsapp;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.peso_atual,
+    (peso) => {
+        if (erros.value.pesoAtual && peso && peso > 0) {
+            delete erros.value.pesoAtual;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.altura,
+    (altura) => {
+        if (erros.value.altura && altura && altura > 0) {
+            delete erros.value.altura;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.tempo_nesse_peso,
+    (tempo) => {
+        if (erros.value.tempoNessePeso && tempo) {
+            delete erros.value.tempoNessePeso;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.objetivo,
+    (objetivo) => {
+        if (erros.value.objetivo && objetivo) {
+            delete erros.value.objetivo;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.trabalha_casa_ou_fora,
+    (trabalho) => {
+        if (erros.value.localTrabalho && trabalho) {
+            delete erros.value.localTrabalho;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.tempo_parar_cozinhar,
+    (tempo) => {
+        if (erros.value.tempoCozinhar && tempo) {
+            delete erros.value.tempoCozinhar;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.restricao_alimentar,
+    (restricao) => {
+        if (erros.value.restricaoAlimentar && restricao) {
+            delete erros.value.restricaoAlimentar;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.consumo_alcool,
+    (consumo) => {
+        if (erros.value.consumoAlcool && consumo) {
+            delete erros.value.consumoAlcool;
+        }
+    }
+);
+
+watch(
+    () => anamneseLocal.value.qualidade_sono,
+    (qualidade) => {
+        if (erros.value.qualidadeSono && qualidade) {
+            delete erros.value.qualidadeSono;
+        }
+    }
+);
+
+const validarFormulario = () => {
+    erros.value = {};
+
+    // Validar Telefone OU WhatsApp (um dos dois obrigatório)
+    if (!anamneseLocal.value.telefone?.trim() && !anamneseLocal.value.whatsapp?.trim()) {
+        erros.value.telefonWhatsapp = 'Telefone ou WhatsApp é obrigatório';
+    }
+
+    // Validar Peso Atual
+    if (!anamneseLocal.value.peso_atual || anamneseLocal.value.peso_atual <= 0) {
+        erros.value.pesoAtual = 'Peso atual é obrigatório e deve ser maior que 0';
+    }
+
+    // Validar Altura
+    if (!anamneseLocal.value.altura || anamneseLocal.value.altura <= 0) {
+        erros.value.altura = 'Altura é obrigatória e deve ser maior que 0';
+    }
+
+    // Validar Tempo Nesse Peso
+    if (!anamneseLocal.value.tempo_nesse_peso) {
+        erros.value.tempoNessePeso = 'Tempo nesse peso é obrigatório';
+    }
+
+    // Validar Objetivo
+    if (!anamneseLocal.value.objetivo) {
+        erros.value.objetivo = 'Objetivo principal é obrigatório';
+    }
+
+    // Validar Local de Trabalho
+    if (!anamneseLocal.value.trabalha_casa_ou_fora) {
+        erros.value.localTrabalho = 'Local de trabalho é obrigatório';
+    }
+
+    // Validar Tempo para Cozinhar
+    if (!anamneseLocal.value.tempo_parar_cozinhar) {
+        erros.value.tempoCozinhar = 'Tempo para cozinhar é obrigatório';
+    }
+
+    // Validar Restrição Alimentar
+    if (!anamneseLocal.value.restricao_alimentar) {
+        erros.value.restricaoAlimentar = 'Restrição alimentar é obrigatória';
+    }
+
+    // Validar Consumo de Álcool
+    if (!anamneseLocal.value.consumo_alcool) {
+        erros.value.consumoAlcool = 'Consumo de álcool é obrigatório';
+    }
+
+    // Validar Qualidade do Sono
+    if (!anamneseLocal.value.qualidade_sono) {
+        erros.value.qualidadeSono = 'Qualidade do sono é obrigatória';
+    }
+
+    return Object.keys(erros.value).length === 0;
+};
+
+const scrollParaPrimeiroErro = async () => {
+    await nextTick();
+
+    // Encontrar o primeiro erro na ordem
+    const ordemErros = ['telefonWhatsapp', 'pesoAtual', 'altura', 'tempoNessePeso', 'objetivo', 'localTrabalho', 'tempoCozinhar', 'restricaoAlimentar', 'consumoAlcool', 'qualidadeSono'];
+
+    for (const nomeErro of ordemErros) {
+        if (erros.value[nomeErro]) {
+            const blocoRef = erroToBlocoRef[nomeErro];
+            if (blocoRef?.value) {
+                blocoRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                break;
+            }
+        }
+    }
+};
 
 const handleClose = () => {
     emit('update:visible', false);
@@ -407,6 +630,10 @@ const handleClose = () => {
 };
 
 const handleSave = () => {
-    emit('salvar', anamneseLocal.value);
+    if (validarFormulario()) {
+        emit('salvar', anamneseLocal.value);
+    } else {
+        scrollParaPrimeiroErro();
+    }
 };
 </script>
