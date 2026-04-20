@@ -142,7 +142,7 @@ watch(
 
                     // Mapear refeições se existirem
                     if (planoData.refeicoes && Array.isArray(planoData.refeicoes) && planoData.refeicoes.length > 0) {
-                        const refeicoesMapeadas = planoData.refeicoes.map((refeicaoApi) => {
+                        const refeicoesMapeadas = planoData.refeicoes.map((refeicaoApi, idx) => {
                             const distribuicoes = {
                                 'Café da manhã': 0.25,
                                 'Lanche manhã': 0.1,
@@ -206,7 +206,7 @@ watch(
                                 id: refeicaoApi.id,
                                 nome: refeicaoApi.nome || '',
                                 horario: refeicaoApi.horario_sugerido ? refeicaoApi.horario_sugerido.substring(0, 5) : '',
-                                ordem: refeicaoApi.ordem || 0,
+                                ordem: Number.isFinite(Number(refeicaoApi.ordem)) && Number(refeicaoApi.ordem) > 0 ? Number(refeicaoApi.ordem) : idx + 1,
                                 notas: refeicaoApi.observacoes || '',
                                 itens: itensMap,
                                 meta_calorias: Math.round(formularioPlano.value.calorias_meta * percDistribuicao),
@@ -533,10 +533,10 @@ const salvarPlano = async () => {
             proteinas_objetivo_pct: formularioPlano.value.proteina_perc,
             carboidratos_objetivo_pct: formularioPlano.value.carboidrato_perc,
             gorduras_objetivo_pct: formularioPlano.value.gordura_perc,
-            refeicoes: formularioPlano.value.refeicoes.map((refeicao) => ({
+            refeicoes: formularioPlano.value.refeicoes.map((refeicao, idx) => ({
                 nome: refeicao.nome,
                 horario_sugerido: refeicao.horario ? `${refeicao.horario}:00` : '',
-                ordem: refeicao.ordem,
+                ordem: Number.isFinite(Number(refeicao.ordem)) && Number(refeicao.ordem) > 0 ? Number(refeicao.ordem) : idx + 1,
                 observacoes: refeicao.notas || '',
                 itens: refeicao.itens.map((item) => ({
                     id_alimento: item.id,

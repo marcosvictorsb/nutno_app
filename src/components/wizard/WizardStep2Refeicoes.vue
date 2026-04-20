@@ -70,6 +70,16 @@
 
                 <!-- Corpo da Refeição (Expandido) -->
                 <div v-if="refeicaoExpandida === refeicaoIndex" class="border-t border-slate-200">
+                    <div v-if="refeicao.extra" class="p-3 bg-amber-50 border-b border-amber-200">
+                        <label class="block text-xs font-semibold text-amber-900 mb-1">Nome da refeição extra</label>
+                        <input
+                            :value="refeicao.nome"
+                            @input="atualizarNomeRefeicao(refeicaoIndex, $event.target.value)"
+                            placeholder="Ex: Pré-treino"
+                            class="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        />
+                    </div>
+
                     <!-- Tabela de Alimentos -->
                     <div v-if="refeicao.itens && refeicao.itens.length > 0" class="p-3 bg-slate-50">
                         <table class="w-full text-xs">
@@ -444,12 +454,24 @@ const deletarItem = (refeicaoIndex, itemIndex) => {
     emit('update:formularioPlano', { ...props.formularioPlano, refeicoes: novas_refeicoes });
 };
 
+const atualizarNomeRefeicao = (refeicaoIndex, nome) => {
+    const novas_refeicoes = [...props.formularioPlano.refeicoes];
+    novas_refeicoes[refeicaoIndex] = {
+        ...novas_refeicoes[refeicaoIndex],
+        nome
+    };
+
+    emit('update:formularioPlano', { ...props.formularioPlano, refeicoes: novas_refeicoes });
+};
+
 // Add extra refeição
 const adicionarRefeicaoExtra = () => {
     const novas_refeicoes = [...props.formularioPlano.refeicoes];
     novas_refeicoes.push({
         nome: `Refeição Extra ${novas_refeicoes.length + 1}`,
         horario: '20:00',
+        ordem: novas_refeicoes.length + 1,
+        extra: true,
         itens: [],
         meta_calorias: 0,
         meta_proteinas_g: 0,
