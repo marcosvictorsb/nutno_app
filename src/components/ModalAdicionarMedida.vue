@@ -39,7 +39,7 @@
                         <!-- Altura (editável) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Altura (cm)</label>
-                            <InputNumber v-model="formularioLocal.altura" :maxFractionDigits="2" placeholder="00.00" />
+                            <InputNumber v-model="formularioLocal.altura" :min="30" :max="400" :maxFractionDigits="0" placeholder="173"  />
                         </div>
 
                         <!-- IMC (calculado) -->
@@ -429,6 +429,18 @@ const handleClose = () => {
 };
 
 const handleSave = () => {
+    const altura = formularioLocal.value.altura;
+    if (altura != null && altura !== '') {
+        if (altura > 0 && altura <= 3) {
+            toast.add({ severity: 'warn', summary: 'Altura inválida', detail: 'Parece que você digitou a altura em metros. Informe em centímetros (ex: 173).', life: 5000 });
+            return;
+        }
+        if (altura < 30 || altura > 400) {
+            toast.add({ severity: 'warn', summary: 'Altura inválida', detail: 'A altura deve estar entre 30 e 400 cm.', life: 5000 });
+            return;
+        }
+    }
+
     const payload = JSON.parse(JSON.stringify(formularioLocal.value || {}));
     recalcularCamposDerivados(payload);
 
